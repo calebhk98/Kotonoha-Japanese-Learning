@@ -12,9 +12,12 @@ export interface WordInfo {
   word: string;
   reading: string;
   meaning: string;
-  jlpt: number;     // 1 to 5, where 5 is N5, 1 is N1, 0 if NA
+  jlpt: number;                  // 1 to 5, where 5 is N5, 1 is N1, 0 if NA
   joyo: boolean;
-  score: number;    // 1-100 (1=beginner, 100=native)
+  score: number;                 // 1-100 (1=beginner, 100=native), adjusted if WaniKani data available
+  baseScore?: number;            // original score before WaniKani adjustment
+  wkMultiplier?: number;         // WaniKani SRS multiplier applied (0.05–1.0), undefined if no WK data
+  frequencyInContent?: number;   // how many times this word's base form appears in the source text
   breakdown?: ScoreBreakdown;
 }
 

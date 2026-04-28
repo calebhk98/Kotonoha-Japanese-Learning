@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { BookOpen, Video, Music, CheckCircle, ChevronRight, PlayCircle, Loader2, Library, Plus } from 'lucide-react';
+import { BookOpen, Video, Music, CheckCircle, ChevronRight, PlayCircle, Loader2, Library, Plus, Settings, Search, X } from 'lucide-react';
 import { INITIAL_CONTENT, GENERATED_CONTENT, Content } from './data/content';
 import { useContentData } from './hooks/useContentData';
 import { ContentDetail } from './components/ContentDetail';
 import { ImportModal } from './components/ImportModal';
 import { WordDetailModal } from './components/WordDetailModal';
+import { SettingsPage } from './components/SettingsPage';
 import { WordInfo } from './types';
 
 export default function App() {
@@ -18,7 +19,8 @@ export default function App() {
     clearKnownWords,
     clearContentVocab,
     updateWord,
-    setContentVocab
+    setContentVocab,
+    refreshWaniKaniData,
   } = useContentData();
 
   const [customContent, setCustomContent] = useState<Content[]>(() => {
@@ -33,10 +35,15 @@ export default function App() {
   });
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const [displayCount, setDisplayCount] = useState(12);
-  const [view, setView] = useState<'home' | 'vocab' | 'scoring'>('home');
+  const [view, setView] = useState<'home' | 'vocab' | 'scoring' | 'settings'>('home');
   const [showImportOpts, setShowImportOpts] = useState(false);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
   const [editingWord, setEditingWord] = useState<WordInfo | null>(null);
+
+  // Filter state for home view (#12, #13)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
+  const [comprehensionFilter, setComprehensionFilter] = useState<'all' | 'almost' | 'ready'>('all');
 
   const ALL_CONTENT = useMemo(() => {
     const map = new Map<string, Content>();
@@ -49,28 +56,56 @@ export default function App() {
     localStorage.setItem('customContent', JSON.stringify(customContent));
   }, [customContent]);
 
-  // Sort content by difficulty score
-  const sortedContent = [...ALL_CONTENT].sort((a, b) => {
-    const statusA = getContentStatus(a.id);
-    const statusB = getContentStatus(b.id);
-    
-    // If not loaded, put to end
-    if (statusA.totalCount === 0 && statusB.totalCount !== 0) return 1;
-    if (statusA.totalCount !== 0 && statusB.totalCount === 0) return -1;
-    
-    return statusA.score - statusB.score;
-  });
+  // Sort and filter content (#11, #12, #13)
+  const sortedContent = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return [...ALL_CONTENT]
+      .filter(c => {
+        if (q && !c.title.toLowerCase().includes(q)) return false;
+        if (typeFilter.size > 0 && !typeFilter.has(c.type)) return false;
+        const status = getContentStatus(c.id);
+        if (status.totalCount === 0) return comprehensionFilter === 'all'; // unloaded items only show in 'all'
+        if (comprehensionFilter === 'almost') return status.comprehension >= 90 && status.comprehension < 100;
+        if (comprehensionFilter === 'ready') return status.comprehension === 100;
+        return true;
+      })
+      .sort((a, b) => {
+        const statusA = getContentStatus(a.id);
+        const statusB = getContentStatus(b.id);
+        if (statusA.totalCount === 0 && statusB.totalCount !== 0) return 1;
+        if (statusA.totalCount !== 0 && statusB.totalCount === 0) return -1;
+        return statusA.score - statusB.score;
+      });
+  }, [ALL_CONTENT, searchQuery, typeFilter, comprehensionFilter, getContentStatus]);
 
   const visibleContent = sortedContent.slice(0, displayCount);
 
+  const toggleTypeFilter = (type: string) => {
+    setTypeFilter(prev => {
+      const next = new Set(prev);
+      next.has(type) ? next.delete(type) : next.add(type);
+      return next;
+    });
+    setDisplayCount(12);
+  };
+
+  const hasActiveFilters = searchQuery.trim() !== '' || typeFilter.size > 0 || comprehensionFilter !== 'all';
+
+  const comprehensionColor = (pct: number) => {
+    if (pct >= 90) return 'text-green-700 bg-green-50 border-green-200';
+    if (pct >= 70) return 'text-yellow-700 bg-yellow-50 border-yellow-200';
+    return 'text-red-700 bg-red-50 border-red-200';
+  };
+
   if (selectedContent) {
     return (
-      <ContentDetail 
-        content={selectedContent} 
+      <ContentDetail
+        content={selectedContent}
         onBack={() => setSelectedContent(null)}
         status={getContentStatus(selectedContent.id)}
         loading={loadingContent[selectedContent.id]}
         markWordsAsKnown={markWordsAsKnown}
+        knownWordSet={knownWords}
         onForceReload={() => loadVocabForContent(selectedContent, true)}
         onUpdateContent={(updatedContent) => {
           let updatedVocab = false;
@@ -147,11 +182,17 @@ export default function App() {
             >
               My Vocab
             </button>
-            <button 
+            <button
               onClick={() => setView('scoring')}
               className={`text-sm font-medium transition-colors ${view === 'scoring' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
             >
               Scoring Guide
+            </button>
+            <button
+              onClick={() => setView('settings')}
+              className={`text-sm font-medium transition-colors flex items-center gap-1 ${view === 'settings' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+            >
+              <Settings className="w-4 h-4" /> Settings
             </button>
             <div className="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
               <CheckCircle className="w-4 h-4 text-green-600" />
@@ -181,11 +222,84 @@ export default function App() {
       )}
 
       <main className="max-w-5xl mx-auto p-6 space-y-8">
+        {view === 'settings' && (
+          <SettingsPage onWaniKaniSync={refreshWaniKaniData} />
+        )}
+
         {view === 'home' && (
           <section>
-            <div className="mb-4 flex items-baseline justify-between">
+            <div className="mb-6 flex items-baseline justify-between">
               <h2 className="text-2xl font-semibold tracking-tight">Recommended For You</h2>
               <p className="text-sm text-gray-500 uppercase tracking-widest font-medium">Sorted by difficulty</p>
+            </div>
+
+            {/* Search + filters (#12, #13) */}
+            <div className="mb-6 space-y-3">
+              <div className="flex flex-wrap gap-2 items-center">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[180px] max-w-xs">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search by title..."
+                    value={searchQuery}
+                    onChange={e => { setSearchQuery(e.target.value); setDisplayCount(12); }}
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                </div>
+
+                {/* Type filter */}
+                {(['story', 'video', 'music'] as const).map(type => (
+                  <button
+                    key={type}
+                    onClick={() => toggleTypeFilter(type)}
+                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider rounded-xl border transition-colors ${
+                      typeFilter.has(type)
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'
+                    }`}
+                  >
+                    {type === 'story' && <BookOpen className="w-3.5 h-3.5" />}
+                    {type === 'video' && <Video className="w-3.5 h-3.5" />}
+                    {type === 'music' && <Music className="w-3.5 h-3.5" />}
+                    {type}
+                  </button>
+                ))}
+
+                {/* Comprehension filter (#13) */}
+                <div className="flex rounded-xl border border-gray-200 overflow-hidden bg-white text-xs font-semibold">
+                  {(['all', 'almost', 'ready'] as const).map((f, i) => (
+                    <button
+                      key={f}
+                      onClick={() => { setComprehensionFilter(f); setDisplayCount(12); }}
+                      className={`px-3 py-2 transition-colors ${i > 0 ? 'border-l border-gray-200' : ''} ${
+                        comprehensionFilter === f
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {f === 'all' ? 'All' : f === 'almost' ? 'Almost There ≥90%' : 'Ready ✓'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Clear filters */}
+                {hasActiveFilters && (
+                  <button
+                    onClick={() => { setSearchQuery(''); setTypeFilter(new Set()); setComprehensionFilter('all'); setDisplayCount(12); }}
+                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 transition-colors px-2 py-2"
+                  >
+                    <X className="w-3.5 h-3.5" /> Clear
+                  </button>
+                )}
+              </div>
+
+              {/* "Almost There" explanation banner (#13) */}
+              {comprehensionFilter === 'almost' && (
+                <div className="bg-green-50 border border-green-100 rounded-2xl px-4 py-3 text-sm text-green-800">
+                  <strong>i+1 sweet spot</strong> — content where you know ≥90% of words. Challenging enough to encounter new vocabulary, easy enough to enjoy reading.
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -215,12 +329,30 @@ export default function App() {
                         {content.type === 'music' && <Music className="w-3.5 h-3.5 text-indigo-600" />}
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-800">{content.type}</span>
                       </div>
+                      {/* Comprehension badge (#11) */}
+                      {!isLoading && status.totalCount > 0 && (
+                        <div className={`absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-bold border ${comprehensionColor(status.comprehension)}`}>
+                          {status.comprehension === 100 ? '✓ Ready' : `${status.comprehension}% known`}
+                        </div>
+                      )}
                     </div>
-                    
+
                     <div className="p-5 flex flex-col flex-grow">
                       <h3 className="font-semibold text-lg mb-2">{content.title}</h3>
                       <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-grow">{content.description}</p>
-                      
+
+                      {/* In "Almost There" mode, show unknown word chips (#13) */}
+                      {comprehensionFilter === 'almost' && !isLoading && status.unknownCount > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {status.unknownWords.slice(0, 6).map(w => (
+                            <span key={w.word} className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs font-medium">{w.word}</span>
+                          ))}
+                          {status.unknownCount > 6 && (
+                            <span className="px-2 py-0.5 text-gray-400 text-xs">+{status.unknownCount - 6} more</span>
+                          )}
+                        </div>
+                      )}
+
                       {isLoading ? (
                         <div className="flex items-center gap-2 text-sm text-gray-400">
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -245,11 +377,18 @@ export default function App() {
                   </div>
                 );
               })}
+
+              {visibleContent.length === 0 && (
+                <div className="col-span-3 py-16 text-center text-gray-400">
+                  <p className="text-lg font-medium">No content matches your filters.</p>
+                  <button onClick={() => { setSearchQuery(''); setTypeFilter(new Set()); setComprehensionFilter('all'); }} className="mt-3 text-sm text-indigo-500 hover:text-indigo-700 underline">Clear filters</button>
+                </div>
+              )}
             </div>
-            
+
             {displayCount < sortedContent.length && (
               <div className="mt-8 flex justify-center">
-                <button 
+                <button
                   onClick={() => setDisplayCount(prev => prev + 12)}
                   className="bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-full font-medium hover:bg-gray-50 shadow-sm transition-all"
                 >
