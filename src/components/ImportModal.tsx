@@ -2,10 +2,23 @@ import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { Content, ContentType } from '../data/content';
 
-export function ImportModal({ 
-  onClose, 
-  onImport 
-}: { 
+const MAX_TEXT_LENGTH = 50000;
+const JAPANESE_SCRIPT = /[぀-ゟ゠-ヿ一-鿿]/;
+
+function validateJapaneseText(text: string): string | null {
+  if (text.length > MAX_TEXT_LENGTH) {
+    return `Text exceeds the ${MAX_TEXT_LENGTH.toLocaleString()} character limit (currently ${text.length.toLocaleString()}).`;
+  }
+  if (!JAPANESE_SCRIPT.test(text)) {
+    return 'Text must contain Japanese characters (hiragana, katakana, or kanji).';
+  }
+  return null;
+}
+
+export function ImportModal({
+  onClose,
+  onImport
+}: {
   onClose: () => void;
   onImport: (content: Content) => void;
 }) {
@@ -13,9 +26,17 @@ export function ImportModal({
   const [text, setText] = useState('');
   const [type, setType] = useState<ContentType>('story');
   const [mediaUrl, setMediaUrl] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleImport = () => {
     if (!title.trim() || !text.trim()) return;
+
+    const error = validateJapaneseText(text.trim());
+    if (error) {
+      setValidationError(error);
+      return;
+    }
+    setValidationError(null);
 
     const newContent: Content = {
       id: `custom-${Date.now()}`,
@@ -25,7 +46,7 @@ export function ImportModal({
       text: text.trim(),
       mediaUrl: mediaUrl.trim() || undefined
     };
-    
+
     onImport(newContent);
     onClose();
   };
@@ -82,12 +103,22 @@ export function ImportModal({
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Japanese Text (Transcript)</label>
-              <textarea 
+              <textarea
                 value={text}
-                onChange={e => setText(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl h-64 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none font-sans"
+                onChange={e => { setText(e.target.value); setValidationError(null); }}
+                className={`w-full px-4 py-3 border rounded-xl h-64 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none font-sans ${validationError ? 'border-red-400' : 'border-gray-200'}`}
                 placeholder="Paste Japanese text here..."
               />
+              <div className="flex items-start justify-between mt-1">
+                {validationError ? (
+                  <p className="text-xs text-red-500">{validationError}</p>
+                ) : (
+                  <span />
+                )}
+                <p className={`text-xs ml-auto ${text.length > MAX_TEXT_LENGTH ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                  {text.length.toLocaleString()} / {MAX_TEXT_LENGTH.toLocaleString()}
+                </p>
+              </div>
             </div>
           </div>
         </div>

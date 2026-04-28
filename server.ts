@@ -2,8 +2,18 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
-import kanjiData from "kanji-data";
 import kuromoji from "kuromoji";
+import {
+  DictionaryVariant,
+  DictionaryEntry,
+  FindBestVariantResult,
+  JLPT_SCORES,
+  JOYO_PENALTIES,
+  getFrequencyPenalty,
+  getWordScoreBreakdown,
+  getCachedDictionaryEntries,
+  findBestVariant,
+} from "./src/lib/scoring.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,117 +28,6 @@ kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
   }
 });
 
-const JLPT_SCORES: Record<number, number> = { 5: 15, 4: 30, 3: 50, 2: 70, 1: 90, 0: 100 };
-const JOYO_PENALTIES: Record<number, number> = { 1: 5, 2: 7, 3: 10, 4: 12, 5: 15, 6: 20, 8: 25, 9: 30 };
-
-function getFrequencyPenalty(variant: any, wordStr: string): number {
-  const priorities = variant?.priorities || [];
-
-  if (variant === null && /^[ぁ-ん]{1,3}$/.test(wordStr)) return -20;
-
-  const hasPriority = (p: string) => priorities.includes(p);
-
-  if (hasPriority('news1') || hasPriority('ichi1')) return -20;
-  if (hasPriority('news2') || hasPriority('ichi2')) return -10;
-  if (hasPriority('gai1') || hasPriority('spec1')) return 0;
-  if (hasPriority('gai2') || hasPriority('spec2')) return 5;
-
-  const nfTag = priorities.find((p: string) => p.startsWith('nf'));
-  if (nfTag) {
-    const rank = parseInt(nfTag.slice(2), 10);
-    if (rank <= 5) return 10;
-    if (rank <= 10) return 15;
-    if (rank <= 20) return 20;
-    if (rank <= 30) return 30;
-    return 40;
-  }
-
-  return 50;
-}
-
-function getWordScoreBreakdown(wordStr: string, variant: any) {
-  let hardestJlpt = 6;
-  let hasKanji = false;
-  let allJoyo = true;
-  let highestGrade: number | null = null;
-  const jlptValues: number[] = [];
-  const gradeValues: number[] = [];
-
-  const kanjis = kanjiData.extractKanji(wordStr);
-
-  for (const k of kanjis) {
-    hasKanji = true;
-    const meta = kanjiData.get(k);
-    if (!meta) continue;
-
-    const jlpt = meta.jlpt ?? 0;
-    jlptValues.push(jlpt);
-    if (jlpt < hardestJlpt) hardestJlpt = jlpt;
-
-    if (meta.grade === null || meta.grade > 8) {
-      allJoyo = false;
-      highestGrade = 9;
-    } else {
-      gradeValues.push(meta.grade);
-      highestGrade = highestGrade === null ? meta.grade : Math.max(highestGrade, meta.grade);
-    }
-  }
-
-  const finalJlpt = hasKanji && hardestJlpt !== 6 ? hardestJlpt : (hasKanji ? 0 : 5);
-  const jlptScore = JLPT_SCORES[finalJlpt] || 100;
-  const joyoPenalty = (hasKanji && highestGrade !== null) ? (JOYO_PENALTIES[highestGrade] || 0) : 0;
-  const freqPenalty = getFrequencyPenalty(variant, wordStr);
-  const score = Math.min(100, Math.max(1, jlptScore + joyoPenalty + freqPenalty));
-
-  return {
-    jlpt: finalJlpt,
-    joyo: allJoyo,
-    score,
-    breakdown: {
-      jlptScore,
-      joyoPenalty,
-      highestGrade,
-      freqPenalty,
-      jlptValues,
-      gradeValues,
-      priorities: variant?.priorities || []
-    }
-  };
-}
-
-const wordsCache = new Map<string, any>();
-
-function getCachedDictionaryEntries(wordStr: string) {
-  if (wordsCache.has(wordStr)) return wordsCache.get(wordStr);
-  const entries = kanjiData.searchWords(wordStr);
-  wordsCache.set(wordStr, entries);
-  return entries;
-}
-
-function findBestVariant(wordStr: string, entries: any[]) {
-  let best = { variant: null, entry: null, score: -999 };
-
-  for (const entry of entries) {
-    if (!entry.variants) continue;
-    for (const v of entry.variants) {
-      if (v.written !== wordStr && v.pronounced !== wordStr) continue;
-
-      let score = (v.written === wordStr ? 100 : 0) + (v.priorities?.length ? 50 : 0);
-      const isHiragana = /^[ぁ-ん]+$/.test(wordStr);
-      const hasKanji = /[一-龯]/.test(v.written);
-
-      if (v.written !== wordStr && isHiragana && hasKanji) {
-        score -= v.priorities?.length ? 20 : 200;
-      }
-
-      if (score > best.score) {
-        best = { variant: v, entry, score };
-      }
-    }
-  }
-
-  return best.score >= 0 ? best : { variant: null, entry: null, score: -999 };
-}
 
 function processText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
@@ -174,30 +73,49 @@ async function startServer() {
 
   app.use(express.json());
 
+  app.use((req, _res, next) => {
+    console.log(`[Server] ${req.method} ${req.path}`);
+    next();
+  });
+
+  const MAX_TEXT_LENGTH = 50000;
+  const JAPANESE_SCRIPT = /[぀-ゟ゠-ヿ一-鿿]/;
+
   app.post("/api/extract", (req, res) => {
+    const start = Date.now();
     try {
       const { text } = req.body;
       if (!text) {
         return res.status(400).json({ error: "No text provided" });
       }
+      if (typeof text !== "string" || text.length > MAX_TEXT_LENGTH) {
+        return res.status(400).json({ error: `Text exceeds the ${MAX_TEXT_LENGTH} character limit` });
+      }
+      if (!JAPANESE_SCRIPT.test(text)) {
+        return res.status(400).json({ error: "Text must contain Japanese characters" });
+      }
 
+      console.log(`[API] /api/extract: processing ${text.length} chars`);
       const words = processText(text);
+      console.log(`[API] /api/extract: extracted ${words.length} words in ${Date.now() - start}ms`);
       res.json(words);
     } catch (e: any) {
-      console.error(e);
+      console.error(`[API Error] /api/extract failed after ${Date.now() - start}ms:`, e.message);
       res.status(500).json({ error: e.message });
     }
   });
 
   app.post("/api/update-words", (req, res) => {
+    const start = Date.now();
     try {
       const { words } = req.body;
       if (!Array.isArray(words)) {
         return res.status(400).json({ error: "Invalid words array" });
       }
 
-      const results = words.map((w: any) => {
-        const wordStr = w.word;
+      console.log(`[API] /api/update-words: scoring ${words.length} words`);
+      const results = words.map((w: Record<string, unknown>) => {
+        const wordStr = w.word as string | undefined;
         if (!wordStr) return w;
 
         const entries = getCachedDictionaryEntries(wordStr);
@@ -213,9 +131,10 @@ async function startServer() {
         };
       });
 
+      console.log(`[API] /api/update-words: completed in ${Date.now() - start}ms`);
       res.json(results);
     } catch (e: any) {
-      console.error(e);
+      console.error(`[API Error] /api/update-words failed after ${Date.now() - start}ms:`, e.message);
       res.status(500).json({ error: e.message });
     }
   });
