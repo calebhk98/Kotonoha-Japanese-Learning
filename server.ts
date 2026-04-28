@@ -191,10 +191,16 @@ async function startServer() {
 
   app.use(express.json());
 
+  app.use((req, _res, next) => {
+    console.log(`[Server] ${req.method} ${req.path}`);
+    next();
+  });
+
   const MAX_TEXT_LENGTH = 50000;
   const JAPANESE_SCRIPT = /[぀-ゟ゠-ヿ一-鿿]/;
 
   app.post("/api/extract", (req, res) => {
+    const start = Date.now();
     try {
       const { text } = req.body;
       if (!text) {
@@ -207,21 +213,25 @@ async function startServer() {
         return res.status(400).json({ error: "Text must contain Japanese characters" });
       }
 
+      console.log(`[API] /api/extract: processing ${text.length} chars`);
       const words = processText(text);
+      console.log(`[API] /api/extract: extracted ${words.length} words in ${Date.now() - start}ms`);
       res.json(words);
     } catch (e: any) {
-      console.error(e);
+      console.error(`[API Error] /api/extract failed after ${Date.now() - start}ms:`, e.message);
       res.status(500).json({ error: e.message });
     }
   });
 
   app.post("/api/update-words", (req, res) => {
+    const start = Date.now();
     try {
       const { words } = req.body;
       if (!Array.isArray(words)) {
         return res.status(400).json({ error: "Invalid words array" });
       }
 
+      console.log(`[API] /api/update-words: scoring ${words.length} words`);
       const results = words.map((w: Record<string, unknown>) => {
         const wordStr = w.word as string | undefined;
         if (!wordStr) return w;
@@ -239,9 +249,10 @@ async function startServer() {
         };
       });
 
+      console.log(`[API] /api/update-words: completed in ${Date.now() - start}ms`);
       res.json(results);
     } catch (e: any) {
-      console.error(e);
+      console.error(`[API Error] /api/update-words failed after ${Date.now() - start}ms:`, e.message);
       res.status(500).json({ error: e.message });
     }
   });

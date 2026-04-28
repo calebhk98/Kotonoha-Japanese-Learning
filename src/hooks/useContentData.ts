@@ -13,7 +13,9 @@ export function useContentData() {
     const savedKnownWords = localStorage.getItem('knownWords');
     if (savedKnownWords) {
       try {
-        setKnownWords(new Set(JSON.parse(savedKnownWords)));
+        const parsed = JSON.parse(savedKnownWords);
+        setKnownWords(new Set(parsed));
+        console.log(`[Storage] Restored ${parsed.length} known words from localStorage`);
       } catch (e) {
         console.error("Failed to parse known words from localStorage:", e);
       }
@@ -34,8 +36,10 @@ export function useContentData() {
         }
         if (isValid) {
           setContentVocab(parsed);
+          console.log(`[Storage] Restored vocab cache for ${Object.keys(parsed).length} content items`);
         } else {
           localStorage.removeItem('contentVocab');
+          console.warn("[Storage] Discarded outdated vocab cache (missing jlptScore/highestGrade)");
         }
       } catch (e) {
         console.error("Failed to parse content vocab from localStorage:", e);
@@ -80,15 +84,17 @@ export function useContentData() {
 
     loadingContentRef.current[content.id] = true;
     setLoadingContent(prev => ({ ...prev, [content.id]: true }));
+    console.log(`[Vocab] Loading vocabulary for "${content.id}"`);
     try {
       const words = await extractVocabulary(content.text);
+      console.log(`[Vocab] Loaded ${words.length} words for "${content.id}"`);
       setContentVocab(prev => {
         const next = { ...prev, [content.id]: words };
         localStorage.setItem('contentVocab', JSON.stringify(next));
         return next;
       });
     } catch (err) {
-      console.error("Error loading vocab for", content.id, err);
+      console.error(`[Vocab] Failed to load vocabulary for "${content.id}":`, err);
     } finally {
       loadingContentRef.current[content.id] = false;
       setLoadingContent(prev => ({ ...prev, [content.id]: false }));
@@ -136,6 +142,7 @@ export function useContentData() {
   const clearContentVocab = useCallback(() => {
     setContentVocab({});
     localStorage.removeItem('contentVocab');
+    console.log("[Storage] Vocab cache cleared");
   }, []);
 
   const updateWord = useCallback((wordStr: string, updatedWord: WordInfo) => {
