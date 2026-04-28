@@ -152,7 +152,7 @@ export function useContentData() {
   // If all words are known, difficulty is 0.
   const getContentStatus = useCallback((contentId: string) => {
     const words = contentVocab[contentId];
-    if (!words) return { difficulty: 0, unknownCount: 0, totalCount: 0, score: 0, totalUnknownScore: 0, unknownWords: [] };
+    if (!words) return { difficulty: 0, unknownCount: 0, totalCount: 0, score: 0, totalUnknownScore: 0, unknownWords: [], knownWords: [], comprehension: 0 };
 
     const unknownWords = words.filter(w => !knownWords.has(w.word));
     const knownVocab = words.filter(w => knownWords.has(w.word));
@@ -162,6 +162,7 @@ export function useContentData() {
 
     const avgScore = unknownWords.length > 0 ? Math.round(totalUnknownScore / unknownWords.length) : 0;
     const difficultyScore = totalUnknownScore + (totalKnownScore * 0.5);
+    const comprehension = words.length > 0 ? Math.round((knownVocab.length / words.length) * 100) : 0;
 
     return {
       difficulty: avgScore,
@@ -170,7 +171,8 @@ export function useContentData() {
       totalCount: words.length,
       score: difficultyScore,
       unknownWords,
-      knownWords: knownVocab
+      knownWords: knownVocab,
+      comprehension,
     };
   }, [contentVocab, knownWords]);
 

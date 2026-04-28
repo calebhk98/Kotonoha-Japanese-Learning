@@ -37,12 +37,18 @@ function processText(text: string) {
   const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
   const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
+  // Count how many times each base form appears (for frequencyInContent)
+  const baseFormCounts = new Map<string, number>();
   const validWords = new Set<string>();
+
   for (const token of tokens) {
     if (token.surface_form.trim() === '' || isPunctuation(token.surface_form) || isSingleKana(token.surface_form)) continue;
 
     const word = token.basic_form && token.basic_form !== '*' ? token.basic_form : token.surface_form;
-    if (!isSingleKana(word)) validWords.add(word);
+    if (!isSingleKana(word)) {
+      validWords.add(word);
+      baseFormCounts.set(word, (baseFormCounts.get(word) ?? 0) + 1);
+    }
   }
 
   const results = [];
@@ -61,7 +67,8 @@ function processText(text: string) {
     }
 
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
-    results.push({ word: wordStr, reading, meaning, jlpt, joyo, score, breakdown });
+    const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
+    results.push({ word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent });
   }
 
   return results;
