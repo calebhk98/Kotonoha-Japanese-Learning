@@ -1,0 +1,6 @@
+{
+  "name": "Kotonoha Japanese Learning",
+  "description": "An AI-powered Japanese learning app that dynamically scores content difficulty based on vocabulary complexity, tracks your known words, and generates custom learning lessons before consuming media.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
