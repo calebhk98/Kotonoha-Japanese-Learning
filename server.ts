@@ -191,11 +191,20 @@ async function startServer() {
 
   app.use(express.json());
 
+  const MAX_TEXT_LENGTH = 50000;
+  const JAPANESE_SCRIPT = /[぀-ゟ゠-ヿ一-鿿]/;
+
   app.post("/api/extract", (req, res) => {
     try {
       const { text } = req.body;
       if (!text) {
         return res.status(400).json({ error: "No text provided" });
+      }
+      if (typeof text !== "string" || text.length > MAX_TEXT_LENGTH) {
+        return res.status(400).json({ error: `Text exceeds the ${MAX_TEXT_LENGTH} character limit` });
+      }
+      if (!JAPANESE_SCRIPT.test(text)) {
+        return res.status(400).json({ error: "Text must contain Japanese characters" });
       }
 
       const words = processText(text);
