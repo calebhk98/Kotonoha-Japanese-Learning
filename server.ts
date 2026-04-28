@@ -2,8 +2,18 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
-import kanjiData from "kanji-data";
 import kuromoji from "kuromoji";
+import {
+  DictionaryVariant,
+  DictionaryEntry,
+  FindBestVariantResult,
+  JLPT_SCORES,
+  JOYO_PENALTIES,
+  getFrequencyPenalty,
+  getWordScoreBreakdown,
+  getCachedDictionaryEntries,
+  findBestVariant,
+} from "./src/lib/scoring.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,134 +28,6 @@ kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
   }
 });
 
-interface DictionaryVariant {
-  written: string;
-  pronounced: string;
-  priorities?: string[];
-}
-
-interface DictionaryEntry {
-  meanings: Array<{ glosses: string[] }>;
-  variants: DictionaryVariant[];
-}
-
-interface FindBestVariantResult {
-  variant: DictionaryVariant | null;
-  entry: DictionaryEntry | null;
-  score: number;
-}
-
-const JLPT_SCORES: Record<number, number> = { 5: 15, 4: 30, 3: 50, 2: 70, 1: 90, 0: 100 };
-const JOYO_PENALTIES: Record<number, number> = { 1: 5, 2: 7, 3: 10, 4: 12, 5: 15, 6: 20, 8: 25, 9: 30 };
-
-function getFrequencyPenalty(variant: DictionaryVariant | null, wordStr: string): number {
-  const priorities = variant?.priorities || [];
-
-  if (variant === null && /^[ぁ-ん]{1,3}$/.test(wordStr)) return -20;
-
-  const hasPriority = (p: string) => priorities.includes(p);
-
-  if (hasPriority('news1') || hasPriority('ichi1')) return -20;
-  if (hasPriority('news2') || hasPriority('ichi2')) return -10;
-  if (hasPriority('gai1') || hasPriority('spec1')) return 0;
-  if (hasPriority('gai2') || hasPriority('spec2')) return 5;
-
-  const nfTag = priorities.find((p: string) => p.startsWith('nf'));
-  if (nfTag) {
-    const rank = parseInt(nfTag.slice(2), 10);
-    if (rank <= 5) return 10;
-    if (rank <= 10) return 15;
-    if (rank <= 20) return 20;
-    if (rank <= 30) return 30;
-    return 40;
-  }
-
-  return 50;
-}
-
-function getWordScoreBreakdown(wordStr: string, variant: DictionaryVariant | null) {
-  let hardestJlpt = 6;
-  let hasKanji = false;
-  let allJoyo = true;
-  let highestGrade: number | null = null;
-  const jlptValues: number[] = [];
-  const gradeValues: number[] = [];
-
-  const kanjis = kanjiData.extractKanji(wordStr);
-
-  for (const k of kanjis) {
-    hasKanji = true;
-    const meta = kanjiData.get(k);
-    if (!meta) continue;
-
-    const jlpt = meta.jlpt ?? 0;
-    jlptValues.push(jlpt);
-    if (jlpt < hardestJlpt) hardestJlpt = jlpt;
-
-    if (meta.grade === null || meta.grade > 8) {
-      allJoyo = false;
-      highestGrade = 9;
-    } else {
-      gradeValues.push(meta.grade);
-      highestGrade = highestGrade === null ? meta.grade : Math.max(highestGrade, meta.grade);
-    }
-  }
-
-  const finalJlpt = hasKanji && hardestJlpt !== 6 ? hardestJlpt : (hasKanji ? 0 : 5);
-  const jlptScore = JLPT_SCORES[finalJlpt] || 100;
-  const joyoPenalty = (hasKanji && highestGrade !== null) ? (JOYO_PENALTIES[highestGrade] || 0) : 0;
-  const freqPenalty = getFrequencyPenalty(variant, wordStr);
-  const score = Math.min(100, Math.max(1, jlptScore + joyoPenalty + freqPenalty));
-
-  return {
-    jlpt: finalJlpt,
-    joyo: allJoyo,
-    score,
-    breakdown: {
-      jlptScore,
-      joyoPenalty,
-      highestGrade,
-      freqPenalty,
-      jlptValues,
-      gradeValues,
-      priorities: variant?.priorities || []
-    }
-  };
-}
-
-const wordsCache = new Map<string, DictionaryEntry[]>();
-
-function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
-  if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
-  const entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
-  wordsCache.set(wordStr, entries);
-  return entries;
-}
-
-function findBestVariant(wordStr: string, entries: DictionaryEntry[]): FindBestVariantResult {
-  let best: FindBestVariantResult = { variant: null, entry: null, score: -999 };
-
-  for (const entry of entries) {
-    if (!entry.variants) continue;
-    for (const v of entry.variants) {
-      if (v.written !== wordStr && v.pronounced !== wordStr) continue;
-
-      let score = (v.written === wordStr ? 100 : 0) + (v.priorities?.length ? 50 : 0);
-      const isHiragana = /^[ぁ-ん]+$/.test(wordStr);
-      const hasKanji = /[一-龯]/.test(v.written);
-
-      if (v.written !== wordStr && isHiragana && hasKanji) {
-        score -= v.priorities?.length ? 20 : 200;
-      }
-
-      if (score > best.score) {
-        best = { variant: v, entry, score };
-      }
-    }
-  }
-
-  return best.score >= 0 ? best : { variant: null, entry: null, score: -999 };
-}
 
 function processText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
