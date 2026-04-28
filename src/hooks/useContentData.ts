@@ -14,7 +14,9 @@ export function useContentData() {
     if (savedKnownWords) {
       try {
         setKnownWords(new Set(JSON.parse(savedKnownWords)));
-      } catch (e) { }
+      } catch (e) {
+        console.error("Failed to parse known words from localStorage:", e);
+      }
     }
 
     const savedVocab = localStorage.getItem('contentVocab');
@@ -35,7 +37,9 @@ export function useContentData() {
         } else {
           localStorage.removeItem('contentVocab');
         }
-      } catch (e) { }
+      } catch (e) {
+        console.error("Failed to parse content vocab from localStorage:", e);
+      }
     }
   }, []);
 

@@ -18,10 +18,27 @@ kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
   }
 });
 
+interface DictionaryVariant {
+  written: string;
+  pronounced: string;
+  priorities?: string[];
+}
+
+interface DictionaryEntry {
+  meanings: Array<{ glosses: string[] }>;
+  variants: DictionaryVariant[];
+}
+
+interface FindBestVariantResult {
+  variant: DictionaryVariant | null;
+  entry: DictionaryEntry | null;
+  score: number;
+}
+
 const JLPT_SCORES: Record<number, number> = { 5: 15, 4: 30, 3: 50, 2: 70, 1: 90, 0: 100 };
 const JOYO_PENALTIES: Record<number, number> = { 1: 5, 2: 7, 3: 10, 4: 12, 5: 15, 6: 20, 8: 25, 9: 30 };
 
-function getFrequencyPenalty(variant: any, wordStr: string): number {
+function getFrequencyPenalty(variant: DictionaryVariant | null, wordStr: string): number {
   const priorities = variant?.priorities || [];
 
   if (variant === null && /^[ぁ-ん]{1,3}$/.test(wordStr)) return -20;
@@ -46,7 +63,7 @@ function getFrequencyPenalty(variant: any, wordStr: string): number {
   return 50;
 }
 
-function getWordScoreBreakdown(wordStr: string, variant: any) {
+function getWordScoreBreakdown(wordStr: string, variant: DictionaryVariant | null) {
   let hardestJlpt = 6;
   let hasKanji = false;
   let allJoyo = true;
@@ -96,17 +113,17 @@ function getWordScoreBreakdown(wordStr: string, variant: any) {
   };
 }
 
-const wordsCache = new Map<string, any>();
+const wordsCache = new Map<string, DictionaryEntry[]>();
 
-function getCachedDictionaryEntries(wordStr: string) {
-  if (wordsCache.has(wordStr)) return wordsCache.get(wordStr);
-  const entries = kanjiData.searchWords(wordStr);
+function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
+  if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
+  const entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
   wordsCache.set(wordStr, entries);
   return entries;
 }
 
-function findBestVariant(wordStr: string, entries: any[]) {
-  let best = { variant: null, entry: null, score: -999 };
+function findBestVariant(wordStr: string, entries: DictionaryEntry[]): FindBestVariantResult {
+  let best: FindBestVariantResult = { variant: null, entry: null, score: -999 };
 
   for (const entry of entries) {
     if (!entry.variants) continue;
@@ -196,8 +213,8 @@ async function startServer() {
         return res.status(400).json({ error: "Invalid words array" });
       }
 
-      const results = words.map((w: any) => {
-        const wordStr = w.word;
+      const results = words.map((w: Record<string, unknown>) => {
+        const wordStr = w.word as string | undefined;
         if (!wordStr) return w;
 
         const entries = getCachedDictionaryEntries(wordStr);
