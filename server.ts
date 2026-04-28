@@ -37,12 +37,18 @@ function processText(text: string) {
   const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
   const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
+  // Count how many times each base form appears (for frequencyInContent)
+  const baseFormCounts = new Map<string, number>();
   const validWords = new Set<string>();
+
   for (const token of tokens) {
     if (token.surface_form.trim() === '' || isPunctuation(token.surface_form) || isSingleKana(token.surface_form)) continue;
 
     const word = token.basic_form && token.basic_form !== '*' ? token.basic_form : token.surface_form;
-    if (!isSingleKana(word)) validWords.add(word);
+    if (!isSingleKana(word)) {
+      validWords.add(word);
+      baseFormCounts.set(word, (baseFormCounts.get(word) ?? 0) + 1);
+    }
   }
 
   const results = [];
@@ -61,7 +67,8 @@ function processText(text: string) {
     }
 
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
-    results.push({ word: wordStr, reading, meaning, jlpt, joyo, score, breakdown });
+    const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
+    results.push({ word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent });
   }
 
   return results;
@@ -135,6 +142,89 @@ async function startServer() {
       res.json(results);
     } catch (e: any) {
       console.error(`[API Error] /api/update-words failed after ${Date.now() - start}ms:`, e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  const WK_HEADERS = (token: string) => ({
+    'Authorization': `Bearer ${token}`,
+    'Wanikani-Revision': '20170710',
+    'Content-Type': 'application/json',
+  });
+
+  app.post("/api/wanikani/validate", async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ valid: false, error: 'No token provided' });
+      }
+      const r = await fetch('https://api.wanikani.com/v2/user', { headers: WK_HEADERS(token) });
+      if (!r.ok) return res.json({ valid: false });
+      const data = await r.json() as { data: { username: string; level: number } };
+      res.json({ valid: true, username: data.data.username, level: data.data.level });
+    } catch (e: any) {
+      console.error('[WaniKani] validate error:', e.message);
+      res.status(500).json({ valid: false, error: e.message });
+    }
+  });
+
+  app.post("/api/wanikani/sync", async (req, res) => {
+    const start = Date.now();
+    try {
+      const { token } = req.body;
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ error: 'No token provided' });
+      }
+
+      // Fetch all started kanji assignments (paginated)
+      const assignments = new Map<number, number>(); // subject_id -> srs_stage
+      let assignmentsUrl: string | null = 'https://api.wanikani.com/v2/assignments?subject_types=kanji&started=true';
+      while (assignmentsUrl) {
+        const r = await fetch(assignmentsUrl, { headers: WK_HEADERS(token) });
+        if (!r.ok) return res.status(401).json({ error: 'WaniKani API error' });
+        const body = await r.json() as {
+          data: Array<{ data: { subject_id: number; srs_stage: number } }>;
+          pages: { next_url: string | null };
+        };
+        for (const item of body.data) {
+          assignments.set(item.data.subject_id, item.data.srs_stage);
+        }
+        assignmentsUrl = body.pages?.next_url ?? null;
+      }
+
+      console.log(`[WaniKani] Fetched ${assignments.size} kanji assignments in ${Date.now() - start}ms`);
+
+      // Fetch subjects for those IDs to get characters (batch by 500)
+      const subjectIds = Array.from(assignments.keys());
+      const characters = new Map<number, string>(); // id -> kanji character
+      for (let i = 0; i < subjectIds.length; i += 500) {
+        const batch = subjectIds.slice(i, i + 500).join(',');
+        let subjectsUrl: string | null = `https://api.wanikani.com/v2/subjects?ids=${batch}`;
+        while (subjectsUrl) {
+          const r = await fetch(subjectsUrl, { headers: WK_HEADERS(token) });
+          if (!r.ok) break;
+          const body = await r.json() as {
+            data: Array<{ id: number; data: { characters: string } }>;
+            pages: { next_url: string | null };
+          };
+          for (const item of body.data) {
+            if (item.data.characters) characters.set(item.id, item.data.characters);
+          }
+          subjectsUrl = body.pages?.next_url ?? null;
+        }
+      }
+
+      // Build character -> srs_stage map
+      const result: Record<string, number> = {};
+      for (const [subjectId, srsStage] of assignments) {
+        const char = characters.get(subjectId);
+        if (char) result[char] = srsStage;
+      }
+
+      console.log(`[WaniKani] Sync complete: ${Object.keys(result).length} kanji mapped in ${Date.now() - start}ms`);
+      res.json({ data: result, kanjiCount: Object.keys(result).length });
+    } catch (e: any) {
+      console.error('[WaniKani] sync error:', e.message);
       res.status(500).json({ error: e.message });
     }
   });

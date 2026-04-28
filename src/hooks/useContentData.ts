@@ -2,11 +2,23 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { WordInfo } from '../types';
 import { extractVocabulary } from '../lib/api';
 import { Content } from '../data/content';
+import { WaniKaniData, getWaniKaniMultiplier, loadCachedWaniKaniData } from '../lib/wanikani';
+
+function applyWaniKaniToWords(words: WordInfo[], wkData: WaniKaniData): WordInfo[] {
+  return words.map(word => {
+    const multiplier = getWaniKaniMultiplier(word.word, wkData);
+    if (multiplier === 1.0) return word;
+    const baseScore = word.baseScore ?? word.score;
+    const adjustedScore = Math.max(1, Math.round(baseScore * multiplier));
+    return { ...word, score: adjustedScore, baseScore, wkMultiplier: multiplier };
+  });
+}
 
 export function useContentData() {
   const [knownWords, setKnownWords] = useState<Set<string>>(new Set());
   const [contentVocab, setContentVocab] = useState<Record<string, WordInfo[]>>({});
   const [loadingContent, setLoadingContent] = useState<Record<string, boolean>>({});
+  const [wkData, setWkData] = useState<WaniKaniData | null>(null);
 
   // Load from local storage
   useEffect(() => {
@@ -45,7 +57,37 @@ export function useContentData() {
         console.error("Failed to parse content vocab from localStorage:", e);
       }
     }
+
+    const cached = loadCachedWaniKaniData();
+    if (cached) {
+      setWkData(cached.data);
+      console.log(`[WaniKani] Loaded ${cached.kanjiCount} kanji SRS entries from cache`);
+    }
   }, []);
+
+  // Re-apply WaniKani multipliers to all cached vocab when wkData changes
+  const wkDataRef = useRef<WaniKaniData | null>(null);
+  useEffect(() => {
+    wkDataRef.current = wkData;
+  }, [wkData]);
+
+  const applyWaniKaniToAllVocab = useCallback((data: WaniKaniData) => {
+    setContentVocab(prev => {
+      const next: Record<string, WordInfo[]> = {};
+      for (const [id, words] of Object.entries(prev) as [string, WordInfo[]][]) {
+        next[id] = applyWaniKaniToWords(words, data);
+      }
+      return next;
+    });
+  }, []);
+
+  const refreshWaniKaniData = useCallback(() => {
+    const cached = loadCachedWaniKaniData();
+    if (cached) {
+      setWkData(cached.data);
+      applyWaniKaniToAllVocab(cached.data);
+    }
+  }, [applyWaniKaniToAllVocab]);
 
   const markWordAsKnown = useCallback((word: string) => {
     setKnownWords(prev => {
@@ -86,8 +128,13 @@ export function useContentData() {
     setLoadingContent(prev => ({ ...prev, [content.id]: true }));
     console.log(`[Vocab] Loading vocabulary for "${content.id}"`);
     try {
-      const words = await extractVocabulary(content.text);
+      let words = await extractVocabulary(content.text);
       console.log(`[Vocab] Loaded ${words.length} words for "${content.id}"`);
+
+      if (wkDataRef.current) {
+        words = applyWaniKaniToWords(words, wkDataRef.current);
+      }
+
       setContentVocab(prev => {
         const next = { ...prev, [content.id]: words };
         localStorage.setItem('contentVocab', JSON.stringify(next));
@@ -105,32 +152,27 @@ export function useContentData() {
   // If all words are known, difficulty is 0.
   const getContentStatus = useCallback((contentId: string) => {
     const words = contentVocab[contentId];
-    if (!words) return { difficulty: 0, unknownCount: 0, totalCount: 0, score: 0, totalUnknownScore: 0, unknownWords: [] };
+    if (!words) return { difficulty: 0, unknownCount: 0, totalCount: 0, score: 0, totalUnknownScore: 0, unknownWords: [], knownWords: [], comprehension: 0 };
 
     const unknownWords = words.filter(w => !knownWords.has(w.word));
     const knownVocab = words.filter(w => knownWords.has(w.word));
-    
-    // Each word's score is roughly 1-100.
-    // The total difficulty of a piece of content should be the sum of all unknown word scores.
-    // A story with 5 words of score 10 (total 50) is easier than a story with 50 words of score 10 (total 500).
+
     const totalUnknownScore = unknownWords.reduce((acc, w) => acc + w.score, 0);
     const totalKnownScore = knownVocab.reduce((acc, w) => acc + w.score, 0);
-    
+
     const avgScore = unknownWords.length > 0 ? Math.round(totalUnknownScore / unknownWords.length) : 0;
-    
-    // The main sorting score should just be the totalUnknownScore + 0.5 * totalKnownScore
-    // This perfectly captures "# of unknown words" * "difficulty of those words"
-    // Plus a bit of difficulty for the sheer length / complexity of the known words
-    const difficultyScore = totalUnknownScore + (totalKnownScore * 0.5); 
+    const difficultyScore = totalUnknownScore + (totalKnownScore * 0.5);
+    const comprehension = words.length > 0 ? Math.round((knownVocab.length / words.length) * 100) : 0;
 
     return {
-      difficulty: avgScore,          // average word difficulty (1-100)
-      totalUnknownScore,             // absolute difficulty score to sort by
+      difficulty: avgScore,
+      totalUnknownScore,
       unknownCount: unknownWords.length,
       totalCount: words.length,
-      score: difficultyScore,        // sort score
+      score: difficultyScore,
       unknownWords,
-      knownWords: knownVocab
+      knownWords: knownVocab,
+      comprehension,
     };
   }, [contentVocab, knownWords]);
 
@@ -149,7 +191,7 @@ export function useContentData() {
     setContentVocab(prev => {
       const next: Record<string, WordInfo[]> = {};
       let changed = false;
-      
+
       for (const [key, words] of Object.entries(prev) as [string, WordInfo[]][]) {
         let listChanged = false;
         const newWords = words.map(w => {
@@ -162,7 +204,7 @@ export function useContentData() {
         });
         next[key] = listChanged ? newWords : words;
       }
-      
+
       if (changed) {
         localStorage.setItem('contentVocab', JSON.stringify(next));
         return next;
@@ -175,6 +217,7 @@ export function useContentData() {
     knownWords,
     contentVocab,
     loadingContent,
+    wkData,
     markWordAsKnown,
     markWordsAsKnown,
     clearKnownWords,
@@ -182,6 +225,7 @@ export function useContentData() {
     loadVocabForContent,
     getContentStatus,
     updateWord,
-    setContentVocab
+    setContentVocab,
+    refreshWaniKaniData,
   };
 }
