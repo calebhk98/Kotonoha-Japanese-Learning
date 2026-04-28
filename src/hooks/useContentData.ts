@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WordInfo } from '../types';
-import { extractVocabulary } from '../lib/gemini';
+import { extractVocabulary } from '../lib/api';
 import { Content } from '../data/content';
 
 export function useContentData() {
