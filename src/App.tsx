@@ -22,7 +22,13 @@ export default function App() {
 
   const [customContent, setCustomContent] = useState<Content[]>(() => {
     const saved = localStorage.getItem('customContent');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    try {
+      return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to parse custom content from localStorage:", e);
+      return [];
+    }
   });
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const [displayCount, setDisplayCount] = useState(12);
@@ -41,21 +47,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('customContent', JSON.stringify(customContent));
   }, [customContent]);
-
-  // Kick off loading for all content on startup so we can score and sort them
-  useEffect(() => {
-    let mounted = true;
-    const loadAll = async () => {
-      // Process in batches of 5 to not overwhelm the browser/server
-      for (let i = 0; i < ALL_CONTENT.length; i += 5) {
-        if (!mounted) break;
-        const batch = ALL_CONTENT.slice(i, i + 5);
-        await Promise.all(batch.map(content => loadVocabForContent(content)));
-      }
-    };
-    loadAll();
-    return () => { mounted = false; };
-  }, [loadVocabForContent]);
 
   // Sort content by difficulty score
   const sortedContent = [...ALL_CONTENT].sort((a, b) => {
@@ -202,9 +193,9 @@ export default function App() {
                 const isLoading = loadingContent[content.id] || status.totalCount === 0;
 
                 return (
-                  <div 
-                    key={content.id} 
-                    onClick={() => setSelectedContent(content)}
+                  <div
+                    key={content.id}
+                    onClick={() => { loadVocabForContent(content); setSelectedContent(content); }}
                     className="bg-white rounded-3xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all border border-gray-100 group flex flex-col h-full"
                   >
                     <div className="aspect-[4/3] w-full bg-gray-100 relative overflow-hidden">
