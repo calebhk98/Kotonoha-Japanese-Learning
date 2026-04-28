@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { BookOpen, Video, Music, CheckCircle, ChevronRight, PlayCircle, Loader2, Library, Plus } from 'lucide-react';
+import { BookOpen, Video, Music, CheckCircle, ChevronRight, PlayCircle, Loader2, Library, Plus, Settings } from 'lucide-react';
 import { INITIAL_CONTENT, GENERATED_CONTENT, Content } from './data/content';
 import { useContentData } from './hooks/useContentData';
 import { ContentDetail } from './components/ContentDetail';
 import { ImportModal } from './components/ImportModal';
 import { WordDetailModal } from './components/WordDetailModal';
+import { SettingsPage } from './components/SettingsPage';
 import { WordInfo } from './types';
 
 export default function App() {
@@ -18,7 +19,8 @@ export default function App() {
     clearKnownWords,
     clearContentVocab,
     updateWord,
-    setContentVocab
+    setContentVocab,
+    refreshWaniKaniData,
   } = useContentData();
 
   const [customContent, setCustomContent] = useState<Content[]>(() => {
@@ -33,7 +35,7 @@ export default function App() {
   });
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const [displayCount, setDisplayCount] = useState(12);
-  const [view, setView] = useState<'home' | 'vocab' | 'scoring'>('home');
+  const [view, setView] = useState<'home' | 'vocab' | 'scoring' | 'settings'>('home');
   const [showImportOpts, setShowImportOpts] = useState(false);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
   const [editingWord, setEditingWord] = useState<WordInfo | null>(null);
@@ -65,12 +67,13 @@ export default function App() {
 
   if (selectedContent) {
     return (
-      <ContentDetail 
-        content={selectedContent} 
+      <ContentDetail
+        content={selectedContent}
         onBack={() => setSelectedContent(null)}
         status={getContentStatus(selectedContent.id)}
         loading={loadingContent[selectedContent.id]}
         markWordsAsKnown={markWordsAsKnown}
+        knownWordSet={knownWords}
         onForceReload={() => loadVocabForContent(selectedContent, true)}
         onUpdateContent={(updatedContent) => {
           let updatedVocab = false;
@@ -147,11 +150,17 @@ export default function App() {
             >
               My Vocab
             </button>
-            <button 
+            <button
               onClick={() => setView('scoring')}
               className={`text-sm font-medium transition-colors ${view === 'scoring' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
             >
               Scoring Guide
+            </button>
+            <button
+              onClick={() => setView('settings')}
+              className={`text-sm font-medium transition-colors flex items-center gap-1 ${view === 'settings' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+            >
+              <Settings className="w-4 h-4" /> Settings
             </button>
             <div className="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
               <CheckCircle className="w-4 h-4 text-green-600" />
@@ -181,6 +190,10 @@ export default function App() {
       )}
 
       <main className="max-w-5xl mx-auto p-6 space-y-8">
+        {view === 'settings' && (
+          <SettingsPage onWaniKaniSync={refreshWaniKaniData} />
+        )}
+
         {view === 'home' && (
           <section>
             <div className="mb-4 flex items-baseline justify-between">

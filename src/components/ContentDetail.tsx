@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ArrowLeft, PlayCircle, GraduationCap, Loader2, BookOpen } from 'lucide-react';
+import { ArrowLeft, PlayCircle, GraduationCap, Loader2, BookOpen, Download } from 'lucide-react';
 import { Content } from '../data/content';
 import { WordInfo } from '../types';
 import { LessonProcess } from './LessonProcess';
 import { ContentReader } from './ContentReader';
+import { AnkiExportModal } from './AnkiExportModal';
 
 interface Status {
   difficulty: number;
@@ -15,30 +16,33 @@ interface Status {
   knownWords: WordInfo[];
 }
 
-export function ContentDetail({ 
-  content, 
-  onBack, 
-  status, 
+export function ContentDetail({
+  content,
+  onBack,
+  status,
   loading,
   markWordsAsKnown,
   onForceReload,
   onUpdateContent,
-  onAddWord
-}: { 
-  content: Content; 
-  onBack: () => void; 
-  status: Status; 
+  onAddWord,
+  knownWordSet,
+}: {
+  content: Content;
+  onBack: () => void;
+  status: Status;
   loading: boolean;
   markWordsAsKnown: (words: string[]) => void;
   onForceReload?: () => void;
   onUpdateContent?: (updatedContent: Content) => void;
   onAddWord?: (addedWordStr: string) => void;
+  knownWordSet?: Set<string>;
 }) {
   const [view, setView] = useState<'intro' | 'lesson' | 'consume'>('intro');
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(content.title);
   const [editText, setEditText] = useState(content.text);
   const [showAllWords, setShowAllWords] = useState(false);
+  const [showAnkiModal, setShowAnkiModal] = useState(false);
 
   if (view === 'lesson') {
     return (
@@ -141,7 +145,7 @@ export function ContentDetail({
                 >
                   Add Custom Word
                 </button>
-                <button 
+                <button
                   onClick={() => {
                     const data = {
                       content,
@@ -158,6 +162,13 @@ export function ContentDetail({
                   className="text-xs font-medium text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors"
                 >
                   Export Story JSON
+                </button>
+                <button
+                  onClick={() => setShowAnkiModal(true)}
+                  disabled={loading || status.totalCount === 0}
+                  className="text-xs font-medium text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-3.5 h-3.5" /> Export to Anki
                 </button>
                 {onForceReload && (
                   <button 
@@ -334,6 +345,15 @@ export function ContentDetail({
           </div>
         </div>
       </div>
+
+      {showAnkiModal && (
+        <AnkiExportModal
+          contentTitle={content.title}
+          words={[...status.unknownWords, ...status.knownWords]}
+          knownWordSet={knownWordSet ?? new Set()}
+          onClose={() => setShowAnkiModal(false)}
+        />
+      )}
     </div>
   );
 }
