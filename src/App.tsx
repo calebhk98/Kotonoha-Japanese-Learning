@@ -8,14 +8,15 @@ import { WordDetailModal } from './components/WordDetailModal';
 import { WordInfo } from './types';
 
 export default function App() {
-  const { 
-    knownWords, 
-    contentVocab, 
-    loadingContent, 
-    loadVocabForContent, 
+  const {
+    knownWords,
+    contentVocab,
+    loadingContent,
+    loadVocabForContent,
     getContentStatus,
     markWordsAsKnown,
     clearKnownWords,
+    clearContentVocab,
     updateWord,
     setContentVocab
   } = useContentData();
@@ -264,11 +265,8 @@ export default function App() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
               <h2 className="text-2xl font-semibold tracking-tight"><Library className="w-6 h-6 inline-block mr-2 text-indigo-600" /> Your Vocabulary</h2>
               <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
-                <button 
-                  onClick={() => {
-                    localStorage.removeItem('contentVocab');
-                    window.location.href = window.location.href.split('?')[0];
-                  }}
+                <button
+                  onClick={() => { clearContentVocab(); setDisplayCount(12); }}
                   className="text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors font-medium border border-indigo-200"
                 >
                   Clear Vocab Cache

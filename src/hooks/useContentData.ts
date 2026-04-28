@@ -133,6 +133,11 @@ export function useContentData() {
     localStorage.removeItem('knownWords');
   }, []);
 
+  const clearContentVocab = useCallback(() => {
+    setContentVocab({});
+    localStorage.removeItem('contentVocab');
+  }, []);
+
   const updateWord = useCallback((wordStr: string, updatedWord: WordInfo) => {
     setContentVocab(prev => {
       const next: Record<string, WordInfo[]> = {};
@@ -166,6 +171,7 @@ export function useContentData() {
     markWordAsKnown,
     markWordsAsKnown,
     clearKnownWords,
+    clearContentVocab,
     loadVocabForContent,
     getContentStatus,
     updateWord,
