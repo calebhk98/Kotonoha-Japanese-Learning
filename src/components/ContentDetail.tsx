@@ -14,6 +14,7 @@ interface Status {
   score: number;
   unknownWords: WordInfo[];
   knownWords: WordInfo[];
+  comprehension: number;
 }
 
 export function ContentDetail({
@@ -201,10 +202,19 @@ export function ContentDetail({
                   There are <strong className="text-indigo-600">{status.unknownCount}</strong> words you haven't learned yet. We recommend doing a quick lesson before jumping in.
                 </p>
                 <div className="grid grid-cols-1 gap-4">
-                  {(showAllWords ? status.unknownWords : status.unknownWords.slice(0, 10)).map((w, i) => (
+                  {/* Sort by frequency in content descending (#14) */}
+                  {(showAllWords
+                    ? [...status.unknownWords].sort((a, b) => (b.frequencyInContent ?? 0) - (a.frequencyInContent ?? 0))
+                    : [...status.unknownWords].sort((a, b) => (b.frequencyInContent ?? 0) - (a.frequencyInContent ?? 0)).slice(0, 10)
+                  ).map((w, i) => (
                     <div key={i} className="border border-gray-100 bg-gray-50 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                       <div>
-                        <div className="text-xs text-gray-500">{w.reading}</div>
+                        <div className="text-xs text-gray-500 flex items-center gap-2">
+                          <span>{w.reading}</span>
+                          {w.frequencyInContent && w.frequencyInContent > 1 && (
+                            <span className="bg-indigo-100 text-indigo-700 font-semibold px-1.5 py-0.5 rounded text-[10px]">×{w.frequencyInContent}</span>
+                          )}
+                        </div>
                         <div className="font-bold text-lg">{w.word}</div>
                         <div className="text-sm font-medium text-gray-700 mt-1">{w.meaning}</div>
                       </div>
@@ -329,6 +339,23 @@ export function ContentDetail({
           <div className="bg-[#F9F8F6] p-6 rounded-3xl border border-[#EBE8E0]">
              <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 mb-4">Content Stats</h3>
              <ul className="space-y-3">
+               {/* Comprehension % (#11) */}
+               {!loading && status.totalCount > 0 && (
+                 <li className="flex flex-col gap-1.5">
+                   <div className="flex justify-between items-center text-sm">
+                     <span className="text-gray-500">Comprehension</span>
+                     <span className={`font-bold text-sm ${status.comprehension >= 90 ? 'text-green-600' : status.comprehension >= 70 ? 'text-yellow-600' : 'text-red-500'}`}>
+                       {status.comprehension}% known
+                     </span>
+                   </div>
+                   <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                     <div
+                       className={`h-full rounded-full transition-all ${status.comprehension >= 90 ? 'bg-green-500' : status.comprehension >= 70 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                       style={{ width: `${status.comprehension}%` }}
+                     />
+                   </div>
+                 </li>
+               )}
                <li className="flex justify-between items-center text-sm">
                  <span className="text-gray-500">Total Unique Words</span>
                  <span className="font-medium">{loading ? '-' : status.totalCount}</span>
