@@ -35,10 +35,16 @@ export interface WaniKaniSyncResult {
 const KANJI_REGEX = /[一-龯]/g;
 
 export function getWaniKaniMultiplier(word: string, wkData: WaniKaniData): number {
-  const kanjis = word.match(KANJI_REGEX);
-  if (!kanjis || kanjis.length === 0) return 1.0;
+  const stage = getWaniKaniSrsStage(word, wkData);
+  if (stage === null) return 1.0;
+  return WK_MULTIPLIERS[stage] ?? 1.0;
+}
 
-  // Use the minimum SRS stage (least confident kanji) to determine the multiplier.
+export function getWaniKaniSrsStage(word: string, wkData: WaniKaniData): number | null {
+  const kanjis = word.match(KANJI_REGEX);
+  if (!kanjis || kanjis.length === 0) return null;
+
+  // Use the minimum SRS stage (least confident kanji) to determine the stage.
   // If a kanji hasn't been started in WaniKani, it contributes no adjustment.
   let minStage: number | null = null;
   for (const k of kanjis) {
@@ -48,8 +54,7 @@ export function getWaniKaniMultiplier(word: string, wkData: WaniKaniData): numbe
     }
   }
 
-  if (minStage === null) return 1.0;
-  return WK_MULTIPLIERS[minStage] ?? 1.0;
+  return minStage;
 }
 
 export function loadCachedWaniKaniData(): WaniKaniSyncResult | null {

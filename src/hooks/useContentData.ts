@@ -2,15 +2,22 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { WordInfo } from '../types';
 import { extractVocabulary } from '../lib/api';
 import { Content } from '../data/content';
-import { WaniKaniData, getWaniKaniMultiplier, loadCachedWaniKaniData } from '../lib/wanikani';
+import { WaniKaniData, getWaniKaniMultiplier, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
 
 function applyWaniKaniToWords(words: WordInfo[], wkData: WaniKaniData): WordInfo[] {
   return words.map(word => {
+    const srsStage = getWaniKaniSrsStage(word.word, wkData);
     const multiplier = getWaniKaniMultiplier(word.word, wkData);
-    if (multiplier === 1.0) return word;
+
+    const updatedWord: WordInfo = { ...word };
+    if (srsStage !== null) {
+      updatedWord.wkSrsStage = srsStage;
+    }
+
+    if (multiplier === 1.0) return updatedWord;
     const baseScore = word.baseScore ?? word.score;
     const adjustedScore = Math.max(1, Math.round(baseScore * multiplier));
-    return { ...word, score: adjustedScore, baseScore, wkMultiplier: multiplier };
+    return { ...updatedWord, score: adjustedScore, baseScore, wkMultiplier: multiplier };
   });
 }
 
@@ -150,18 +157,32 @@ export function useContentData() {
 
   // Difficulty is the average difficulty of UNKNOWN words.
   // If all words are known, difficulty is 0.
+  // Words are considered known if: manually marked OR WaniKani SRS stage >= 7 (Master and above)
+  const isWordKnown = useCallback((word: WordInfo): boolean => {
+    if (knownWords.has(word.word)) return true;
+    if (word.wkSrsStage !== undefined && word.wkSrsStage >= 7) return true;
+    return false;
+  }, [knownWords]);
+
   const getContentStatus = useCallback((contentId: string) => {
     const words = contentVocab[contentId];
     if (!words) return { difficulty: 0, unknownCount: 0, totalCount: 0, score: 0, totalUnknownScore: 0, unknownWords: [], knownWords: [], comprehension: 0 };
 
-    const unknownWords = words.filter(w => !knownWords.has(w.word));
-    const knownVocab = words.filter(w => knownWords.has(w.word));
+    const unknownWords = words.filter(w => !isWordKnown(w));
+    const knownVocab = words.filter(w => isWordKnown(w));
 
     const totalUnknownScore = unknownWords.reduce((acc, w) => acc + w.score, 0);
-    const totalKnownScore = knownVocab.reduce((acc, w) => acc + w.score, 0);
+
+    // Known words reduce difficulty, but use WaniKani multiplier if available, otherwise 0.5
+    const totalKnownScore = knownVocab.reduce((acc, w) => {
+      if (w.wkSrsStage !== undefined) {
+        return acc + w.score; // Already has WaniKani multiplier applied
+      }
+      return acc + (w.score * 0.5); // Manually marked as known: apply 0.5 reduction
+    }, 0);
 
     const avgScore = unknownWords.length > 0 ? Math.round(totalUnknownScore / unknownWords.length) : 0;
-    const difficultyScore = totalUnknownScore + (totalKnownScore * 0.5);
+    const difficultyScore = totalUnknownScore + totalKnownScore;
     const comprehension = words.length > 0 ? Math.round((knownVocab.length / words.length) * 100) : 0;
 
     return {
@@ -174,7 +195,7 @@ export function useContentData() {
       knownWords: knownVocab,
       comprehension,
     };
-  }, [contentVocab, knownWords]);
+  }, [contentVocab, isWordKnown]);
 
   const clearKnownWords = useCallback(() => {
     setKnownWords(new Set());
