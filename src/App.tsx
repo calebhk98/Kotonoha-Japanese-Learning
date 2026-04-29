@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BookOpen, Video, Music, CheckCircle, ChevronRight, PlayCircle, Loader2, Library, Plus, Settings, Search, X } from 'lucide-react';
 import { INITIAL_CONTENT, GENERATED_CONTENT, Content } from './data/content';
-import { useContentData } from './hooks/useContentData';
+import { useContentData, applyWaniKaniToWords } from './hooks/useContentData';
 import { ContentDetail } from './components/ContentDetail';
 import { ImportModal } from './components/ImportModal';
 import { WordDetailModal } from './components/WordDetailModal';
@@ -13,6 +13,7 @@ export default function App() {
     knownWords,
     contentVocab,
     loadingContent,
+    wkData,
     loadVocabForContent,
     getContentStatus,
     markWordsAsKnown,
@@ -87,7 +88,12 @@ export default function App() {
         let addedCount = 0;
         for (const result of results) {
           if (result.words && Array.isArray(result.words)) {
-            newVocab[result.id] = result.words;
+            // Apply WaniKani multipliers if available
+            let words = result.words;
+            if (wkData) {
+              words = applyWaniKaniToWords(words, wkData);
+            }
+            newVocab[result.id] = words;
             addedCount++;
           }
         }
