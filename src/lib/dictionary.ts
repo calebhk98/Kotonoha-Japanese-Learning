@@ -60,6 +60,10 @@ export class KanjiDataDictionary implements Dictionary {
 // ==================== Unofficial Jisho API Dictionary ====================
 export class JishoApiDictionary implements Dictionary {
   private initialized = false;
+  private cache = new Map<string, WordLookupResult | null>();
+  private requestQueue: Array<() => Promise<void>> = [];
+  private activeRequests = 0;
+  private maxConcurrent = 2; // Limit to 2 concurrent requests to avoid overwhelming Jisho
 
   async initialize(): Promise<void> {
     try {
@@ -67,7 +71,7 @@ export class JishoApiDictionary implements Dictionary {
       const testRes = await this.fetchFromJisho("test");
       if (testRes) {
         this.initialized = true;
-        console.log("[Dictionary] Jisho API initialized");
+        console.log("[Dictionary] Jisho API initialized (max 2 concurrent requests)");
       }
     } catch (e) {
       console.warn("[Dictionary] Jisho API unavailable:", (e as any).message);
@@ -78,9 +82,30 @@ export class JishoApiDictionary implements Dictionary {
   private async fetchFromJisho(word: string): Promise<any> {
     const encoded = encodeURIComponent(word);
     const url = `https://jisho.org/api/v1/search/words?keyword=${encoded}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) return null;
     return await res.json();
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.activeRequests >= this.maxConcurrent || this.requestQueue.length === 0) {
+      return;
+    }
+
+    this.activeRequests++;
+    const task = this.requestQueue.shift();
+    if (task) {
+      try {
+        await task();
+      } catch (e) {
+        console.error("[Dictionary] Queue task error:", (e as any).message);
+      }
+    }
+    this.activeRequests--;
+
+    if (this.requestQueue.length > 0) {
+      this.processQueue();
+    }
   }
 
   isInitialized(): boolean {
@@ -90,25 +115,46 @@ export class JishoApiDictionary implements Dictionary {
   async lookup(word: string): Promise<WordLookupResult | null> {
     if (!this.initialized) return null;
 
-    try {
-      const result = await this.fetchFromJisho(word);
-      if (!result?.data || result.data.length === 0) return null;
-
-      const firstResult = result.data[0];
-      const meanings = firstResult.senses
-        ?.flatMap((sense: any) => sense.english_definitions || [])
-        .filter(Boolean);
-
-      const meaning = meanings?.[0] || "Unknown";
-      return {
-        meaning,
-        meanings: meanings?.length > 0 ? meanings : undefined,
-        reading: word,
-      };
-    } catch (e) {
-      console.error("[Dictionary] Jisho lookup error:", (e as any).message);
-      return null;
+    // Check cache first
+    if (this.cache.has(word)) {
+      return this.cache.get(word) || null;
     }
+
+    // Queue the request
+    return new Promise((resolve) => {
+      this.requestQueue.push(async () => {
+        try {
+          const result = await this.fetchFromJisho(word);
+          let lookupResult: WordLookupResult | null = null;
+
+          if (result?.data && result.data.length > 0) {
+            const firstResult = result.data[0];
+            const meanings = firstResult.senses
+              ?.flatMap((sense: any) => sense.english_definitions || [])
+              .filter(Boolean);
+
+            if (meanings && meanings.length > 0) {
+              lookupResult = {
+                meaning: meanings[0],
+                meanings,
+                reading: word,
+              };
+            }
+          }
+
+          this.cache.set(word, lookupResult);
+          resolve(lookupResult);
+        } catch (e) {
+          console.error("[Dictionary] Jisho lookup error:", (e as any).message);
+          this.cache.set(word, null);
+          resolve(null);
+        } finally {
+          this.processQueue();
+        }
+      });
+
+      this.processQueue();
+    });
   }
 }
 

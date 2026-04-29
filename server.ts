@@ -145,14 +145,23 @@ async function processText(text: string) {
       meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
     }
 
-    // Fallback for pure hiragana particles if no cached meaning
-    if (meaning === "Unknown meaning" && /^[ぁ-ん]+$/.test(wordStr)) {
-      meaning = "Kana particle / expression";
+    // Use Jisho API for pure hiragana words (particles, auxiliaries)
+    // Queuing system prevents overwhelming the API
+    const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
+    if (isPureHiragana && dictionary && meaning === "Unknown meaning") {
+      const dictResult = await dictionary.lookup(wordStr);
+      if (dictResult) {
+        meaning = dictResult.meaning;
+        if (dictResult.meanings) {
+          meanings = dictResult.meanings;
+        }
+      }
     }
 
-    // Note: Jisho API lookups disabled due to frequent timeouts.
-    // Consider implementing a local pure-hiragana dictionary cache
-    // or using Jisho API only for interactive/on-demand lookups in the future.
+    // Fallback for pure hiragana particles if still no result
+    if (meaning === "Unknown meaning" && isPureHiragana) {
+      meaning = "Kana particle / expression";
+    }
 
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
