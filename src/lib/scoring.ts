@@ -170,6 +170,10 @@ export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
 }
 
 export function findBestVariant(wordStr: string, entries: DictionaryEntry[]): FindBestVariantResult {
+  // Track entry positions to prefer earlier entries
+  const entryMap = new Map<DictionaryEntry, number>();
+  entries.forEach((e, i) => entryMap.set(e, i));
+
   let best: FindBestVariantResult = { variant: null, entry: null, score: -999 };
 
   for (const entry of entries) {
@@ -184,6 +188,24 @@ export function findBestVariant(wordStr: string, entries: DictionaryEntry[]): Fi
       if (v.written !== wordStr && isHiragana && hasKanji) {
         score -= v.priorities?.length ? 20 : 200;
       }
+
+      // Strongly prefer entries with common frequency tags (ichi1, news1 = most common)
+      if (v.priorities) {
+        const hasIchi1 = v.priorities.includes('ichi1');
+        const hasNews1 = v.priorities.includes('news1');
+        const hasIchi2 = v.priorities.includes('ichi2');
+        const hasNews2 = v.priorities.includes('news2');
+
+        if (hasIchi1 || hasNews1) {
+          score += 1000; // Very strong preference for most common words
+        } else if (hasIchi2 || hasNews2) {
+          score += 500; // Strong preference for common words
+        }
+      }
+
+      // Modest preference for the first entry from searchWords (typically most common sense)
+      const entryPos = entryMap.get(entry) ?? 0;
+      score += Math.max(0, 50 - entryPos); // Small decreasing bonus for later entries
 
       if (score > best.score) {
         best = { variant: v, entry, score };
