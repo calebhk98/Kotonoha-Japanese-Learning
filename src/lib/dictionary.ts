@@ -54,26 +54,39 @@ export class KanjiDataDictionary implements Dictionary {
 
 // ==================== Unofficial Jisho API Dictionary ====================
 export class JishoApiDictionary implements Dictionary {
-  private jisho: any = null;
+  private initialized = false;
 
   async initialize(): Promise<void> {
     try {
-      this.jisho = await import("unofficial-jisho-api");
-      console.log("[Dictionary] Jisho API initialized");
+      // Test if we can reach Jisho API
+      const testRes = await this.fetchFromJisho("test");
+      if (testRes) {
+        this.initialized = true;
+        console.log("[Dictionary] Jisho API initialized");
+      }
     } catch (e) {
-      console.warn("[Dictionary] Failed to load unofficial-jisho-api:", (e as any).message);
+      console.warn("[Dictionary] Jisho API unavailable:", (e as any).message);
+      this.initialized = false;
     }
   }
 
+  private async fetchFromJisho(word: string): Promise<any> {
+    const encoded = encodeURIComponent(word);
+    const url = `https://jisho.org/api/v1/search/words?keyword=${encoded}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    return await res.json();
+  }
+
   isInitialized(): boolean {
-    return this.jisho !== null;
+    return this.initialized;
   }
 
   async lookup(word: string): Promise<WordLookupResult | null> {
-    if (!this.jisho) return null;
+    if (!this.initialized) return null;
 
     try {
-      const result = await this.jisho.searchForPhrase(word);
+      const result = await this.fetchFromJisho(word);
       if (!result?.data || result.data.length === 0) return null;
 
       const firstResult = result.data[0];
