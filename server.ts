@@ -125,9 +125,12 @@ async function startServer() {
         return res.status(400).json({ error: "Text must contain Japanese characters" });
       }
 
-      console.log(`[API] /api/extract: processing ${text.length} chars`);
+      const cacheSize = wordsCache.size;
+      console.log(`[API] /api/extract: processing ${text.length} chars (cache has ${cacheSize} words)`);
       const words = processText(text);
-      console.log(`[API] /api/extract: extracted ${words.length} words in ${Date.now() - start}ms`);
+      const newCacheSize = wordsCache.size;
+      const newWords = newCacheSize - cacheSize;
+      console.log(`[API] /api/extract: extracted ${words.length} words (${newWords} new, ${words.length - newWords} cached) in ${Date.now() - start}ms`);
       res.json(words);
     } catch (e: any) {
       console.error(`[API Error] /api/extract failed after ${Date.now() - start}ms:`, e.message);

@@ -96,10 +96,19 @@ export function getWordScoreBreakdown(wordStr: string, variant: DictionaryVarian
 }
 
 export const wordsCache = new Map<string, DictionaryEntry[]>();
+const kanjiCache = new Map<string, string[]>();
 
 // Get dictionary entries for a word by looking up all kanji it contains
 function getEntriesByKanjiLookup(wordStr: string): DictionaryEntry[] {
-  const kanjis = kanjiData.extractKanji(wordStr);
+  // Cache kanji extraction to avoid redundant work
+  let kanjis: string[];
+  if (kanjiCache.has(wordStr)) {
+    kanjis = kanjiCache.get(wordStr)!;
+  } else {
+    kanjis = kanjiData.extractKanji(wordStr);
+    kanjiCache.set(wordStr, kanjis);
+  }
+
   const allEntries: DictionaryEntry[] = [];
 
   // If word has kanji, get entries for each kanji

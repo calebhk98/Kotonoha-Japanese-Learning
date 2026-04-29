@@ -1,8 +1,11 @@
 import { WordInfo } from "../types";
 
-export async function extractVocabulary(text: string): Promise<WordInfo[]> {
+export async function extractVocabulary(text: string, onProgress?: (status: string) => void): Promise<WordInfo[]> {
   const start = Date.now();
-  console.log(`[Vocabulary] Extracting vocabulary from ${text.length} char text`);
+  const charCount = text.length;
+
+  onProgress?.(`Extracting vocabulary from ${charCount} characters...`);
+  console.log(`[Vocabulary] Extracting vocabulary from ${charCount} char text`);
 
   const res = await fetch("/api/extract", {
     method: "POST",
@@ -18,6 +21,9 @@ export async function extractVocabulary(text: string): Promise<WordInfo[]> {
   }
 
   const list: WordInfo[] = await res.json();
-  console.log(`[Vocabulary] Extracted ${list.length} words in ${Date.now() - start}ms`);
+  const elapsed = Date.now() - start;
+  console.log(`[Vocabulary] Extracted ${list.length} words in ${elapsed}ms`);
+
+  onProgress?.(`Found ${list.length} unique words`);
   return list;
 }
