@@ -11,23 +11,28 @@ export interface Dictionary {
 
 // ==================== Kanji Data Dictionary ====================
 export class KanjiDataDictionary implements Dictionary {
-  private kanjiData: any = null;
+  private searchWords: any = null;
 
   async initialize(): Promise<void> {
     try {
-      this.kanjiData = await import("kanji-data");
+      const kanjiData = await import("kanji-data");
+      // Handle both default export and named exports
+      this.searchWords = kanjiData.searchWords || (kanjiData.default?.searchWords) || kanjiData.default;
+      if (!this.searchWords) {
+        console.warn("[Dictionary] kanji-data.searchWords not found in module");
+      }
     } catch (e) {
       console.warn("[Dictionary] Failed to load kanji-data:", (e as any).message);
     }
   }
 
   isInitialized(): boolean {
-    return this.kanjiData !== null;
+    return this.searchWords !== null;
   }
 
   async lookup(word: string): Promise<WordLookupResult | null> {
-    if (!this.kanjiData) return null;
-    const entries = this.kanjiData.searchWords(word) as any[];
+    if (!this.searchWords || typeof this.searchWords !== 'function') return null;
+    const entries = this.searchWords(word) as any[];
     if (!entries || entries.length === 0) return null;
 
     // For pure hiragana, prefer entries with matching pronunciation
