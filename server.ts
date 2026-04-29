@@ -145,12 +145,11 @@ async function processText(text: string) {
       meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
     }
 
-    // Only try dictionary lookup if we don't have a good meaning from cache
-    // This avoids unnecessary API calls and timeouts during batch processing
-    const needsDictionaryLookup = meaning === "Unknown meaning" ||
-                                   /^[ぁ-ん]{1,3}$/.test(wordStr);
+    // Only use Jisho API for pure hiragana words (particles, auxiliaries)
+    // For other words, rely on kanji-data cache which is fast and reliable
+    const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
 
-    if (needsDictionaryLookup && dictionary) {
+    if (isPureHiragana && dictionary && meaning === "Unknown meaning") {
       const dictResult = await dictionary.lookup(wordStr);
       if (dictResult) {
         meaning = dictResult.meaning;
@@ -161,7 +160,7 @@ async function processText(text: string) {
     }
 
     // Fallback for pure hiragana particles if still no result
-    if (meaning === "Unknown meaning" && /^[ぁ-ん]{1,3}$/.test(wordStr)) {
+    if (meaning === "Unknown meaning" && isPureHiragana) {
       meaning = "Kana particle / expression";
     }
 
