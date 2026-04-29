@@ -191,10 +191,10 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Periodically save cache to disk (every 5 seconds if changed)
+  // Periodically save cache to disk (every 30 seconds if changed)
   setInterval(() => {
     saveCacheToDisk();
-  }, 5000);
+  }, 30000);
 
   app.use((req, _res, next) => {
     console.log(`[Server] ${req.method} ${req.path}`);
