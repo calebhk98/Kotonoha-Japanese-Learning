@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import kuromoji from "kuromoji";
+import { readingAnywhere, kanjiAnywhere, setup as setupJmdict, Gloss, Word } from "jmdict-wrapper";
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -63,6 +64,8 @@ function saveCacheToDisk() {
 }
 
 let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null;
+let jmdictDb: any = null;
+
 const tokenizerReady = new Promise<void>((resolve, reject) => {
   kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
     if (err) {
@@ -76,8 +79,57 @@ const tokenizerReady = new Promise<void>((resolve, reject) => {
   });
 });
 
+const jmdictReady = (async () => {
+  try {
+    const jmdictPath = path.join(__dirname, 'jmdict-db');
+    const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
+    const result = await setupJmdict(jmdictPath, jmdictFile, false);
+    jmdictDb = result.db;
+    console.log(`[JMDict] Initialized - dictionary date: ${result.dictDate}`);
+  } catch (e: any) {
+    console.warn(`[JMDict] Failed to initialize:`, e.message);
+    console.warn(`[JMDict] Falling back to kanji-data for definitions`);
+  }
+})();
 
-function processText(text: string) {
+async function getJmdictMeanings(wordStr: string): Promise<string[] | null> {
+  if (!jmdictDb) return null;
+
+  try {
+    let results: Word[] = await readingAnywhere(jmdictDb, wordStr, 10);
+    if (results.length === 0) {
+      results = await kanjiAnywhere(jmdictDb, wordStr, 10);
+    }
+    if (results.length === 0) return null;
+
+    // Find the best match
+    const bestMatch = results.find(r =>
+      r.kana.some(k => k.text === wordStr) ||
+      r.kanji.some(k => k.text === wordStr)
+    ) || results[0];
+
+    // Extract all meanings (glosses) from senses, ordered by frequency
+    const meanings: string[] = [];
+    for (const sense of bestMatch.sense) {
+      if (sense.gloss && sense.gloss.length > 0) {
+        const glossTexts = (sense.gloss as Gloss[])
+          .filter(g => g.lang === 'en')
+          .map(g => g.text);
+        if (glossTexts.length > 0) {
+          meanings.push(glossTexts.join('; '));
+        } else if (sense.gloss[0]?.text) {
+          meanings.push(sense.gloss[0].text);
+        }
+      }
+    }
+    return meanings.length > 0 ? meanings : null;
+  } catch (e: any) {
+    return null;
+  }
+}
+
+
+async function processText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
   const tokens = tokenizer.tokenize(text);
 
@@ -118,6 +170,7 @@ function processText(text: string) {
     const { variant, entry } = findBestVariant(wordStr, entries);
 
     let meaning = "Unknown meaning";
+    let meanings: string[] | undefined = undefined;
     let reading = wordStr;
 
     if (entry && variant) {
@@ -127,9 +180,24 @@ function processText(text: string) {
       meaning = "Kana particle / expression";
     }
 
+    // Try to get all meanings from JMDict for fallback or enrichment
+    if (jmdictDb) {
+      const jmdictMeanings = await getJmdictMeanings(wordStr);
+      if (jmdictMeanings && jmdictMeanings.length > 0) {
+        if (meaning === "Unknown meaning" || meaning === "Kana particle / expression") {
+          meaning = jmdictMeanings[0]; // Use first jmdict meaning as primary
+        }
+        meanings = jmdictMeanings; // Always include all meanings
+      }
+    }
+
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
-    results.push({ word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent });
+    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
+    if (meanings) {
+      wordData.meanings = meanings;
+    }
+    results.push(wordData);
   }
 
   console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
@@ -138,8 +206,9 @@ function processText(text: string) {
 }
 
 async function startServer() {
-  // Wait for tokenizer to be ready before starting server
+  // Wait for tokenizer and jmdict to be ready before starting server
   await tokenizerReady;
+  await jmdictReady;
 
   // Load persisted cache from disk
   loadCacheFromDisk();
@@ -162,7 +231,7 @@ async function startServer() {
   const MAX_TEXT_LENGTH = 50000;
   const JAPANESE_SCRIPT = /[぀-ゟ゠-ヿ一-鿿]/;
 
-  app.post("/api/extract", (req, res) => {
+  app.post("/api/extract", async (req, res) => {
     const start = Date.now();
     try {
       const { text } = req.body;
@@ -178,7 +247,7 @@ async function startServer() {
 
       const cacheSizeBefore = wordsCache.size;
       console.log(`[API] /api/extract: START - cache has ${cacheSizeBefore} words`);
-      const words = processText(text);
+      const words = await processText(text);
       const cacheSizeAfter = wordsCache.size;
       const elapsed = Date.now() - start;
       console.log(`[API] /api/extract: DONE - added ${cacheSizeAfter - cacheSizeBefore} words to cache (total: ${cacheSizeAfter}) in ${elapsed}ms`);
@@ -189,20 +258,20 @@ async function startServer() {
     }
   });
 
-  app.post("/api/batch-extract", (req, res) => {
+  app.post("/api/batch-extract", async (req, res) => {
     const { texts } = req.body;
     if (!Array.isArray(texts)) {
       return res.status(400).json({ error: "texts must be an array" });
     }
 
     console.log(`[API] /api/batch-extract: Processing ${texts.length} items (cache: ${wordsCache.size} words)`);
-    const results = texts.map((item: any) => {
+    const results = await Promise.all(texts.map(async (item: any) => {
       const { id, text } = item;
       if (!text || typeof text !== "string") return { id, error: "No text" };
 
       const start = Date.now();
       try {
-        const words = processText(text);
+        const words = await processText(text);
         const elapsed = Date.now() - start;
         console.log(`[API] batch-extract[${id}]: ${words.length} words in ${elapsed}ms`);
         return { id, words, elapsed };
@@ -210,7 +279,7 @@ async function startServer() {
         console.error(`[API] batch-extract[${id}]: Error:`, e.message);
         return { id, error: e.message };
       }
-    });
+    }));
 
     console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words`);
     res.json(results);
