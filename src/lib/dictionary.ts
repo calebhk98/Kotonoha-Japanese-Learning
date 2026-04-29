@@ -78,7 +78,7 @@ export class JishoApiDictionary implements Dictionary {
   private async fetchFromJisho(word: string): Promise<any> {
     const encoded = encodeURIComponent(word);
     const url = `https://jisho.org/api/v1/search/words?keyword=${encoded}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) return null;
     return await res.json();
   }

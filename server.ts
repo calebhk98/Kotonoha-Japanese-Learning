@@ -145,8 +145,12 @@ async function processText(text: string) {
       meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
     }
 
-    // Try to get meanings from dictionary (Jisho API, JMDict, or fallback)
-    if (dictionary) {
+    // Only try dictionary lookup if we don't have a good meaning from cache
+    // This avoids unnecessary API calls and timeouts during batch processing
+    const needsDictionaryLookup = meaning === "Unknown meaning" ||
+                                   /^[ぁ-ん]{1,3}$/.test(wordStr);
+
+    if (needsDictionaryLookup && dictionary) {
       const dictResult = await dictionary.lookup(wordStr);
       if (dictResult) {
         meaning = dictResult.meaning;
@@ -156,7 +160,7 @@ async function processText(text: string) {
       }
     }
 
-    // Fallback for pure hiragana particles if no dictionary result
+    // Fallback for pure hiragana particles if still no result
     if (meaning === "Unknown meaning" && /^[ぁ-ん]{1,3}$/.test(wordStr)) {
       meaning = "Kana particle / expression";
     }
