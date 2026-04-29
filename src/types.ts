@@ -11,7 +11,8 @@ export interface ScoreBreakdown {
 export interface WordInfo {
   word: string;
   reading: string;
-  meaning: string;
+  meaning: string;               // primary meaning (most common)
+  meanings?: string[];           // all meanings from dictionary, ordered by frequency
   jlpt: number;                  // 1 to 5, where 5 is N5, 1 is N1, 0 if NA
   joyo: boolean;
   score: number;                 // 1-100 (1=beginner, 100=native), adjusted if WaniKani data available

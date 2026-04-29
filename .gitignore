@@ -6,4 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
-.word-cache.json
+.word-cache.jsonjmdict*.json
+jmdict*.tgz
+jmdict-db/
