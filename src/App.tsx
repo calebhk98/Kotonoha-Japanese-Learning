@@ -56,6 +56,37 @@ export default function App() {
     localStorage.setItem('customContent', JSON.stringify(customContent));
   }, [customContent]);
 
+  // Background batch processing of all stories to build cache
+  useEffect(() => {
+    const batchExtract = async () => {
+      try {
+        const texts = ALL_CONTENT.map(c => ({ id: c.id, text: c.text }));
+        console.log(`[App] Starting background vocabulary extraction for ${texts.length} stories`);
+
+        const res = await fetch("/api/batch-extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texts })
+        });
+
+        if (!res.ok) {
+          console.warn(`[App] Batch extract failed with status ${res.status}`);
+          return;
+        }
+
+        const results = await res.json();
+        const successful = results.filter((r: any) => !r.error);
+        console.log(`[App] Background extraction complete: ${successful.length}/${results.length} stories processed`);
+      } catch (e) {
+        console.error(`[App] Background extraction error:`, e);
+      }
+    };
+
+    // Start background processing after a short delay to avoid blocking initial render
+    const timer = setTimeout(batchExtract, 500);
+    return () => clearTimeout(timer);
+  }, []); // Run once on mount
+
   // Sort and filter content (#11, #12, #13)
   const sortedContent = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();

@@ -125,17 +125,44 @@ async function startServer() {
         return res.status(400).json({ error: "Text must contain Japanese characters" });
       }
 
-      const cacheSize = wordsCache.size;
-      console.log(`[API] /api/extract: processing ${text.length} chars (cache has ${cacheSize} words)`);
+      const cacheSizeBefore = wordsCache.size;
+      console.log(`[API] /api/extract: START - cache has ${cacheSizeBefore} words`);
       const words = processText(text);
-      const newCacheSize = wordsCache.size;
-      const newWords = newCacheSize - cacheSize;
-      console.log(`[API] /api/extract: extracted ${words.length} words (${newWords} new, ${words.length - newWords} cached) in ${Date.now() - start}ms`);
+      const cacheSizeAfter = wordsCache.size;
+      const elapsed = Date.now() - start;
+      console.log(`[API] /api/extract: DONE - added ${cacheSizeAfter - cacheSizeBefore} words to cache (total: ${cacheSizeAfter}) in ${elapsed}ms`);
       res.json(words);
     } catch (e: any) {
       console.error(`[API Error] /api/extract failed after ${Date.now() - start}ms:`, e.message);
       res.status(500).json({ error: e.message });
     }
+  });
+
+  app.post("/api/batch-extract", (req, res) => {
+    const { texts } = req.body;
+    if (!Array.isArray(texts)) {
+      return res.status(400).json({ error: "texts must be an array" });
+    }
+
+    console.log(`[API] /api/batch-extract: Processing ${texts.length} items (cache: ${wordsCache.size} words)`);
+    const results = texts.map((item: any) => {
+      const { id, text } = item;
+      if (!text || typeof text !== "string") return { id, error: "No text" };
+
+      const start = Date.now();
+      try {
+        const words = processText(text);
+        const elapsed = Date.now() - start;
+        console.log(`[API] batch-extract[${id}]: ${words.length} words in ${elapsed}ms`);
+        return { id, words, elapsed };
+      } catch (e: any) {
+        console.error(`[API] batch-extract[${id}]: Error:`, e.message);
+        return { id, error: e.message };
+      }
+    });
+
+    console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words`);
+    res.json(results);
   });
 
   app.post("/api/update-words", (req, res) => {
