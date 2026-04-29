@@ -135,7 +135,9 @@ export function useContentData() {
     setLoadingContent(prev => ({ ...prev, [content.id]: true }));
     console.log(`[Vocab] Loading vocabulary for "${content.id}"`);
     try {
-      let words = await extractVocabulary(content.text);
+      let words = await extractVocabulary(content.text, (status) => {
+        console.log(`[Vocab] ${status}`);
+      });
       console.log(`[Vocab] Loaded ${words.length} words for "${content.id}"`);
 
       if (wkDataRef.current) {

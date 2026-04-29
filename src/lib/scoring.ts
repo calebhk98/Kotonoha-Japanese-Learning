@@ -95,12 +95,56 @@ export function getWordScoreBreakdown(wordStr: string, variant: DictionaryVarian
   };
 }
 
+// Use a Map for fast in-memory access, but also track for persistence
 export const wordsCache = new Map<string, DictionaryEntry[]>();
+const kanjiCache = new Map<string, string[]>();
+
+// Track if cache has unsaved changes
+let cacheNeedsSave = false;
+
+export function markCacheAsDirty() {
+  cacheNeedsSave = true;
+}
+
+export function shouldSaveCache(): boolean {
+  return cacheNeedsSave;
+}
+
+export function clearCacheDirtyFlag() {
+  cacheNeedsSave = false;
+}
+
+// Get dictionary entries for a word by looking up all kanji it contains
+function getEntriesByKanjiLookup(wordStr: string): DictionaryEntry[] {
+  // Cache kanji extraction to avoid redundant work
+  let kanjis: string[];
+  if (kanjiCache.has(wordStr)) {
+    kanjis = kanjiCache.get(wordStr)!;
+  } else {
+    kanjis = kanjiData.extractKanji(wordStr);
+    kanjiCache.set(wordStr, kanjis);
+  }
+
+  const allEntries: DictionaryEntry[] = [];
+
+  // If word has kanji, get entries for each kanji
+  if (kanjis.length > 0) {
+    for (const k of kanjis) {
+      const words = kanjiData.getWords(k);
+      allEntries.push(...words);
+    }
+  }
+
+  return allEntries;
+}
 
 export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
-  const entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
+
+  // Use efficient kanji-based lookup instead of global searchWords
+  const entries = getEntriesByKanjiLookup(wordStr);
   wordsCache.set(wordStr, entries);
+  markCacheAsDirty();
   return entries;
 }
 

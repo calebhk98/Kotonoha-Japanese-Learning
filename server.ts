@@ -2,6 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import kuromoji from "kuromoji";
 import {
   DictionaryVariant,
@@ -14,10 +15,52 @@ import {
   getCachedDictionaryEntries,
   findBestVariant,
   wordsCache,
+  markCacheAsDirty,
+  shouldSaveCache,
+  clearCacheDirtyFlag,
 } from "./src/lib/scoring.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const CACHE_FILE = path.join(__dirname, '.word-cache.json');
+
+// Load persisted cache from disk
+function loadCacheFromDisk() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
+      if (data && typeof data === 'object') {
+        let count = 0;
+        for (const [key, value] of Object.entries(data)) {
+          wordsCache.set(key, value as DictionaryEntry[]);
+          count++;
+        }
+        console.log(`[Server] Loaded ${count} words from cache file`);
+        clearCacheDirtyFlag();
+      }
+    }
+  } catch (e) {
+    console.error('[Server] Failed to load cache from disk:', (e as any).message);
+  }
+}
+
+// Save cache to disk
+function saveCacheToDisk() {
+  try {
+    if (!shouldSaveCache()) return;
+
+    const obj: Record<string, DictionaryEntry[]> = {};
+    for (const [key, value] of wordsCache.entries()) {
+      obj[key] = value;
+    }
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(obj), 'utf-8');
+    clearCacheDirtyFlag();
+    console.log(`[Server] Saved ${wordsCache.size} words to cache file`);
+  } catch (e) {
+    console.error('[Server] Failed to save cache to disk:', (e as any).message);
+  }
+}
 
 let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null;
 const tokenizerReady = new Promise<void>((resolve, reject) => {
@@ -98,10 +141,18 @@ async function startServer() {
   // Wait for tokenizer to be ready before starting server
   await tokenizerReady;
 
+  // Load persisted cache from disk
+  loadCacheFromDisk();
+
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+
+  // Periodically save cache to disk (every 5 seconds if changed)
+  setInterval(() => {
+    saveCacheToDisk();
+  }, 5000);
 
   app.use((req, _res, next) => {
     console.log(`[Server] ${req.method} ${req.path}`);
@@ -125,14 +176,44 @@ async function startServer() {
         return res.status(400).json({ error: "Text must contain Japanese characters" });
       }
 
-      console.log(`[API] /api/extract: processing ${text.length} chars`);
+      const cacheSizeBefore = wordsCache.size;
+      console.log(`[API] /api/extract: START - cache has ${cacheSizeBefore} words`);
       const words = processText(text);
-      console.log(`[API] /api/extract: extracted ${words.length} words in ${Date.now() - start}ms`);
+      const cacheSizeAfter = wordsCache.size;
+      const elapsed = Date.now() - start;
+      console.log(`[API] /api/extract: DONE - added ${cacheSizeAfter - cacheSizeBefore} words to cache (total: ${cacheSizeAfter}) in ${elapsed}ms`);
       res.json(words);
     } catch (e: any) {
       console.error(`[API Error] /api/extract failed after ${Date.now() - start}ms:`, e.message);
       res.status(500).json({ error: e.message });
     }
+  });
+
+  app.post("/api/batch-extract", (req, res) => {
+    const { texts } = req.body;
+    if (!Array.isArray(texts)) {
+      return res.status(400).json({ error: "texts must be an array" });
+    }
+
+    console.log(`[API] /api/batch-extract: Processing ${texts.length} items (cache: ${wordsCache.size} words)`);
+    const results = texts.map((item: any) => {
+      const { id, text } = item;
+      if (!text || typeof text !== "string") return { id, error: "No text" };
+
+      const start = Date.now();
+      try {
+        const words = processText(text);
+        const elapsed = Date.now() - start;
+        console.log(`[API] batch-extract[${id}]: ${words.length} words in ${elapsed}ms`);
+        return { id, words, elapsed };
+      } catch (e: any) {
+        console.error(`[API] batch-extract[${id}]: Error:`, e.message);
+        return { id, error: e.message };
+      }
+    });
+
+    console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words`);
+    res.json(results);
   });
 
   app.post("/api/update-words", (req, res) => {
@@ -266,8 +347,21 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  // Save cache on shutdown
+  process.on('SIGINT', () => {
+    console.log('\n[Server] Shutting down, saving cache...');
+    saveCacheToDisk();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', () => {
+    console.log('[Server] Terminating, saving cache...');
+    saveCacheToDisk();
+    process.exit(0);
   });
 }
 
