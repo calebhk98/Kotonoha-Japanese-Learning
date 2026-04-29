@@ -95,8 +95,24 @@ export function getWordScoreBreakdown(wordStr: string, variant: DictionaryVarian
   };
 }
 
+// Use a Map for fast in-memory access, but also track for persistence
 export const wordsCache = new Map<string, DictionaryEntry[]>();
 const kanjiCache = new Map<string, string[]>();
+
+// Track if cache has unsaved changes
+let cacheNeedsSave = false;
+
+export function markCacheAsDirty() {
+  cacheNeedsSave = true;
+}
+
+export function shouldSaveCache(): boolean {
+  return cacheNeedsSave;
+}
+
+export function clearCacheDirtyFlag() {
+  cacheNeedsSave = false;
+}
 
 // Get dictionary entries for a word by looking up all kanji it contains
 function getEntriesByKanjiLookup(wordStr: string): DictionaryEntry[] {
@@ -128,6 +144,7 @@ export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   // Use efficient kanji-based lookup instead of global searchWords
   const entries = getEntriesByKanjiLookup(wordStr);
   wordsCache.set(wordStr, entries);
+  markCacheAsDirty();
   return entries;
 }
 

@@ -2,6 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import kuromoji from "kuromoji";
 import {
   DictionaryVariant,
@@ -14,10 +15,52 @@ import {
   getCachedDictionaryEntries,
   findBestVariant,
   wordsCache,
+  markCacheAsDirty,
+  shouldSaveCache,
+  clearCacheDirtyFlag,
 } from "./src/lib/scoring.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const CACHE_FILE = path.join(__dirname, '.word-cache.json');
+
+// Load persisted cache from disk
+function loadCacheFromDisk() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
+      if (data && typeof data === 'object') {
+        let count = 0;
+        for (const [key, value] of Object.entries(data)) {
+          wordsCache.set(key, value as DictionaryEntry[]);
+          count++;
+        }
+        console.log(`[Server] Loaded ${count} words from cache file`);
+        clearCacheDirtyFlag();
+      }
+    }
+  } catch (e) {
+    console.error('[Server] Failed to load cache from disk:', (e as any).message);
+  }
+}
+
+// Save cache to disk
+function saveCacheToDisk() {
+  try {
+    if (!shouldSaveCache()) return;
+
+    const obj: Record<string, DictionaryEntry[]> = {};
+    for (const [key, value] of wordsCache.entries()) {
+      obj[key] = value;
+    }
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(obj), 'utf-8');
+    clearCacheDirtyFlag();
+    console.log(`[Server] Saved ${wordsCache.size} words to cache file`);
+  } catch (e) {
+    console.error('[Server] Failed to save cache to disk:', (e as any).message);
+  }
+}
 
 let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null;
 const tokenizerReady = new Promise<void>((resolve, reject) => {
@@ -98,10 +141,18 @@ async function startServer() {
   // Wait for tokenizer to be ready before starting server
   await tokenizerReady;
 
+  // Load persisted cache from disk
+  loadCacheFromDisk();
+
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+
+  // Periodically save cache to disk (every 5 seconds if changed)
+  setInterval(() => {
+    saveCacheToDisk();
+  }, 5000);
 
   app.use((req, _res, next) => {
     console.log(`[Server] ${req.method} ${req.path}`);
@@ -296,8 +347,21 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  // Save cache on shutdown
+  process.on('SIGINT', () => {
+    console.log('\n[Server] Shutting down, saving cache...');
+    saveCacheToDisk();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', () => {
+    console.log('[Server] Terminating, saving cache...');
+    saveCacheToDisk();
+    process.exit(0);
   });
 }
 
