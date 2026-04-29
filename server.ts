@@ -4,7 +4,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import kuromoji from "kuromoji";
-import { readingAnywhere, kanjiAnywhere, setup as setupJmdict, Gloss, Word } from "jmdict-wrapper";
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -20,6 +19,7 @@ import {
   shouldSaveCache,
   clearCacheDirtyFlag,
 } from "./src/lib/scoring.js";
+import { DictionaryManager } from "./src/lib/dictionary.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,7 +64,7 @@ function saveCacheToDisk() {
 }
 
 let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null;
-let jmdictDb: any = null;
+let dictionary: DictionaryManager | null = null;
 
 const tokenizerReady = new Promise<void>((resolve, reject) => {
   kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
@@ -79,54 +79,21 @@ const tokenizerReady = new Promise<void>((resolve, reject) => {
   });
 });
 
-const jmdictReady = (async () => {
-  try {
-    const jmdictPath = path.join(__dirname, 'jmdict-db');
-    const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
-    const result = await setupJmdict(jmdictPath, jmdictFile, false);
-    jmdictDb = result.db;
-    console.log(`[JMDict] Initialized - dictionary date: ${result.dictDate}`);
-  } catch (e: any) {
-    console.warn(`[JMDict] Failed to initialize:`, e.message);
-    console.warn(`[JMDict] Falling back to kanji-data for definitions`);
+const dictionaryReady = (async () => {
+  dictionary = new DictionaryManager();
+  const jmdictPath = path.join(__dirname, 'jmdict-db');
+  const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
+  const jmdictExists = fs.existsSync(jmdictFile);
+
+  if (jmdictExists) {
+    console.log('[Dictionary] jmdict file found, attempting to initialize');
+    await dictionary.initialize('jmdict', jmdictPath, jmdictFile);
+  } else {
+    console.log('[Dictionary] jmdict file not found, using Jisho API');
+    await dictionary.initialize('jisho');
   }
+  console.log('[Dictionary] Initialization complete');
 })();
-
-async function getJmdictMeanings(wordStr: string): Promise<string[] | null> {
-  if (!jmdictDb) return null;
-
-  try {
-    let results: Word[] = await readingAnywhere(jmdictDb, wordStr, 10);
-    if (results.length === 0) {
-      results = await kanjiAnywhere(jmdictDb, wordStr, 10);
-    }
-    if (results.length === 0) return null;
-
-    // Find the best match
-    const bestMatch = results.find(r =>
-      r.kana.some(k => k.text === wordStr) ||
-      r.kanji.some(k => k.text === wordStr)
-    ) || results[0];
-
-    // Extract all meanings (glosses) from senses, ordered by frequency
-    const meanings: string[] = [];
-    for (const sense of bestMatch.sense) {
-      if (sense.gloss && sense.gloss.length > 0) {
-        const glossTexts = (sense.gloss as Gloss[])
-          .filter(g => g.lang === 'en')
-          .map(g => g.text);
-        if (glossTexts.length > 0) {
-          meanings.push(glossTexts.join('; '));
-        } else if (sense.gloss[0]?.text) {
-          meanings.push(sense.gloss[0].text);
-        }
-      }
-    }
-    return meanings.length > 0 ? meanings : null;
-  } catch (e: any) {
-    return null;
-  }
-}
 
 
 async function processText(text: string) {
@@ -176,19 +143,22 @@ async function processText(text: string) {
     if (entry && variant) {
       reading = variant.pronounced || wordStr;
       meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
-    } else if (/^[ぁ-ん]{1,3}$/.test(wordStr)) {
-      meaning = "Kana particle / expression";
     }
 
-    // Try to get all meanings from JMDict for fallback or enrichment
-    if (jmdictDb) {
-      const jmdictMeanings = await getJmdictMeanings(wordStr);
-      if (jmdictMeanings && jmdictMeanings.length > 0) {
-        if (meaning === "Unknown meaning" || meaning === "Kana particle / expression") {
-          meaning = jmdictMeanings[0]; // Use first jmdict meaning as primary
+    // Try to get meanings from dictionary (Jisho API, JMDict, or fallback)
+    if (dictionary) {
+      const dictResult = await dictionary.lookup(wordStr);
+      if (dictResult) {
+        meaning = dictResult.meaning;
+        if (dictResult.meanings) {
+          meanings = dictResult.meanings;
         }
-        meanings = jmdictMeanings; // Always include all meanings
       }
+    }
+
+    // Fallback for pure hiragana particles if no dictionary result
+    if (meaning === "Unknown meaning" && /^[ぁ-ん]{1,3}$/.test(wordStr)) {
+      meaning = "Kana particle / expression";
     }
 
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
@@ -206,9 +176,9 @@ async function processText(text: string) {
 }
 
 async function startServer() {
-  // Wait for tokenizer and jmdict to be ready before starting server
+  // Wait for tokenizer and dictionary to be ready before starting server
   await tokenizerReady;
-  await jmdictReady;
+  await dictionaryReady;
 
   // Load persisted cache from disk
   loadCacheFromDisk();
