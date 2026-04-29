@@ -173,12 +173,14 @@ describe('findBestVariant', () => {
     expect(result.variant?.pronounced).toBe('たべる');
   });
 
-  it('returns null for hiragana lookup of kanji variant without priorities', () => {
-    // Intentional design: hiragana input matching a kanji-written form is penalised
-    // to -200 when no priority tags are present, keeping the result below the ≥0 threshold.
+  it('finds hiragana lookup of kanji variant without priorities', () => {
+    // Fixed: pure hiragana input matching kanji variant should still return the variant
+    // when the pronounced form matches, even without priority tags. This allows words
+    // like たべる (taberu) -> 食べる to be found with correct definitions.
     const entry = makeEntry('食べる', 'たべる');
     const result = findBestVariant('たべる', [entry]);
-    expect(result.variant).toBeNull();
+    expect(result.variant).not.toBeNull();
+    expect(result.variant?.pronounced).toBe('たべる');
   });
 
   it('prefers written form match over pronunciation-only match', () => {

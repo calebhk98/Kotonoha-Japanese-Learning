@@ -156,12 +156,13 @@ export function findBestVariant(wordStr: string, entries: DictionaryEntry[]): Fi
     for (const v of entry.variants) {
       if (v.written !== wordStr && v.pronounced !== wordStr) continue;
 
-      let score = (v.written === wordStr ? 100 : 0) + (v.priorities?.length ? 50 : 0);
       const isHiragana = /^[ぁ-ん]+$/.test(wordStr);
       const hasKanji = /[一-龯]/.test(v.written);
 
+      let score = (v.written === wordStr ? 100 : (isHiragana && v.pronounced === wordStr ? 70 : 0)) + (v.priorities?.length ? 50 : 0);
+
       if (v.written !== wordStr && isHiragana && hasKanji) {
-        score -= v.priorities?.length ? 20 : 200;
+        score -= v.priorities?.length ? 15 : 50;
       }
 
       if (score > best.score) {
