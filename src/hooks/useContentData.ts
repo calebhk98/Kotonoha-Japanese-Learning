@@ -4,7 +4,7 @@ import { extractVocabulary } from '../lib/api';
 import { Content } from '../data/content';
 import { WaniKaniData, getWaniKaniMultiplier, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
 
-function applyWaniKaniToWords(words: WordInfo[], wkData: WaniKaniData): WordInfo[] {
+export function applyWaniKaniToWords(words: WordInfo[], wkData: WaniKaniData): WordInfo[] {
   return words.map(word => {
     const srsStage = getWaniKaniSrsStage(word.word, wkData);
     const multiplier = getWaniKaniMultiplier(word.word, wkData);
