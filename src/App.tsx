@@ -77,6 +77,25 @@ export default function App() {
         const results = await res.json();
         const successful = results.filter((r: any) => !r.error);
         console.log(`[App] Background extraction complete: ${successful.length}/${results.length} stories processed`);
+
+        // Update contentVocab state with extracted vocabulary
+        const newVocab: Record<string, any[]> = {};
+        let addedCount = 0;
+        for (const result of results) {
+          if (result.words && Array.isArray(result.words)) {
+            newVocab[result.id] = result.words;
+            addedCount++;
+          }
+        }
+
+        if (addedCount > 0) {
+          setContentVocab(prev => {
+            const updated = { ...prev, ...newVocab };
+            localStorage.setItem('contentVocab', JSON.stringify(updated));
+            return updated;
+          });
+          console.log(`[App] Updated UI with vocabulary for ${addedCount} stories`);
+        }
       } catch (e) {
         console.error(`[App] Background extraction error:`, e);
       }
