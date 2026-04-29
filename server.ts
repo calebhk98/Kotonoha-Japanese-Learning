@@ -13,19 +13,24 @@ import {
   getWordScoreBreakdown,
   getCachedDictionaryEntries,
   findBestVariant,
+  wordsCache,
 } from "./src/lib/scoring.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null;
-kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
-  if (err) {
-    console.error("Failed to build kuromoji tokenizer:", err);
-  } else {
-    tokenizer = t;
-    console.log("Kuromoji tokenizer ready");
-  }
+const tokenizerReady = new Promise<void>((resolve, reject) => {
+  kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
+    if (err) {
+      console.error("Failed to build kuromoji tokenizer:", err);
+      reject(err);
+    } else {
+      tokenizer = t;
+      console.log("Kuromoji tokenizer ready");
+      resolve();
+    }
+  });
 });
 
 
@@ -51,9 +56,22 @@ function processText(text: string) {
     }
   }
 
+  let cacheHits = 0;
+  let cacheMisses = 0;
   const results = [];
   for (const wordStr of validWords) {
+    const start = Date.now();
+    const cacheHad = wordsCache.has(wordStr);
     const entries = getCachedDictionaryEntries(wordStr);
+    const lookupTime = Date.now() - start;
+
+    if (cacheHad) cacheHits++;
+    else cacheMisses++;
+
+    if (lookupTime > 10) {
+      console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
+    }
+
     const { variant, entry } = findBestVariant(wordStr, entries);
 
     let meaning = "Unknown meaning";
@@ -71,10 +89,15 @@ function processText(text: string) {
     results.push({ word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent });
   }
 
+  console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
+
   return results;
 }
 
 async function startServer() {
+  // Wait for tokenizer to be ready before starting server
+  await tokenizerReady;
+
   const app = express();
   const PORT = 3000;
 
