@@ -141,12 +141,27 @@ function getEntriesByKanjiLookup(wordStr: string): DictionaryEntry[] {
 export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
 
-  // Use efficient kanji-based lookup for words with kanji
-  let entries = getEntriesByKanjiLookup(wordStr);
+  // Use global search for all words to ensure correct definitions
+  // searchWords looks up by written form first, then pronunciation
+  const entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
 
-  // For pure hiragana words with no dictionary entries found, try global search
-  if (entries.length === 0 && /^[ぁ-ん]+$/.test(wordStr)) {
-    entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
+  // For pure hiragana input, filter to prefer entries where at least one variant
+  // has hiragana in the written form or matches the pronunciation
+  if (/^[ぁ-ん]+$/.test(wordStr)) {
+    // Move entries with hiragana-containing or pronunciation-matching variants to the front
+    const [withHiragana, withoutHiragana] = entries.reduce((acc, entry) => {
+      const hasHiraganaVariant = entry.variants?.some(v =>
+        /[ぁ-ん]/.test(v.written) || v.pronounced === wordStr
+      );
+      if (hasHiraganaVariant) {
+        acc[0].push(entry);
+      } else {
+        acc[1].push(entry);
+      }
+      return acc;
+    }, [[], []] as DictionaryEntry[][]);
+
+    entries.splice(0, entries.length, ...withHiragana, ...withoutHiragana);
   }
 
   wordsCache.set(wordStr, entries);
@@ -162,13 +177,12 @@ export function findBestVariant(wordStr: string, entries: DictionaryEntry[]): Fi
     for (const v of entry.variants) {
       if (v.written !== wordStr && v.pronounced !== wordStr) continue;
 
+      let score = (v.written === wordStr ? 100 : 0) + (v.priorities?.length ? 50 : 0);
       const isHiragana = /^[ぁ-ん]+$/.test(wordStr);
       const hasKanji = /[一-龯]/.test(v.written);
 
-      let score = (v.written === wordStr ? 100 : (isHiragana && v.pronounced === wordStr ? 70 : 0)) + (v.priorities?.length ? 50 : 0);
-
       if (v.written !== wordStr && isHiragana && hasKanji) {
-        score -= v.priorities?.length ? 15 : 50;
+        score -= v.priorities?.length ? 20 : 200;
       }
 
       if (score > best.score) {
