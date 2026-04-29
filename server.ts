@@ -19,13 +19,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null;
-kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
-  if (err) {
-    console.error("Failed to build kuromoji tokenizer:", err);
-  } else {
-    tokenizer = t;
-    console.log("Kuromoji tokenizer ready");
-  }
+const tokenizerReady = new Promise<void>((resolve, reject) => {
+  kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
+    if (err) {
+      console.error("Failed to build kuromoji tokenizer:", err);
+      reject(err);
+    } else {
+      tokenizer = t;
+      console.log("Kuromoji tokenizer ready");
+      resolve();
+    }
+  });
 });
 
 
@@ -75,6 +79,9 @@ function processText(text: string) {
 }
 
 async function startServer() {
+  // Wait for tokenizer to be ready before starting server
+  await tokenizerReady;
+
   const app = express();
   const PORT = 3000;
 

@@ -185,7 +185,7 @@ export function ContentDetail({
             {loading ? (
               <div className="flex items-center gap-3 text-gray-500 py-8 bg-gray-50 rounded-2xl justify-center">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Analyzing text with AI...</span>
+                <span>Extracting vocabulary...</span>
               </div>
             ) : status.unknownCount === 0 ? (
               <div className="bg-green-50 border border-green-100 rounded-2xl p-6 flex items-start gap-4 text-green-800">
