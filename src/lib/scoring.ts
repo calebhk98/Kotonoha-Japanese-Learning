@@ -97,9 +97,27 @@ export function getWordScoreBreakdown(wordStr: string, variant: DictionaryVarian
 
 export const wordsCache = new Map<string, DictionaryEntry[]>();
 
+// Get dictionary entries for a word by looking up all kanji it contains
+function getEntriesByKanjiLookup(wordStr: string): DictionaryEntry[] {
+  const kanjis = kanjiData.extractKanji(wordStr);
+  const allEntries: DictionaryEntry[] = [];
+
+  // If word has kanji, get entries for each kanji
+  if (kanjis.length > 0) {
+    for (const k of kanjis) {
+      const words = kanjiData.getWords(k);
+      allEntries.push(...words);
+    }
+  }
+
+  return allEntries;
+}
+
 export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
-  const entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
+
+  // Use efficient kanji-based lookup instead of global searchWords
+  const entries = getEntriesByKanjiLookup(wordStr);
   wordsCache.set(wordStr, entries);
   return entries;
 }
