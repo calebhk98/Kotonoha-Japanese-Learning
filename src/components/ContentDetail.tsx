@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ArrowLeft, PlayCircle, GraduationCap, Loader2, BookOpen, Download } from 'lucide-react';
+import { ArrowLeft, PlayCircle, GraduationCap, Loader2, BookOpen, Download, Zap } from 'lucide-react';
 import { Content } from '../data/content';
 import { WordInfo } from '../types';
+import { WK_STAGE_NAMES } from '../lib/wanikani';
 import { LessonProcess } from './LessonProcess';
 import { ContentReader } from './ContentReader';
 import { AnkiExportModal } from './AnkiExportModal';
@@ -239,6 +240,15 @@ export function ContentDetail({
                           <span>Freq. Penalty {w.breakdown?.priorities?.length ? `(${w.breakdown.priorities[0]})` : ''}</span>
                           <span>{w.breakdown?.freqPenalty > 0 ? '+' : ''}{w.breakdown?.freqPenalty || 0} pts</span>
                         </div>
+                        {w.wkSrsStage !== undefined && (
+                          <div className="flex justify-between text-gray-500 border-t border-gray-100 pt-1 mt-1">
+                            <span className="flex items-center gap-1.5">
+                              <Zap className="w-3 h-3" />
+                              {WK_STAGE_NAMES[w.wkSrsStage]}
+                            </span>
+                            <span>×{w.wkMultiplier?.toFixed(2) || '1.00'}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -278,6 +288,11 @@ export function ContentDetail({
                           <span className="text-sm text-gray-500">{w.reading}</span>
                         </div>
                         <div className="text-sm font-medium text-gray-600 mt-0.5">{w.meaning}</div>
+                        {w.wkSrsStage !== undefined && (
+                          <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <Zap className="w-3 h-3" /> {WK_STAGE_NAMES[w.wkSrsStage]}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 text-xs text-gray-500 min-w-fit">
                         <div>
