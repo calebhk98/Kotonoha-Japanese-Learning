@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { WordInfo, ScoreBreakdown } from '../types';
-import { X, Save } from 'lucide-react';
+import { X, Save, Zap } from 'lucide-react';
+import { WK_STAGE_NAMES } from '../lib/wanikani';
 
 export const WordDetailModal: React.FC<{
   w: WordInfo;
@@ -16,8 +17,10 @@ export const WordDetailModal: React.FC<{
   const [freqPenalty, setFreqPenalty] = useState(w.breakdown?.freqPenalty?.toString() || '0');
   const [priorities, setPriorities] = useState(w.breakdown?.priorities?.join(', ') || '');
   const [jlptScore, setJlptScore] = useState(w.breakdown?.jlptScore?.toString() || '0');
+  const [wkSrsStage, setWkSrsStage] = useState(w.wkSrsStage?.toString() || '');
 
   const handleSave = () => {
+    const stage = wkSrsStage !== '' ? parseInt(wkSrsStage) : undefined;
     const updated: WordInfo = {
       ...w,
       reading,
@@ -25,6 +28,7 @@ export const WordDetailModal: React.FC<{
       jlpt: parseInt(jlpt) || 0,
       joyo: highestGrade !== '' ? parseInt(highestGrade) <= 8 : w.joyo,
       score: parseInt(score) || 0,
+      wkSrsStage: stage,
       breakdown: {
         ...(w.breakdown || { jlptValues: [], gradeValues: [] }), // fallback
         jlptScore: parseInt(jlptScore) || 0,
@@ -150,6 +154,25 @@ export const WordDetailModal: React.FC<{
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono"
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-6">
+            <h4 className="text-sm font-semibold text-gray-800 mb-4 uppercase tracking-widest flex items-center gap-2">
+              <Zap className="w-4 h-4" /> WaniKani Status
+            </h4>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-500">SRS Stage (1-9)</label>
+              <select
+                value={wkSrsStage}
+                onChange={e => setWkSrsStage(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              >
+                <option value="">Not in WaniKani</option>
+                {Object.entries(WK_STAGE_NAMES).map(([stage, name]) => (
+                  <option key={stage} value={stage}>{stage} - {name}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

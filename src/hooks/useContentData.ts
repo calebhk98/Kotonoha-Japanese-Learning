@@ -2,15 +2,22 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { WordInfo } from '../types';
 import { extractVocabulary } from '../lib/api';
 import { Content } from '../data/content';
-import { WaniKaniData, getWaniKaniMultiplier, loadCachedWaniKaniData } from '../lib/wanikani';
+import { WaniKaniData, getWaniKaniMultiplier, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
 
 function applyWaniKaniToWords(words: WordInfo[], wkData: WaniKaniData): WordInfo[] {
   return words.map(word => {
+    const srsStage = getWaniKaniSrsStage(word.word, wkData);
     const multiplier = getWaniKaniMultiplier(word.word, wkData);
-    if (multiplier === 1.0) return word;
+
+    const updatedWord: WordInfo = { ...word };
+    if (srsStage !== null) {
+      updatedWord.wkSrsStage = srsStage;
+    }
+
+    if (multiplier === 1.0) return updatedWord;
     const baseScore = word.baseScore ?? word.score;
     const adjustedScore = Math.max(1, Math.round(baseScore * multiplier));
-    return { ...word, score: adjustedScore, baseScore, wkMultiplier: multiplier };
+    return { ...updatedWord, score: adjustedScore, baseScore, wkMultiplier: multiplier };
   });
 }
 
