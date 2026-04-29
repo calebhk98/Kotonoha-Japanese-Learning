@@ -172,10 +172,17 @@ export function useContentData() {
     const knownVocab = words.filter(w => isWordKnown(w));
 
     const totalUnknownScore = unknownWords.reduce((acc, w) => acc + w.score, 0);
-    const totalKnownScore = knownVocab.reduce((acc, w) => acc + w.score, 0);
+
+    // Known words reduce difficulty, but use WaniKani multiplier if available, otherwise 0.5
+    const totalKnownScore = knownVocab.reduce((acc, w) => {
+      if (w.wkSrsStage !== undefined) {
+        return acc + w.score; // Already has WaniKani multiplier applied
+      }
+      return acc + (w.score * 0.5); // Manually marked as known: apply 0.5 reduction
+    }, 0);
 
     const avgScore = unknownWords.length > 0 ? Math.round(totalUnknownScore / unknownWords.length) : 0;
-    const difficultyScore = totalUnknownScore + (totalKnownScore * 0.5);
+    const difficultyScore = totalUnknownScore + totalKnownScore;
     const comprehension = words.length > 0 ? Math.round((knownVocab.length / words.length) * 100) : 0;
 
     return {
