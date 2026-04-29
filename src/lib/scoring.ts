@@ -141,8 +141,14 @@ function getEntriesByKanjiLookup(wordStr: string): DictionaryEntry[] {
 export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
 
-  // Use efficient kanji-based lookup instead of global searchWords
-  const entries = getEntriesByKanjiLookup(wordStr);
+  // Use efficient kanji-based lookup for words with kanji
+  let entries = getEntriesByKanjiLookup(wordStr);
+
+  // For pure hiragana words with no dictionary entries found, try global search
+  if (entries.length === 0 && /^[ぁ-ん]+$/.test(wordStr)) {
+    entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
+  }
+
   wordsCache.set(wordStr, entries);
   markCacheAsDirty();
   return entries;
