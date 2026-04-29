@@ -56,7 +56,11 @@ export default function App() {
     localStorage.setItem('customContent', JSON.stringify(customContent));
   }, [customContent]);
 
+  // Track whether we've attempted batch extraction
+  const [batchExtractionAttempted, setBatchExtractionAttempted] = useState(false);
+
   // Background batch processing of all stories to build cache
+  // Re-runs if cache is cleared (when contentVocab becomes significantly smaller)
   useEffect(() => {
     const batchExtract = async () => {
       try {
@@ -96,15 +100,25 @@ export default function App() {
           });
           console.log(`[App] Updated UI with vocabulary for ${addedCount} stories`);
         }
+
+        setBatchExtractionAttempted(true);
       } catch (e) {
         console.error(`[App] Background extraction error:`, e);
       }
     };
 
-    // Start background processing after a short delay to avoid blocking initial render
-    const timer = setTimeout(batchExtract, 500);
-    return () => clearTimeout(timer);
-  }, []); // Run once on mount
+    // Run batch extract if:
+    // 1. Never attempted yet, OR
+    // 2. Cache was cleared (contentVocab is empty while we have content)
+    const shouldRunExtraction =
+      !batchExtractionAttempted ||
+      (ALL_CONTENT.length > 0 && Object.keys(contentVocab).length === 0);
+
+    if (shouldRunExtraction) {
+      const timer = setTimeout(batchExtract, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [contentVocab, ALL_CONTENT.length, batchExtractionAttempted]);
 
   // Sort and filter content (#11, #12, #13)
   const sortedContent = useMemo(() => {
