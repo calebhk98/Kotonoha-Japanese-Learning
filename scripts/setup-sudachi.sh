@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 echo "🔨 Setting up Sudachi WASM with embedded dictionary..."
 echo ""
@@ -13,9 +12,17 @@ fi
 # Check for required tools
 echo "📋 Checking prerequisites..."
 if ! command -v cargo &> /dev/null; then
-    echo "❌ Rust not found. Install from https://rustup.rs/"
+    echo "⚠️  Rust not found. The tokenizer will not be set up."
+    echo ""
+    echo "To install Rust and complete the setup, run:"
+    echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+    echo "  source \$HOME/.cargo/env"
+    echo "  npm run setup-sudachi"
+    echo ""
     exit 1
 fi
+
+set -e
 if ! command -v wasm-pack &> /dev/null; then
     echo "📦 Installing wasm-pack..."
     cargo install wasm-pack
