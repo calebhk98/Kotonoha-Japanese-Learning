@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import tar from "tar";
 import kuromoji from "kuromoji";
 import { readingAnywhere, kanjiAnywhere, setup as setupJmdict, Gloss, Word } from "jmdict-wrapper";
 import {
@@ -25,6 +26,34 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CACHE_FILE = path.join(__dirname, '.word-cache.json');
+
+// Extract jmdict if needed
+async function ensureJmdictExtracted() {
+  const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
+  const jmdictTgz = path.join(__dirname, 'jmdict-all-3.6.2.json.tgz');
+
+  if (fs.existsSync(jmdictFile)) {
+    console.log('[JMDict] Found extracted dictionary file');
+    return;
+  }
+
+  if (!fs.existsSync(jmdictTgz)) {
+    console.warn('[JMDict] Neither extracted file nor compressed file found');
+    return;
+  }
+
+  try {
+    console.log('[JMDict] Extracting compressed dictionary...');
+    await tar.extract({
+      file: jmdictTgz,
+      cwd: __dirname,
+    });
+    console.log('[JMDict] Successfully extracted dictionary');
+  } catch (e: any) {
+    console.error('[JMDict] Failed to extract:', e.message);
+    throw e;
+  }
+}
 
 // Load persisted cache from disk
 function loadCacheFromDisk() {
@@ -81,6 +110,7 @@ const tokenizerReady = new Promise<void>((resolve, reject) => {
 
 const jmdictReady = (async () => {
   try {
+    await ensureJmdictExtracted();
     const jmdictPath = path.join(__dirname, 'jmdict-db');
     const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
     const result = await setupJmdict(jmdictPath, jmdictFile, false);
@@ -96,17 +126,30 @@ async function getJmdictMeanings(wordStr: string): Promise<string[] | null> {
   if (!jmdictDb) return null;
 
   try {
-    let results: Word[] = await readingAnywhere(jmdictDb, wordStr, 10);
-    if (results.length === 0) {
-      results = await kanjiAnywhere(jmdictDb, wordStr, 10);
+    const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
+
+    let results: Word[] = [];
+    if (isPureHiragana) {
+      results = await readingAnywhere(jmdictDb, wordStr, 20);
+    } else {
+      results = await readingAnywhere(jmdictDb, wordStr, 10);
+      if (results.length === 0) {
+        results = await kanjiAnywhere(jmdictDb, wordStr, 10);
+      }
     }
+
     if (results.length === 0) return null;
 
-    // Find the best match
-    const bestMatch = results.find(r =>
-      r.kana.some(k => k.text === wordStr) ||
-      r.kanji.some(k => k.text === wordStr)
-    ) || results[0];
+    // For pure hiragana, prioritize exact kana match
+    let bestMatch: Word;
+    if (isPureHiragana) {
+      bestMatch = results.find(r => r.kana.some(k => k.text === wordStr)) || results[0];
+    } else {
+      bestMatch = results.find(r =>
+        r.kana.some(k => k.text === wordStr) ||
+        r.kanji.some(k => k.text === wordStr)
+      ) || results[0];
+    }
 
     // Extract all meanings (glosses) from senses, ordered by frequency
     const meanings: string[] = [];
