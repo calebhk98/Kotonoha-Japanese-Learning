@@ -1,0 +1,6 @@
+{
+  "systemDict": "./sudachi-dictionary-20250129/system_small.dic",
+  "userDicts": [],
+  "characterDefinitionFile": "./char.def",
+  "enableDefaultCompoundParticles": true
+}

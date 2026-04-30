@@ -1,0 +1,45 @@
+{
+  "text": "はじめまして。\n\nわたしのなまえはたなかです。\n\nにほんじんです。\n\nとうきょうにすんでいます。\n\nがくせいです。\n\nどうぞよろしくおねがいします。",
+  "expectedWords": [
+    "はじめまして",
+    "わたし",
+    "なまえ",
+    "たなか",
+    "です",
+    "にほんじん",
+    "とうきょう",
+    "すんでいます",
+    "がくせい",
+    "どうぞ",
+    "よろしく",
+    "おねがい",
+    "します"
+  ],
+  "criticalWords": [
+    {
+      "word": "たなか",
+      "description": "Tanaka (pure hiragana name, issue #23)",
+      "importance": "critical"
+    },
+    {
+      "word": "なまえ",
+      "description": "name",
+      "importance": "high"
+    },
+    {
+      "word": "とうきょう",
+      "description": "Tokyo",
+      "importance": "critical"
+    },
+    {
+      "word": "にほんじん",
+      "description": "Japanese person",
+      "importance": "high"
+    },
+    {
+      "word": "おねがい",
+      "description": "please/request",
+      "importance": "high"
+    }
+  ]
+}

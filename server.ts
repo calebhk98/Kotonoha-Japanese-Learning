@@ -4,7 +4,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import * as tar from "tar";
-import kuromoji from "kuromoji";
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -21,6 +20,7 @@ import {
   clearCacheDirtyFlag,
 } from "./src/lib/scoring.js";
 import { DictionaryManager } from "./src/lib/dictionary.js";
+import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -92,21 +92,18 @@ function saveCacheToDisk() {
   }
 }
 
-let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null;
+let tokenizer: Tokenizer | null = null;
 let dictionary: DictionaryManager | null = null;
 
-const tokenizerReady = new Promise<void>((resolve, reject) => {
-  kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
-    if (err) {
-      console.error("Failed to build kuromoji tokenizer:", err);
-      reject(err);
-    } else {
-      tokenizer = t;
-      console.log("Kuromoji tokenizer ready");
-      resolve();
-    }
-  });
-});
+const tokenizerReady = (async () => {
+  try {
+    tokenizer = await createTokenizer();
+    console.log(`[Server] Tokenizer ready: ${tokenizer.name}`);
+  } catch (e: any) {
+    console.error(`[Server] Failed to initialize tokenizer: ${e.message}`);
+    throw e;
+  }
+})();
 
 const jmdictReady = (async () => {
   try {
@@ -139,23 +136,22 @@ const dictionaryReady = (async () => {
 
 async function processText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
-  const tokens = tokenizer.tokenize(text);
+  const segments = await tokenizer.segment(text);
 
   const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
   const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
   const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
-  // Count how many times each base form appears (for frequencyInContent)
+  // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
   const validWords = new Set<string>();
 
-  for (const token of tokens) {
-    if (token.surface_form.trim() === '' || isPunctuation(token.surface_form) || isSingleKana(token.surface_form)) continue;
+  for (const segment of segments) {
+    if (segment.trim() === '' || isPunctuation(segment) || isSingleKana(segment)) continue;
 
-    const word = token.basic_form && token.basic_form !== '*' ? token.basic_form : token.surface_form;
-    if (!isSingleKana(word)) {
-      validWords.add(word);
-      baseFormCounts.set(word, (baseFormCounts.get(word) ?? 0) + 1);
+    if (!isSingleKana(segment)) {
+      validWords.add(segment);
+      baseFormCounts.set(segment, (baseFormCounts.get(segment) ?? 0) + 1);
     }
   }
 
