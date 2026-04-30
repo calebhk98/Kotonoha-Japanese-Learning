@@ -4,7 +4,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import * as tar from "tar";
-import TinySegmenter from "tiny-segmenter";
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -21,6 +20,7 @@ import {
   clearCacheDirtyFlag,
 } from "./src/lib/scoring.js";
 import { DictionaryManager } from "./src/lib/dictionary.js";
+import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -92,13 +92,18 @@ function saveCacheToDisk() {
   }
 }
 
-let tokenizer: TinySegmenter | null = null;
+let tokenizer: Tokenizer | null = null;
 let dictionary: DictionaryManager | null = null;
 
-const tokenizerReady = Promise.resolve().then(() => {
-  tokenizer = new TinySegmenter();
-  console.log("TinySegmenter tokenizer ready");
-});
+const tokenizerReady = (async () => {
+  try {
+    tokenizer = await createTokenizer();
+    console.log(`[Server] Tokenizer ready: ${tokenizer.name}`);
+  } catch (e: any) {
+    console.error(`[Server] Failed to initialize tokenizer: ${e.message}`);
+    throw e;
+  }
+})();
 
 const jmdictReady = (async () => {
   try {
@@ -131,7 +136,7 @@ const dictionaryReady = (async () => {
 
 async function processText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
-  const segments = tokenizer.segment(text);
+  const segments = await tokenizer.segment(text);
 
   const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
   const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);

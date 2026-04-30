@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "setup-sudachi": "bash scripts/setup-sudachi.sh",
+    "postinstall": "bash scripts/setup-sudachi.sh || echo 'ℹ️  Sudachi setup skipped (Rust not installed). Run: npm run setup-sudachi'",
     "dev": "tsx server.ts",
     "start": "node server.ts",
     "build": "vite build",
