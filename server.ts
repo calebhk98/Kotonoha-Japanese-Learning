@@ -96,15 +96,40 @@ let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null;
 let dictionary: DictionaryManager | null = null;
 
 const tokenizerReady = new Promise<void>((resolve, reject) => {
-  kuromoji.builder({ dicPath: 'node_modules/kuromoji/dict' }).build((err, t) => {
+  const dicPath = path.join(__dirname, 'node_modules/kuromoji/dict');
+  console.log(`[Kuromoji] Starting initialization...`);
+  console.log(`[Kuromoji] Dictionary path: ${dicPath}`);
+  console.log(`[Kuromoji] Dictionary exists: ${fs.existsSync(dicPath)}`);
+
+  kuromoji.builder({ dicPath }).build((err, t) => {
     if (err) {
-      console.error("Failed to build kuromoji tokenizer:", err);
+      console.error("[Kuromoji] Failed to build tokenizer:", err);
       reject(err);
-    } else {
-      tokenizer = t;
-      console.log("Kuromoji tokenizer ready");
-      resolve();
+      return;
     }
+
+    tokenizer = t;
+    console.log("[Kuromoji] Tokenizer initialized successfully");
+
+    // Diagnostic test: Check if dictionary loaded correctly
+    const testCases = [
+      "なまえ",        // Should be 1 token, not split into な+ま+え
+      "たなか",        // Should be 1 token (name)
+      "にほん",        // Should be 1 token, not に+ほん
+      "とうきょう",    // Should be 1 token, not とう+きょう
+    ];
+
+    console.log("[Kuromoji] Running dictionary test...");
+    for (const testWord of testCases) {
+      const result = tokenizer.tokenize(testWord);
+      const isCorrect = result.length === 1;
+      const status = isCorrect ? "✓ PASS" : "✗ FAIL";
+      const tokenList = result.map(t => t.surface_form).join(" + ");
+      console.log(`[Kuromoji] ${status}: "${testWord}" → [${tokenList}] (${result.length} tokens)`);
+    }
+
+    console.log("[Kuromoji] Dictionary test complete");
+    resolve();
   });
 });
 
