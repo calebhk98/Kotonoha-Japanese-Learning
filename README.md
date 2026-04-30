@@ -13,14 +13,11 @@ A smart vocabulary learning tool that analyzes Japanese content (stories, videos
 
 ## Quick Start
 
-**Prerequisites**: Node.js 18+, Rust (for tokenizer setup)
+**Prerequisites**: Node.js 18+ (Rust will be auto-installed if needed)
 
 ```bash
-# Install dependencies
+# Install dependencies (also builds Sudachi WASM tokenizer)
 npm install
-
-# Setup Sudachi tokenizer (one-time, ~2-3 minutes)
-npm run setup-sudachi
 
 # Start dev server
 npm run dev
@@ -28,7 +25,7 @@ npm run dev
 
 The app will be available at `http://localhost:3000`.
 
-> **Note**: First-time setup requires Rust for building the Sudachi WASM tokenizer. See [TOKENIZER_SETUP.md](TOKENIZER_SETUP.md) for detailed instructions and troubleshooting.
+> **Note**: First-time setup automatically installs Rust and builds the Sudachi WASM tokenizer (~3-5 minutes). See [TOKENIZER_SETUP.md](TOKENIZER_SETUP.md) for detailed instructions and troubleshooting.
 
 ## How It Works
 

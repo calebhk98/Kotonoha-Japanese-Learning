@@ -4,16 +4,17 @@
 
 The project uses **Sudachi WASM** for accurate Japanese tokenization (83% accuracy on hiragana words).
 
-### First-Time Setup (One Command)
+### Automatic Setup with npm install
 
 ```bash
-npm run setup-sudachi
+npm install
 ```
 
 This automatically:
+- Detects if Rust is installed (installs it if needed)
 - Clones the Sudachi repository
 - Downloads the UniDic dictionary
-- Builds the WASM binary (~2-3 minutes)
+- Builds the WASM binary (~3-5 minutes on first run)
 - Copies to `sudachi-wasm-built/`
 
 ### Run the Server
@@ -24,18 +25,29 @@ npm run dev
 
 The server will use Sudachi WASM by default for tokenization.
 
-## Troubleshooting
+### Manual Setup (Optional)
 
-### "Sudachi WASM not initialized" Error
-
-**Solution**: Run the setup script
+If you prefer to run setup manually:
 ```bash
 npm run setup-sudachi
 ```
 
-### "Rust not found" Error During Setup
+## Troubleshooting
 
-**Solution**: Install Rust
+### Setup Hangs or Times Out
+
+**Cause**: Network issues downloading Sudachi repository or dictionary
+**Solution**: Check your internet connection and try again
+```bash
+npm run setup-sudachi
+```
+
+The script will skip the download if it's already in progress.
+
+### "Failed to install Rust" Error
+
+**Cause**: Network issue or Rust installer not available
+**Solution**: Install Rust manually from https://rustup.rs/
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
@@ -46,10 +58,12 @@ Then retry:
 npm run setup-sudachi
 ```
 
-### "wasm-pack not found" Error
+### "Sudachi WASM not initialized" Error
 
-**Solution**: Let the setup script install it (it will automatically)
+**Cause**: The WASM binary is missing or corrupted
+**Solution**: Rebuild it
 ```bash
+rm -rf sudachi-wasm-built
 npm run setup-sudachi
 ```
 

@@ -12,14 +12,18 @@ fi
 # Check for required tools
 echo "📋 Checking prerequisites..."
 if ! command -v cargo &> /dev/null; then
-    echo "⚠️  Rust not found. The tokenizer will not be set up."
-    echo ""
-    echo "To install Rust and complete the setup, run:"
-    echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-    echo "  source \$HOME/.cargo/env"
-    echo "  npm run setup-sudachi"
-    echo ""
-    exit 1
+    echo "📦 Rust not found. Installing Rust..."
+
+    # Download and run rustup installer
+    if ! curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable > /dev/null 2>&1; then
+        echo "❌ Failed to install Rust. Please install manually from https://rustup.rs/"
+        exit 1
+    fi
+
+    # Source the Rust environment
+    export PATH="$HOME/.cargo/bin:$PATH"
+
+    echo "✅ Rust installed successfully"
 fi
 
 set -e
