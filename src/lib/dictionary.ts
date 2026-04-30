@@ -31,9 +31,15 @@ export class KanjiDataDictionary implements Dictionary {
   }
 
   async lookup(word: string): Promise<WordLookupResult | null> {
-    if (!this.searchWords || typeof this.searchWords !== 'function') return null;
+    if (!this.searchWords || typeof this.searchWords !== 'function') {
+      console.log(`[Dictionary.KanjiData] searchWords not available`);
+      return null;
+    }
     const entries = this.searchWords(word) as any[];
-    if (!entries || entries.length === 0) return null;
+    if (!entries || entries.length === 0) {
+      console.log(`[Dictionary.KanjiData] No entries for "${word}"`);
+      return null;
+    }
 
     // For pure hiragana, prefer entries with matching pronunciation
     let bestEntry = entries[0];
@@ -50,6 +56,7 @@ export class KanjiDataDictionary implements Dictionary {
     }
 
     const firstMeaning = bestEntry.meanings?.[0]?.glosses?.[0] || "Unknown";
+    console.log(`[Dictionary.KanjiData] Found "${word}": ${firstMeaning}`);
     return {
       meaning: firstMeaning,
       reading: word,
@@ -113,11 +120,16 @@ export class JishoApiDictionary implements Dictionary {
   }
 
   async lookup(word: string): Promise<WordLookupResult | null> {
-    if (!this.initialized) return null;
+    if (!this.initialized) {
+      console.log(`[Dictionary.Jisho] Not initialized, returning null for "${word}"`);
+      return null;
+    }
 
     // Check cache first
     if (this.cache.has(word)) {
-      return this.cache.get(word) || null;
+      const cached = this.cache.get(word);
+      console.log(`[Dictionary.Jisho] Cache hit for "${word}": ${cached?.meaning || 'null'}`);
+      return cached || null;
     }
 
     // Queue the request
@@ -139,13 +151,16 @@ export class JishoApiDictionary implements Dictionary {
                 meanings,
                 reading: word,
               };
+              console.log(`[Dictionary.Jisho] Found "${word}": ${meanings[0]}`);
             }
+          } else {
+            console.log(`[Dictionary.Jisho] No results from Jisho API for "${word}"`);
           }
 
           this.cache.set(word, lookupResult);
           resolve(lookupResult);
         } catch (e) {
-          console.error("[Dictionary] Jisho lookup error:", (e as any).message);
+          console.error("[Dictionary.Jisho] Lookup error for", word, ":", (e as any).message);
           this.cache.set(word, null);
           resolve(null);
         } finally {
@@ -250,9 +265,10 @@ export class DictionaryManager {
         await (this.fallback as JishoApiDictionary).initialize();
         return;
       }
+      // If jmdict failed, fall through to try jisho
     }
 
-    if (usePrimary === "jisho") {
+    if (usePrimary === "jisho" || usePrimary === "jmdict") {
       const jishoDict = new JishoApiDictionary();
       await jishoDict.initialize();
       if (jishoDict.isInitialized()) {
