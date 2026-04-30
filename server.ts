@@ -191,10 +191,10 @@ async function processText(text: string) {
       meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
     }
 
-    // Use Jisho API for pure hiragana words (particles, auxiliaries)
-    // Queuing system prevents overwhelming the API
+    // Use dictionary (Jisho API or jmdict) for pure hiragana words first
+    // These are particles, auxiliaries, and other hiragana-only words where kanji-data is unreliable
     const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
-    if (isPureHiragana && dictionary && meaning === "Unknown meaning") {
+    if (isPureHiragana && dictionary) {
       const dictResult = await dictionary.lookup(wordStr);
       if (dictResult) {
         meaning = dictResult.meaning;
@@ -204,7 +204,7 @@ async function processText(text: string) {
       }
     }
 
-    // Fallback for pure hiragana particles if still no result
+    // Fallback for pure hiragana particles if still no result from dictionary
     if (meaning === "Unknown meaning" && isPureHiragana) {
       meaning = "Kana particle / expression";
     }
