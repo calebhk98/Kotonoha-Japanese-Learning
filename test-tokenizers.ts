@@ -1,10 +1,14 @@
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import TinySegmenter from 'tiny-segmenter';
 import { loadDefaultJapaneseParser } from 'budoux';
 import kuromoji from 'kuromoji';
 import { DictionaryFactory } from 'sudachi-ts';
 import init, { tokenize as sudachiTokenize, TokenizeMode } from 'sudachi';
-import hiogawaInit, { Tokenizer as HiogawaSudachiTokenizer } from '@hiogawa/sudachi.wasm';
+import hiogawaInit, { initSync, Tokenizer as HiogawaSudachiTokenizer } from '@hiogawa/sudachi.wasm';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Load test data
 const testData = JSON.parse(fs.readFileSync('./test-story.json', 'utf-8'));
@@ -97,27 +101,54 @@ function runNextTest() {
     console.error('BudouX error:', (e as any).message);
   }
 
-  // Test 4: Sudachi-TS (requires DictionaryFactory)
-  console.log('🧪 Testing Sudachi-TS...');
+  // Test 4: Sudachi-TS with downloaded dictionary
+  console.log('🧪 Testing Sudachi-TS (Mode C - with downloaded small dictionary)...');
   (async () => {
     try {
-      const factory = new DictionaryFactory();
-      const dict = await factory.create();
+      // Direct imports from build files since export points don't work
+      const sudachiTsModule = await import('sudachi-ts');
+      const { SplitMode } = sudachiTsModule;
+      // Import BinaryDictionary directly from the build
+      const binaryDictModule = await import('sudachi-ts/build/src/dictionary/binaryDictionary.js');
+      const { BinaryDictionary } = binaryDictModule;
+
+      // Load the downloaded dictionary
+      const dictPath = path.join(__dirname, 'sudachi-dictionary-20250129/system_small.dic');
+      const dict = await BinaryDictionary.loadSystem(dictPath);
       const sudachiTokenizer = dict.create();
-      const sudachiTokens = sudachiTokenizer.tokenize(text);
+
+      // Test Mode C (longest segmentation - best for hiragana)
+      const sudachiTokens = sudachiTokenizer.tokenize(SplitMode.C, text);
       const sudachiWords = filterWords(
-        sudachiTokens.map((t: any) => (typeof t.surface === 'function' ? t.surface() : t.surface_form))
+        sudachiTokens.map((t: any) => t.surface())
       );
       const sudachiCritical = scoreTokens(sudachiWords, criticalWords);
       const sudachiCorrect = sudachiCritical.filter(c => c.found).length;
       results.push({
-        name: 'Sudachi-TS',
+        name: 'Sudachi-TS (Mode C)',
         words: sudachiWords,
         critical: sudachiCritical,
         score: { correct: sudachiCorrect, total: sudachiCritical.length, percentage: Math.round((sudachiCorrect / sudachiCritical.length) * 100) },
       });
 
-      // Also test @didmar/sudachi-wasm
+      // Also test Mode B for comparison
+      console.log('🧪 Testing Sudachi-TS (Mode B - medium segmentation)...');
+      const sudachiTokensB = sudachiTokenizer.tokenize(SplitMode.B, text);
+      const sudachiWordsB = filterWords(
+        sudachiTokensB.map((t: any) => t.surface())
+      );
+      const sudachiCriticalB = scoreTokens(sudachiWordsB, criticalWords);
+      const sudachiCorrectB = sudachiCriticalB.filter(c => c.found).length;
+      results.push({
+        name: 'Sudachi-TS (Mode B)',
+        words: sudachiWordsB,
+        critical: sudachiCriticalB,
+        score: { correct: sudachiCorrectB, total: sudachiCriticalB.length, percentage: Math.round((sudachiCorrectB / sudachiCriticalB.length) * 100) },
+      });
+
+      await dict.close();
+
+      // Also test @hiogawa/sudachi.wasm
       testDidmarSudachi();
     } catch (e) {
       console.error('Sudachi-TS error:', (e as any).message);
@@ -127,12 +158,24 @@ function runNextTest() {
 }
 
 async function testDidmarSudachi() {
-  console.log('🧪 Testing @hiogawa/sudachi.wasm...');
+  console.log('🧪 Testing @hiogawa/sudachi.wasm (Mode C - longest segmentation)...');
   try {
-    await hiogawaInit();
+    // Load WASM file locally to avoid network fetch
+    const wasmPath = path.join(__dirname, 'node_modules/@hiogawa/sudachi.wasm/pkg/index_bg.wasm');
+    const wasmBuffer = fs.readFileSync(wasmPath);
+
+    // Initialize WASM with local file
+    try {
+      initSync(wasmBuffer);
+    } catch {
+      // If initSync fails, try async init as fallback
+      await hiogawaInit();
+    }
+
+    // Create tokenizer with embedded dictionary (no external file needed)
     const tokenizer = HiogawaSudachiTokenizer.create();
 
-    // Test Mode C (longest units - best for hiragana)
+    // Use Mode C (longest segmentation) for best hiragana handling
     const morphemes = tokenizer.run(text, 'C');
     const hiogawaWords = filterWords(morphemes.map(m => m.surface));
     const hiogawaCritical = scoreTokens(hiogawaWords, criticalWords);
@@ -143,9 +186,24 @@ async function testDidmarSudachi() {
       critical: hiogawaCritical,
       score: { correct: hiogawaCorrect, total: hiogawaCritical.length, percentage: Math.round((hiogawaCorrect / hiogawaCritical.length) * 100) },
     });
+
+    // Also test Mode B for comparison
+    console.log('🧪 Testing @hiogawa/sudachi.wasm (Mode B - medium segmentation)...');
+    const morphemesB = tokenizer.run(text, 'B');
+    const hiogawaWordsB = filterWords(morphemesB.map(m => m.surface));
+    const hiogawaCriticalB = scoreTokens(hiogawaWordsB, criticalWords);
+    const hiogawaCorrectB = hiogawaCriticalB.filter(c => c.found).length;
+    results.push({
+      name: '@hiogawa/sudachi.wasm (Mode B)',
+      words: hiogawaWordsB,
+      critical: hiogawaCriticalB,
+      score: { correct: hiogawaCorrectB, total: hiogawaCriticalB.length, percentage: Math.round((hiogawaCorrectB / hiogawaCriticalB.length) * 100) },
+    });
+
     printResults();
   } catch (e) {
     console.error('@hiogawa/sudachi.wasm error:', (e as any).message);
+    console.error('Stack:', (e as any).stack?.split('\n').slice(0, 3).join('\n'));
     printResults();
   }
 }
