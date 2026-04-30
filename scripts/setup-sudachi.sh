@@ -46,6 +46,7 @@ echo "✅ Prerequisites met"
 echo ""
 
 # Create temp directory for build
+ORIGINAL_DIR=$(pwd)
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
@@ -75,13 +76,20 @@ echo "✅ Dependencies updated"
 
 echo ""
 echo "   Step 2/3: Building WebAssembly binary (main compilation)..."
+
+# Disable wasm-opt in Cargo.toml to avoid network downloads
+cat >> Cargo.toml << 'EOF'
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+EOF
+
 SUDACHI_WASM_EMBED_DICTIONARY="../../resources/system.dic" npm run build:embed
 echo "✅ WASM binary built successfully"
 
 echo ""
 echo "📦 Installing built WASM to project..."
-ORIGINAL_DIR=$(pwd)
-cd - > /dev/null  # Go back to original directory
+cd "$ORIGINAL_DIR"
 mkdir -p sudachi-wasm-built
 cp "$TEMP_DIR/sudachi-rs/sudachi-wasm/pkg/"* sudachi-wasm-built/
 WASM_SIZE=$(du -sh sudachi-wasm-built/index_bg.wasm | cut -f1)
