@@ -265,9 +265,10 @@ export class DictionaryManager {
         await (this.fallback as JishoApiDictionary).initialize();
         return;
       }
+      // If jmdict failed, fall through to try jisho
     }
 
-    if (usePrimary === "jisho") {
+    if (usePrimary === "jisho" || usePrimary === "jmdict") {
       const jishoDict = new JishoApiDictionary();
       await jishoDict.initialize();
       if (jishoDict.isInitialized()) {
