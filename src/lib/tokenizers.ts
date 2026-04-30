@@ -76,30 +76,24 @@ export class LinderaImpl implements Tokenizer {
   }
 }
 
-// Hiogawa Sudachi WASM implementation
+// Hiogawa Sudachi WASM implementation (with built-in dictionary)
 export class SudachiWasmImpl implements Tokenizer {
-  name = 'Sudachi WASM';
-  private dict: any = null;
+  name = 'Sudachi WASM (Built)';
+  private tokenizer: any = null;
 
   async ready(): Promise<void> {
     try {
-      const { initSync, DictionaryFactory } = await import('@hiogawa/sudachi.wasm');
+      const { initSync, Tokenizer } = await import('../../sudachi-wasm-built/index.js');
       const fs = await import('fs');
       const path = await import('path');
 
-      // Try to initialize with embedded dictionary
-      const systemSmallPath = path.join(process.cwd(), 'sudachi-dictionary-20250129', 'system_small.dic');
+      // Load and initialize the WASM module
+      const wasmPath = path.join(process.cwd(), 'sudachi-wasm-built', 'index_bg.wasm');
+      const wasmBuffer = fs.readFileSync(wasmPath);
+      initSync(wasmBuffer);
 
-      if (fs.existsSync(systemSmallPath)) {
-        const wasmBuffer = fs.readFileSync(path.join(process.cwd(), 'node_modules', '@hiogawa', 'sudachi.wasm', 'dist', 'sudachi.wasm'));
-        initSync(wasmBuffer);
-        this.dict = DictionaryFactory.create({
-          dictionaryPath: systemSmallPath,
-        });
-      } else {
-        throw new Error('Dictionary file not found at ' + systemSmallPath);
-      }
-
+      // Create tokenizer
+      this.tokenizer = Tokenizer.create();
       console.log(`[Tokenizer] ${this.name} ready`);
     } catch (e: any) {
       console.warn(`[Tokenizer] ${this.name} initialization failed:`, e.message);
@@ -108,9 +102,54 @@ export class SudachiWasmImpl implements Tokenizer {
   }
 
   async segment(text: string): Promise<string[]> {
-    if (!this.dict) throw new Error('Sudachi WASM not initialized');
-    const morphemes = this.dict.tokenize(text);
-    return morphemes.map((m: any) => m.surface());
+    if (!this.tokenizer) throw new Error('Sudachi WASM not initialized');
+    const morphemes = this.tokenizer.run(text, 'C');
+
+    // Combine prefixes/suffixes with adjacent words
+    const particles = new Set(['は', 'が', 'を', 'に', 'へ', 'と', 'で', 'も', 'か', 'の', 'て', 'な', 'だ']);
+    const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
+
+    const result: string[] = [];
+    let i = 0;
+
+    while (i < morphemes.length) {
+      const m = morphemes[i];
+      const surface = m.surface;
+      const pos = m.part_of_speech[0];
+
+      // Skip punctuation and particles
+      if (isPunctuation(surface) || particles.has(surface)) {
+        i++;
+        continue;
+      }
+
+      // Start building a word unit
+      let word = '';
+
+      // Collect leading prefixes
+      while (i < morphemes.length && morphemes[i].part_of_speech[0] === '接頭辞') {
+        word += morphemes[i].surface;
+        i++;
+      }
+
+      // Add the main word
+      if (i < morphemes.length && !isPunctuation(morphemes[i].surface) && !particles.has(morphemes[i].surface)) {
+        word += morphemes[i].surface;
+        i++;
+      }
+
+      // Collect trailing suffixes
+      while (i < morphemes.length && morphemes[i].part_of_speech[0] === '接尾辞') {
+        word += morphemes[i].surface;
+        i++;
+      }
+
+      if (word) {
+        result.push(word);
+      }
+    }
+
+    return result;
   }
 }
 
@@ -148,7 +187,7 @@ export class KuromojiImpl implements Tokenizer {
 }
 
 export async function createTokenizer(name?: string): Promise<Tokenizer> {
-  const tokenizerName = name || process.env.TOKENIZER || 'TinySegmenter';
+  const tokenizerName = name || process.env.TOKENIZER || 'sudachi-wasm';
 
   let tokenizer: Tokenizer;
 
