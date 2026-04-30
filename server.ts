@@ -171,7 +171,7 @@ async function processText(text: string) {
     if (cacheHad) cacheHits++;
     else cacheMisses++;
 
-    if (lookupTime > 10) {
+    if (lookupTime > 250) {
       console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
     }
 
