@@ -1,3 +1,5 @@
+import { createRequire } from 'module';
+
 export interface WordLookupResult {
   meaning: string;
   meanings?: string[]; // All available meanings/senses
@@ -182,10 +184,10 @@ export class JmdictDictionary implements Dictionary {
 
   async initialize(jmdictPath: string, jmdictFile: string): Promise<void> {
     try {
-      const jmdictModule = await import("jmdict-wrapper");
-      const { setup: setupJmdict } = jmdictModule;
-      this.readingAnywhere = jmdictModule.readingAnywhere;
-      this.kanjiAnywhere = jmdictModule.kanjiAnywhere;
+      const require = createRequire(import.meta.url);
+      const { setup: setupJmdict, readingAnywhere, kanjiAnywhere } = require("jmdict-wrapper");
+      this.readingAnywhere = readingAnywhere;
+      this.kanjiAnywhere = kanjiAnywhere;
 
       const result = await setupJmdict(jmdictPath, jmdictFile, false);
       this.db = result.db;
