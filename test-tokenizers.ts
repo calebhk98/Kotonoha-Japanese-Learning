@@ -101,20 +101,21 @@ function runNextTest() {
     console.error('BudouX error:', (e as any).message);
   }
 
-  // Test 4: Sudachi-TS with downloaded dictionary
-  console.log('🧪 Testing Sudachi-TS (Mode C - with downloaded small dictionary)...');
+  // Test 4: Sudachi-TS with loadConfig and Dictionary.create()
+  console.log('🧪 Testing Sudachi-TS (Mode C - loaded from sudachi.json)...');
   (async () => {
     try {
-      // Direct imports from build files since export points don't work
       const sudachiTsModule = await import('sudachi-ts');
       const { SplitMode } = sudachiTsModule;
-      // Import BinaryDictionary directly from the build
-      const binaryDictModule = await import('sudachi-ts/build/src/dictionary/binaryDictionary.js');
-      const { BinaryDictionary } = binaryDictModule;
+      const configModule = await import('sudachi-ts/config/config.js');
+      const { loadConfig } = configModule;
+      const dictionaryModule = await import('sudachi-ts/core/dictionary.js');
+      const { Dictionary } = dictionaryModule;
 
-      // Load the downloaded dictionary
-      const dictPath = path.join(__dirname, 'sudachi-dictionary-20250129/system_small.dic');
-      const dict = await BinaryDictionary.loadSystem(dictPath);
+      // Load config and create dictionary
+      const configPath = path.join(__dirname, 'sudachi.json');
+      const config = await loadConfig(configPath);
+      const dict = await Dictionary.create(config);
       const sudachiTokenizer = dict.create();
 
       // Test Mode C (longest segmentation - best for hiragana)
@@ -132,7 +133,7 @@ function runNextTest() {
       });
 
       // Also test Mode B for comparison
-      console.log('🧪 Testing Sudachi-TS (Mode B - medium segmentation)...');
+      console.log('🧪 Testing Sudachi-TS (Mode B)...');
       const sudachiTokensB = sudachiTokenizer.tokenize(SplitMode.B, text);
       const sudachiWordsB = filterWords(
         sudachiTokensB.map((t: any) => t.surface())
@@ -146,12 +147,29 @@ function runNextTest() {
         score: { correct: sudachiCorrectB, total: sudachiCriticalB.length, percentage: Math.round((sudachiCorrectB / sudachiCriticalB.length) * 100) },
       });
 
+      // Also test Mode A for completeness
+      console.log('🧪 Testing Sudachi-TS (Mode A)...');
+      const sudachiTokensA = sudachiTokenizer.tokenize(SplitMode.A, text);
+      const sudachiWordsA = filterWords(
+        sudachiTokensA.map((t: any) => t.surface())
+      );
+      const sudachiCriticalA = scoreTokens(sudachiWordsA, criticalWords);
+      const sudachiCorrectA = sudachiCriticalA.filter(c => c.found).length;
+      results.push({
+        name: 'Sudachi-TS (Mode A)',
+        words: sudachiWordsA,
+        critical: sudachiCriticalA,
+        score: { correct: sudachiCorrectA, total: sudachiCriticalA.length, percentage: Math.round((sudachiCorrectA / sudachiCriticalA.length) * 100) },
+      });
+
       await dict.close();
 
       // Also test @hiogawa/sudachi.wasm
       testDidmarSudachi();
     } catch (e) {
       console.error('Sudachi-TS error:', (e as any).message);
+      console.error('  Config path: sudachi.json');
+      console.error('  Dictionary: sudachi-dictionary-20250129/system_small.dic');
       testDidmarSudachi();
     }
   })();
