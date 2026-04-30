@@ -4,6 +4,7 @@ import { loadDefaultJapaneseParser } from 'budoux';
 import kuromoji from 'kuromoji';
 import { DictionaryFactory } from 'sudachi-ts';
 import init, { tokenize as sudachiTokenize, TokenizeMode } from 'sudachi';
+import hiogawaInit, { Tokenizer as HiogawaSudachiTokenizer } from '@hiogawa/sudachi.wasm';
 
 // Load test data
 const testData = JSON.parse(fs.readFileSync('./test-story.json', 'utf-8'));
@@ -126,23 +127,25 @@ function runNextTest() {
 }
 
 async function testDidmarSudachi() {
-  console.log('🧪 Testing Sudachi WASM...');
+  console.log('🧪 Testing @hiogawa/sudachi.wasm...');
   try {
-    await init();
+    await hiogawaInit();
+    const tokenizer = HiogawaSudachiTokenizer.create();
+
     // Test Mode C (longest units - best for hiragana)
-    const sudachiResult = sudachiTokenize(text, TokenizeMode.C);
-    const sudachiWords = filterWords(sudachiResult.split('\t'));
-    const sudachiCritical = scoreTokens(sudachiWords, criticalWords);
-    const sudachiCorrect = sudachiCritical.filter(c => c.found).length;
+    const morphemes = tokenizer.run(text, 'C');
+    const hiogawaWords = filterWords(morphemes.map(m => m.surface));
+    const hiogawaCritical = scoreTokens(hiogawaWords, criticalWords);
+    const hiogawaCorrect = hiogawaCritical.filter(c => c.found).length;
     results.push({
-      name: 'Sudachi WASM (Mode C)',
-      words: sudachiWords,
-      critical: sudachiCritical,
-      score: { correct: sudachiCorrect, total: sudachiCritical.length, percentage: Math.round((sudachiCorrect / sudachiCritical.length) * 100) },
+      name: '@hiogawa/sudachi.wasm (Mode C)',
+      words: hiogawaWords,
+      critical: hiogawaCritical,
+      score: { correct: hiogawaCorrect, total: hiogawaCritical.length, percentage: Math.round((hiogawaCorrect / hiogawaCritical.length) * 100) },
     });
     printResults();
   } catch (e) {
-    console.error('Sudachi WASM error:', (e as any).message);
+    console.error('@hiogawa/sudachi.wasm error:', (e as any).message);
     printResults();
   }
 }
