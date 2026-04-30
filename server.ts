@@ -108,7 +108,19 @@ const tokenizerReady = new Promise<void>((resolve, reject) => {
   });
 });
 
+const jmdictReady = (async () => {
+  try {
+    await ensureJmdictExtracted();
+    console.log(`[JMDict] Dictionary file extracted and ready`);
+  } catch (e: any) {
+    console.warn(`[JMDict] Failed to extract dictionary:`, e.message);
+  }
+})();
+
 const dictionaryReady = (async () => {
+  // Ensure jmdict extraction is complete before checking for the file
+  await jmdictReady;
+
   dictionary = new DictionaryManager();
   const jmdictPath = path.join(__dirname, 'jmdict-db');
   const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
@@ -120,26 +132,9 @@ const dictionaryReady = (async () => {
   } else {
     console.log('[Dictionary] jmdict file not found, using Jisho API');
     await dictionary.initialize('jisho');
-
   }
   console.log('[Dictionary] Initialization complete');
 })();
-
-const jmdictReady = (async () => {
-  try {
-    await ensureJmdictExtracted();
-    console.log(`[JMDict] Dictionary file extracted and ready (jmdict support disabled pending module loading fix)`);
-  } catch (e: any) {
-    console.warn(`[JMDict] Failed to extract dictionary:`, e.message);
-  }
-  console.log('[Dictionary] Initialization complete');
-})();
-
-// TODO: jmdict support disabled pending ESM/CommonJS compatibility fix
-// When resolved, this will use jmdict-wrapper for pure hiragana lookups
-async function getJmdictMeanings(_wordStr: string): Promise<string[] | null> {
-  return null;
-}
 
 
 async function processText(text: string) {
