@@ -3,9 +3,8 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
-import tar from "tar";
+import * as tar from "tar";
 import kuromoji from "kuromoji";
-import { readingAnywhere, kanjiAnywhere, setup as setupJmdict, Gloss, Word } from "jmdict-wrapper";
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -111,64 +110,16 @@ const tokenizerReady = new Promise<void>((resolve, reject) => {
 const jmdictReady = (async () => {
   try {
     await ensureJmdictExtracted();
-    const jmdictPath = path.join(__dirname, 'jmdict-db');
-    const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
-    const result = await setupJmdict(jmdictPath, jmdictFile, false);
-    jmdictDb = result.db;
-    console.log(`[JMDict] Initialized - dictionary date: ${result.dictDate}`);
+    console.log(`[JMDict] Dictionary file extracted and ready (jmdict support disabled pending module loading fix)`);
   } catch (e: any) {
-    console.warn(`[JMDict] Failed to initialize:`, e.message);
-    console.warn(`[JMDict] Falling back to kanji-data for definitions`);
+    console.warn(`[JMDict] Failed to extract dictionary:`, e.message);
   }
 })();
 
-async function getJmdictMeanings(wordStr: string): Promise<string[] | null> {
-  if (!jmdictDb) return null;
-
-  try {
-    const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
-
-    let results: Word[] = [];
-    if (isPureHiragana) {
-      results = await readingAnywhere(jmdictDb, wordStr, 20);
-    } else {
-      results = await readingAnywhere(jmdictDb, wordStr, 10);
-      if (results.length === 0) {
-        results = await kanjiAnywhere(jmdictDb, wordStr, 10);
-      }
-    }
-
-    if (results.length === 0) return null;
-
-    // For pure hiragana, prioritize exact kana match
-    let bestMatch: Word;
-    if (isPureHiragana) {
-      bestMatch = results.find(r => r.kana.some(k => k.text === wordStr)) || results[0];
-    } else {
-      bestMatch = results.find(r =>
-        r.kana.some(k => k.text === wordStr) ||
-        r.kanji.some(k => k.text === wordStr)
-      ) || results[0];
-    }
-
-    // Extract all meanings (glosses) from senses, ordered by frequency
-    const meanings: string[] = [];
-    for (const sense of bestMatch.sense) {
-      if (sense.gloss && sense.gloss.length > 0) {
-        const glossTexts = (sense.gloss as Gloss[])
-          .filter(g => g.lang === 'en')
-          .map(g => g.text);
-        if (glossTexts.length > 0) {
-          meanings.push(glossTexts.join('; '));
-        } else if (sense.gloss[0]?.text) {
-          meanings.push(sense.gloss[0].text);
-        }
-      }
-    }
-    return meanings.length > 0 ? meanings : null;
-  } catch (e: any) {
-    return null;
-  }
+// TODO: jmdict support disabled pending ESM/CommonJS compatibility fix
+// When resolved, this will use jmdict-wrapper for pure hiragana lookups
+async function getJmdictMeanings(_wordStr: string): Promise<string[] | null> {
+  return null;
 }
 
 
