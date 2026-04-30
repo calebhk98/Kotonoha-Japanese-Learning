@@ -13,11 +13,14 @@ A smart vocabulary learning tool that analyzes Japanese content (stories, videos
 
 ## Quick Start
 
-**Prerequisites**: Node.js 18+
+**Prerequisites**: Node.js 18+, Rust (for tokenizer setup)
 
 ```bash
 # Install dependencies
 npm install
+
+# Setup Sudachi tokenizer (one-time, ~2-3 minutes)
+npm run setup-sudachi
 
 # Start dev server
 npm run dev
@@ -25,9 +28,11 @@ npm run dev
 
 The app will be available at `http://localhost:3000`.
 
+> **Note**: First-time setup requires Rust for building the Sudachi WASM tokenizer. See [TOKENIZER_SETUP.md](TOKENIZER_SETUP.md) for detailed instructions and troubleshooting.
+
 ## How It Works
 
-1. **Local Processing**: Japanese text is tokenized using `kuromoji` (a client-side tokenizer)
+1. **Local Processing**: Japanese text is tokenized using **Sudachi WASM** (a WebAssembly tokenizer with 83% accuracy on hiragana words)
 2. **Word Dictionary**: Words are looked up in the `kanji-data` dictionary to determine meanings and readings
 3. **Scoring System**:
    - **JLPT Points**: N5 (+15) → N1 (+100) based on kanji difficulty

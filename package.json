@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "setup-sudachi": "bash scripts/setup-sudachi.sh",
     "dev": "tsx server.ts",
     "start": "node server.ts",
     "build": "vite build",
