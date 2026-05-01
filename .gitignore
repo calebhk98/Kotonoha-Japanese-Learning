@@ -11,4 +11,4 @@ jmdict-all-3.6.2.json
 jmdict-db/
 *.dic
 sudachi-dictionary-*/
-sudachi-wasm-built/
+sudachi-wasm-built/index_bg.wasm
