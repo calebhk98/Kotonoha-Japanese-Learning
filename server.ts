@@ -214,6 +214,99 @@ async function processText(text: string) {
   return results;
 }
 
+async function processStoryText(text: string) {
+  if (!tokenizer) throw new Error("Tokenizer not ready");
+  const segments = await tokenizer.segment(text);
+
+  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
+  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
+  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
+
+  // Find positions of each segment in the original text
+  const tokens: any[] = [];
+  let searchStart = 0;
+
+  for (const segment of segments) {
+    const segmentIndex = text.indexOf(segment, searchStart);
+    if (segmentIndex === -1) {
+      console.warn(`[API] Could not find segment "${segment}" in text starting from position ${searchStart}`);
+      continue;
+    }
+
+    const isVocabWord = !(segment.trim() === '' || isPunctuation(segment) || isSingleKana(segment));
+
+    tokens.push({
+      surface: segment,
+      startIndex: segmentIndex,
+      endIndex: segmentIndex + segment.length,
+      isVocabWord,
+    });
+
+    searchStart = segmentIndex + segment.length;
+  }
+
+  // Look up vocab words
+  const vocabTokens = tokens.filter(t => t.isVocabWord);
+  const tokenMap = new Map<string, any>();
+
+  for (const token of vocabTokens) {
+    if (tokenMap.has(token.surface)) continue;
+
+    const entries = getCachedDictionaryEntries(token.surface);
+    const { variant, entry } = findBestVariant(token.surface, entries);
+
+    let meaning = "Unknown meaning";
+    let meanings: string[] | undefined = undefined;
+    let reading = token.surface;
+
+    if (entry && variant) {
+      reading = variant.pronounced || token.surface;
+      meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
+    }
+
+    const isPureHiragana = /^[ぁ-ん]+$/.test(token.surface);
+    if (isPureHiragana && dictionary) {
+      const dictResult = await dictionary.lookup(token.surface);
+      if (dictResult) {
+        meaning = dictResult.meaning;
+        if (dictResult.meanings) {
+          meanings = dictResult.meanings;
+        }
+      }
+    }
+
+    if (meaning === "Unknown meaning" && isPureHiragana) {
+      meaning = "Kana particle / expression";
+    }
+
+    const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(token.surface, variant);
+
+    tokenMap.set(token.surface, {
+      word: token.surface,
+      reading,
+      meaning,
+      jlpt,
+      joyo,
+      score,
+      breakdown,
+      meanings,
+    });
+  }
+
+  // Enrich tokens with word info
+  const enrichedTokens = tokens.map(token => {
+    if (token.isVocabWord && tokenMap.has(token.surface)) {
+      return {
+        ...token,
+        wordInfo: tokenMap.get(token.surface),
+      };
+    }
+    return token;
+  });
+
+  return enrichedTokens;
+}
+
 async function startServer() {
   // Wait for tokenizer and dictionary to be ready before starting server
   await tokenizerReady;
@@ -292,6 +385,30 @@ async function startServer() {
 
     console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words`);
     res.json(results);
+  });
+
+  app.post("/api/process-story", async (req, res) => {
+    const start = Date.now();
+    try {
+      const { text } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "No text provided" });
+      }
+      if (typeof text !== "string" || text.length > MAX_TEXT_LENGTH) {
+        return res.status(400).json({ error: `Text exceeds the ${MAX_TEXT_LENGTH} character limit` });
+      }
+      if (!JAPANESE_SCRIPT.test(text)) {
+        return res.status(400).json({ error: "Text must contain Japanese characters" });
+      }
+
+      const tokens = await processStoryText(text);
+      const elapsed = Date.now() - start;
+      console.log(`[API] /api/process-story: ${tokens.length} tokens in ${elapsed}ms`);
+      res.json({ tokens });
+    } catch (e: any) {
+      console.error(`[API Error] /api/process-story failed after ${Date.now() - start}ms:`, e.message);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.post("/api/update-words", (req, res) => {
