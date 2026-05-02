@@ -19,9 +19,39 @@ function getMorphemeBaseForm(surface: string, pos: string[]): string {
     // 五段 (Godan) verbs - consonant stem
     if (inflectionType.startsWith('五段')) {
       const line = inflectionType.split('-')[1]; // e.g., 'カ行'
-      // Handle multiple inflection forms (連用形-一般, 連用形-イ音便, etc.)
-      if (inflectionForm.startsWith('連用形') || inflectionForm.startsWith('未然形')) {
-        // Masu stem: replace final hiragana with dictionary form
+
+      // Handle continuative/past forms (連用形, 過去形)
+      if (inflectionForm && (inflectionForm.startsWith('連用形') || inflectionForm.startsWith('過去形') || inflectionForm.startsWith('過去分詞形'))) {
+        // Past form like "帰った" → "帰る", or continuative like "帰っ" → "帰る"
+        if (line === 'カ行') return surface.slice(0, -1) + 'く';
+        if (line === 'ガ行') return surface.slice(0, -1) + 'ぐ';
+        if (line === 'サ行') return surface.slice(0, -1) + 'す';
+        if (line === 'タ行') return surface.slice(0, -1) + 'つ';
+        if (line === 'ナ行') return surface.slice(0, -1) + 'ぬ';
+        if (line === 'ハ行') return surface.slice(0, -1) + 'ふ';
+        if (line === 'マ行') return surface.slice(0, -1) + 'む';
+        if (line === 'ヤ行') return surface.slice(0, -1) + 'う';
+        if (line === 'ラ行') return surface.slice(0, -1) + 'る';
+        if (line === 'ワ行' || line === 'ワア行') return surface.slice(0, -1) + 'う';
+      }
+
+      // Handle volitional/presumptive forms (意志形, 推量形, 未然形)
+      if (inflectionForm && (inflectionForm.startsWith('意志形') || inflectionForm.startsWith('推量形') || inflectionForm.startsWith('未然形'))) {
+        // Volitional like "作ろう" → "作る" (lines like ラ行 ending in ろ)
+        if (line === 'ラ行' && surface.endsWith('ろ')) return surface.slice(0, -1) + 'る';
+        if (line === 'カ行' && surface.endsWith('こ')) return surface.slice(0, -1) + 'く';
+        if (line === 'ガ行' && surface.endsWith('ご')) return surface.slice(0, -1) + 'ぐ';
+        if (line === 'サ行' && surface.endsWith('そ')) return surface.slice(0, -1) + 'す';
+        if (line === 'タ行' && surface.endsWith('と')) return surface.slice(0, -1) + 'つ';
+        if (line === 'ナ行' && surface.endsWith('の')) return surface.slice(0, -1) + 'ぬ';
+        if (line === 'ハ行' && surface.endsWith('ほ')) return surface.slice(0, -1) + 'ふ';
+        if (line === 'マ行' && surface.endsWith('も')) return surface.slice(0, -1) + 'む';
+        if (line === 'ヤ行' && surface.endsWith('よ')) return surface.slice(0, -1) + 'う';
+        if ((line === 'ワ行' || line === 'ワア行') && surface.endsWith('お')) return surface.slice(0, -1) + 'う';
+      }
+
+      // Masu stem or other forms
+      if (inflectionForm && inflectionForm.startsWith('連用形')) {
         if (line === 'カ行' && (surface.endsWith('き') || surface.endsWith('い'))) return surface.slice(0, -1) + 'く';
         if (line === 'ガ行' && (surface.endsWith('ぎ') || surface.endsWith('い'))) return surface.slice(0, -1) + 'ぐ';
         if (line === 'サ行' && surface.endsWith('し')) return surface.slice(0, -1) + 'す';
@@ -31,42 +61,51 @@ function getMorphemeBaseForm(surface: string, pos: string[]): string {
         if (line === 'マ行' && surface.endsWith('み')) return surface.slice(0, -1) + 'む';
         if (line === 'ヤ行' && surface.endsWith('い')) return surface.slice(0, -1) + 'う';
         if (line === 'ラ行' && surface.endsWith('り')) return surface.slice(0, -1) + 'る';
-        if (line === 'ワ行' && surface.endsWith('い')) return surface.slice(0, -1) + 'う';
-        if (line === 'ワア行' && surface.endsWith('い')) return surface.slice(0, -1) + 'う';
-        if (inflectionForm.startsWith('未然形') && surface.endsWith('か')) return surface.slice(0, -1) + 'く';
+        if ((line === 'ワ行' || line === 'ワア行') && surface.endsWith('い')) return surface.slice(0, -1) + 'う';
       }
     }
+
     // 下一段 (Ichidan) verbs - vowel stem (ア行, バ行, ダ行, マ行, ヤ行, ラ行)
     if (inflectionType.startsWith('下一段-')) {
       const line = inflectionType.split('-')[1];
-      if (inflectionForm.startsWith('連用形') || inflectionForm.startsWith('未然形')) {
+      // For ichidan verbs ending in え, べ, で, め, れ
+      if (inflectionForm && (inflectionForm.startsWith('連用形') || inflectionForm.startsWith('未然形') || inflectionForm.startsWith('過去形'))) {
         if (line === 'ア行' && surface.endsWith('え')) return surface.slice(0, -1) + 'える';
         if (line === 'バ行' && surface.endsWith('べ')) return surface.slice(0, -1) + 'べる';
         if (line === 'ダ行' && surface.endsWith('で')) return surface.slice(0, -1) + 'でる';
         if (line === 'マ行' && surface.endsWith('め')) return surface.slice(0, -1) + 'める';
         if (line === 'ヤ行' && surface.endsWith('え')) return surface.slice(0, -1) + 'える';
         if (line === 'ラ行' && surface.endsWith('れ')) return surface.slice(0, -1) + 'れる';
+        // Also handle when it ends with け, け for ケ系 (like 出かけ → 出かける)
+        if (line === 'ケ行' && surface.endsWith('け')) return surface + 'る';
+      }
+      // For special patterns like 出かけ which is an ichidan verb
+      if (surface.endsWith('け') && !surface.endsWith('える')) {
+        return surface + 'る';
       }
     }
+
     // 上一段 (Ichidan) verbs - vowel stem (エ行, イ行)
     if (inflectionType.startsWith('上一段-')) {
-      if ((inflectionForm.startsWith('連用形') || inflectionForm.startsWith('未然形')) && surface.endsWith('い')) {
+      if (inflectionForm && (inflectionForm.startsWith('連用形') || inflectionForm.startsWith('未然形')) && surface.endsWith('い')) {
         if (inflectionType === '上一段-エ行') return surface.slice(0, -1) + 'える'; // wrong, should be える → いる? No, エ行 is 来る class
         if (inflectionType === '上一段-イ行') return surface.slice(0, -1) + 'いる';
       }
     }
+
     // サ行変格 (Sa-gyou irregular)
     if (inflectionType === 'サ行変格') {
-      if (inflectionForm === '連用形-一般' && surface.endsWith('し')) {
+      if (inflectionForm && (inflectionForm === '連用形-一般' || inflectionForm.startsWith('過去')) && surface.endsWith('し')) {
         return surface.slice(0, -1) + 'する';
       }
       if (inflectionForm === '未然形-一般' && surface.endsWith('せ')) {
         return surface.slice(0, -1) + 'する';
       }
     }
+
     // カ行変格 (Ka-gyou irregular) - くる
     if (inflectionType === 'カ行変格') {
-      if (inflectionForm === '連用形-一般' && surface.endsWith('き')) {
+      if (inflectionForm && (inflectionForm === '連用形-一般' || inflectionForm.startsWith('過去')) && surface.endsWith('き')) {
         return surface.slice(0, -1) + 'る';
       }
       if (inflectionForm === '未然形-一般' && surface.endsWith('こ')) {
@@ -92,6 +131,21 @@ function getMorphemeBaseForm(surface: string, pos: string[]): string {
   // For na-adjectives (形状詞)
   if (partOfSpeech === '形状詞') {
     return surface; // These are usually already in dictionary form
+  }
+
+  // Fallback for verbs: if it ends in o-form (ろ, こ, etc.) and is a verb, convert to dictionary form
+  if (partOfSpeech === '動詞') {
+    // Volitional forms like 作ろう → 作る
+    if (surface.endsWith('ろ')) return surface.slice(0, -1) + 'る';
+    if (surface.endsWith('こ')) return surface.slice(0, -1) + 'く';
+    if (surface.endsWith('ご')) return surface.slice(0, -1) + 'ぐ';
+    if (surface.endsWith('そ')) return surface.slice(0, -1) + 'す';
+    if (surface.endsWith('と')) return surface.slice(0, -1) + 'つ';
+    if (surface.endsWith('の')) return surface.slice(0, -1) + 'ぬ';
+    if (surface.endsWith('ほ')) return surface.slice(0, -1) + 'ふ';
+    if (surface.endsWith('も')) return surface.slice(0, -1) + 'む';
+    if (surface.endsWith('よ')) return surface.slice(0, -1) + 'う';
+    if (surface.endsWith('お')) return surface.slice(0, -1) + 'う';
   }
 
   // If we can't determine, return surface as-is
