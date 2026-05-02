@@ -78,18 +78,22 @@ export class LinderaImpl implements Tokenizer {
 
 // Hiogawa Sudachi WASM implementation (with built-in dictionary)
 export class SudachiWasmImpl implements Tokenizer {
-  name = 'Sudachi WASM (Built)';
+  name = 'Sudachi WASM';
   private tokenizer: any = null;
 
   async ready(): Promise<void> {
     try {
-      const { initSync, Tokenizer } = await import('../../sudachi-wasm-built/index.js');
+      const pkg = await import('@hiogawa/sudachi.wasm');
+      const { initSync, Tokenizer } = pkg;
+
       const fs = await import('fs');
       const path = await import('path');
 
-      // Load and initialize the WASM module
-      const wasmPath = path.join(process.cwd(), 'sudachi-wasm-built', 'index_bg.wasm');
-      const wasmBuffer = fs.readFileSync(wasmPath);
+      // Load the WASM module from npm package
+      const wasmPath = (path.default || path).join(process.cwd(), 'node_modules/@hiogawa/sudachi.wasm/pkg/index_bg.wasm');
+      const wasmBuffer = (fs.readFileSync as any)(wasmPath);
+
+      // Initialize the WASM module
       initSync(wasmBuffer);
 
       // Create tokenizer
@@ -210,6 +214,17 @@ export async function createTokenizer(name?: string): Promise<Tokenizer> {
       break;
   }
 
-  await tokenizer.ready();
-  return tokenizer;
+  try {
+    await tokenizer.ready();
+    return tokenizer;
+  } catch (e) {
+    // If requested tokenizer fails, fall back to TinySegmenter
+    if (tokenizerName.toLowerCase() !== 'tinysegmenter') {
+      console.warn(`[Tokenizer] Falling back to TinySegmenter due to: ${(e as any).message}`);
+      const fallback = new TinySegmenterImpl();
+      await fallback.ready();
+      return fallback;
+    }
+    throw e;
+  }
 }
