@@ -17,6 +17,7 @@ export async function clearServerCache(): Promise<void> {
   console.log(`[API] Cache cleared: ${result.message}`);
 }
 
+export async function extractVocabulary(text: string, onProgress?: (message: string) => void): Promise<WordInfo[]> {
   const start = Date.now();
   const charCount = text.length;
 
