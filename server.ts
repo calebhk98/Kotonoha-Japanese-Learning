@@ -725,6 +725,64 @@ async function startServer() {
     }
   });
 
+  app.get("/api/word/:word", async (req, res) => {
+    const start = Date.now();
+    try {
+      const { word } = req.params;
+      if (!word || typeof word !== 'string') {
+        return res.status(400).json({ error: 'No word provided' });
+      }
+
+      const entries = getCachedDictionaryEntries(word);
+      const { variant, entry } = findBestVariant(word, entries);
+
+      let reading = word;
+      let meaning = "Unknown meaning";
+      let meanings: string[] | undefined = undefined;
+
+      if (entry && variant) {
+        reading = variant.pronounced || word;
+        if (entry.meanings && entry.meanings.length > 0) {
+          meaning = entry.meanings[0].glosses?.join(", ") || meaning;
+          // Collect all unique meanings
+          const allMeanings = new Set<string>();
+          for (const m of entry.meanings) {
+            if (m.glosses) {
+              for (const gloss of m.glosses) {
+                allMeanings.add(gloss);
+              }
+            }
+          }
+          meanings = Array.from(allMeanings);
+        }
+      }
+
+      const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(word, variant);
+
+      const wordData: any = {
+        word,
+        reading,
+        meaning,
+        jlpt,
+        joyo,
+        score,
+        breakdown,
+        entry
+      };
+
+      if (meanings) {
+        wordData.meanings = meanings;
+      }
+
+      const elapsed = Date.now() - start;
+      console.log(`[API] /api/word/${word}: completed in ${elapsed}ms`);
+      res.json(wordData);
+    } catch (e: any) {
+      console.error(`[API Error] /api/word failed:`, e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post("/api/wanikani/sync", async (req, res) => {
     const start = Date.now();
     try {
