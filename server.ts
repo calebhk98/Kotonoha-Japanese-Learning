@@ -26,6 +26,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CACHE_FILE = path.join(__dirname, '.word-cache.json');
+const JISHO_CACHE_FILE = path.join(__dirname, '.jisho-cache.json');
+let jishoCache = new Map<string, any>();
+let jishoCacheNeedsSave = false;
 
 // Extract jmdict if needed
 async function ensureJmdictExtracted() {
@@ -75,6 +78,25 @@ function loadCacheFromDisk() {
   }
 }
 
+// Load Jisho API cache from disk
+function loadJishoCacheFromDisk() {
+  try {
+    if (fs.existsSync(JISHO_CACHE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(JISHO_CACHE_FILE, 'utf-8'));
+      if (data && typeof data === 'object') {
+        let count = 0;
+        for (const [key, value] of Object.entries(data)) {
+          jishoCache.set(key, value);
+          count++;
+        }
+        console.log(`[Server] Loaded ${count} Jisho API entries from cache file`);
+      }
+    }
+  } catch (e) {
+    console.error('[Server] Failed to load Jisho cache from disk:', (e as any).message);
+  }
+}
+
 // Save cache to disk
 function saveCacheToDisk() {
   try {
@@ -89,6 +111,23 @@ function saveCacheToDisk() {
     console.log(`[Server] Saved ${wordsCache.size} words to cache file`);
   } catch (e) {
     console.error('[Server] Failed to save cache to disk:', (e as any).message);
+  }
+}
+
+// Save Jisho API cache to disk
+function saveJishoCacheToDisk() {
+  try {
+    if (!jishoCacheNeedsSave) return;
+
+    const obj: Record<string, any> = {};
+    for (const [key, value] of jishoCache.entries()) {
+      obj[key] = value;
+    }
+    fs.writeFileSync(JISHO_CACHE_FILE, JSON.stringify(obj), 'utf-8');
+    jishoCacheNeedsSave = false;
+    console.log(`[Server] Saved ${jishoCache.size} Jisho API entries to cache file`);
+  } catch (e) {
+    console.error('[Server] Failed to save Jisho cache to disk:', (e as any).message);
   }
 }
 
@@ -118,17 +157,25 @@ const dictionaryReady = (async () => {
   // Ensure jmdict extraction is complete before checking for the file
   await jmdictReady;
 
+  // Load Jisho cache before initializing dictionary
+  loadJishoCacheFromDisk();
+
   dictionary = new DictionaryManager();
   const jmdictPath = path.join(__dirname, 'jmdict-db');
   const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
   const jmdictExists = fs.existsSync(jmdictFile);
 
+  const onJishoCacheUpdate = (cache: Map<string, any>) => {
+    jishoCache = cache;
+    jishoCacheNeedsSave = true;
+  };
+
   if (jmdictExists) {
     console.log('[Dictionary] jmdict file found, attempting to initialize');
-    await dictionary.initialize('jmdict', jmdictPath, jmdictFile);
+    await dictionary.initialize('jmdict', jmdictPath, jmdictFile, jishoCache, onJishoCacheUpdate);
   } else {
     console.log('[Dictionary] jmdict file not found, using Jisho API');
-    await dictionary.initialize('jisho');
+    await dictionary.initialize('jisho', undefined, undefined, jishoCache, onJishoCacheUpdate);
   }
   console.log('[Dictionary] Initialization complete');
 })();
@@ -428,9 +475,10 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Periodically save cache to disk (every 30 seconds if changed)
+  // Periodically save caches to disk (every 30 seconds if changed)
   setInterval(() => {
     saveCacheToDisk();
+    saveJishoCacheToDisk();
   }, 30000);
 
   app.use((req, _res, next) => {
@@ -714,16 +762,18 @@ async function startServer() {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-  // Save cache on shutdown
+  // Save caches on shutdown
   process.on('SIGINT', () => {
-    console.log('\n[Server] Shutting down, saving cache...');
+    console.log('\n[Server] Shutting down, saving caches...');
     saveCacheToDisk();
+    saveJishoCacheToDisk();
     process.exit(0);
   });
 
   process.on('SIGTERM', () => {
-    console.log('[Server] Terminating, saving cache...');
+    console.log('[Server] Terminating, saving caches...');
     saveCacheToDisk();
+    saveJishoCacheToDisk();
     process.exit(0);
   });
 }

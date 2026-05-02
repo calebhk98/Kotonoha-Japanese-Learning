@@ -73,6 +73,17 @@ export class JishoApiDictionary implements Dictionary {
   private requestQueue: Array<() => Promise<void>> = [];
   private activeRequests = 0;
   private maxConcurrent = 2; // Limit to 2 concurrent requests to avoid overwhelming Jisho
+  private persistentCache: Map<string, WordLookupResult | null>;
+  private onCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void;
+
+  constructor(persistentCache?: Map<string, WordLookupResult | null>, onCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void) {
+    this.persistentCache = persistentCache || new Map();
+    this.onCacheUpdate = onCacheUpdate;
+    // Load persistent cache into memory
+    for (const [key, value] of this.persistentCache.entries()) {
+      this.cache.set(key, value);
+    }
+  }
 
   async initialize(): Promise<void> {
     try {
@@ -80,7 +91,7 @@ export class JishoApiDictionary implements Dictionary {
       const testRes = await this.fetchFromJisho("test");
       if (testRes) {
         this.initialized = true;
-        console.log("[Dictionary] Jisho API initialized (max 2 concurrent requests)");
+        console.log(`[Dictionary] Jisho API initialized (max 2 concurrent requests, ${this.cache.size} cached)`);
       }
     } catch (e) {
       console.warn("[Dictionary] Jisho API unavailable:", (e as any).message);
@@ -160,10 +171,14 @@ export class JishoApiDictionary implements Dictionary {
           }
 
           this.cache.set(word, lookupResult);
+          this.persistentCache.set(word, lookupResult);
+          this.onCacheUpdate?.(this.persistentCache);
           resolve(lookupResult);
         } catch (e) {
           console.error("[Dictionary.Jisho] Lookup error for", word, ":", (e as any).message);
           this.cache.set(word, null);
+          this.persistentCache.set(word, null);
+          this.onCacheUpdate?.(this.persistentCache);
           resolve(null);
         } finally {
           this.processQueue();
@@ -256,14 +271,16 @@ export class DictionaryManager {
   async initialize(
     usePrimary: "jmdict" | "jisho" | "kanjidata" = "jisho",
     jmdictPath?: string,
-    jmdictFile?: string
+    jmdictFile?: string,
+    jishoCache?: Map<string, WordLookupResult | null>,
+    onJishoCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void
   ): Promise<void> {
     if (usePrimary === "jmdict" && jmdictPath && jmdictFile) {
       const jmdictDict = new JmdictDictionary();
       await jmdictDict.initialize(jmdictPath, jmdictFile);
       if (jmdictDict.isInitialized()) {
         this.primary = jmdictDict;
-        this.fallback = new JishoApiDictionary();
+        this.fallback = new JishoApiDictionary(jishoCache, onJishoCacheUpdate);
         await (this.fallback as JishoApiDictionary).initialize();
         return;
       }
@@ -271,7 +288,7 @@ export class DictionaryManager {
     }
 
     if (usePrimary === "jisho" || usePrimary === "jmdict") {
-      const jishoDict = new JishoApiDictionary();
+      const jishoDict = new JishoApiDictionary(jishoCache, onJishoCacheUpdate);
       await jishoDict.initialize();
       if (jishoDict.isInitialized()) {
         this.primary = jishoDict;
