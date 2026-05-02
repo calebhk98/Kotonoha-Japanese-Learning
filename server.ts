@@ -26,6 +26,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CACHE_FILE = path.join(__dirname, '.word-cache.json');
+const JISHO_CACHE_FILE = path.join(__dirname, '.jisho-cache.json');
+let jishoCache = new Map<string, any>();
+let jishoCacheNeedsSave = false;
 
 // Extract jmdict if needed
 async function ensureJmdictExtracted() {
@@ -75,6 +78,25 @@ function loadCacheFromDisk() {
   }
 }
 
+// Load Jisho API cache from disk
+function loadJishoCacheFromDisk() {
+  try {
+    if (fs.existsSync(JISHO_CACHE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(JISHO_CACHE_FILE, 'utf-8'));
+      if (data && typeof data === 'object') {
+        let count = 0;
+        for (const [key, value] of Object.entries(data)) {
+          jishoCache.set(key, value);
+          count++;
+        }
+        console.log(`[Server] Loaded ${count} Jisho API entries from cache file`);
+      }
+    }
+  } catch (e) {
+    console.error('[Server] Failed to load Jisho cache from disk:', (e as any).message);
+  }
+}
+
 // Save cache to disk
 function saveCacheToDisk() {
   try {
@@ -89,6 +111,23 @@ function saveCacheToDisk() {
     console.log(`[Server] Saved ${wordsCache.size} words to cache file`);
   } catch (e) {
     console.error('[Server] Failed to save cache to disk:', (e as any).message);
+  }
+}
+
+// Save Jisho API cache to disk
+function saveJishoCacheToDisk() {
+  try {
+    if (!jishoCacheNeedsSave) return;
+
+    const obj: Record<string, any> = {};
+    for (const [key, value] of jishoCache.entries()) {
+      obj[key] = value;
+    }
+    fs.writeFileSync(JISHO_CACHE_FILE, JSON.stringify(obj), 'utf-8');
+    jishoCacheNeedsSave = false;
+    console.log(`[Server] Saved ${jishoCache.size} Jisho API entries to cache file`);
+  } catch (e) {
+    console.error('[Server] Failed to save Jisho cache to disk:', (e as any).message);
   }
 }
 
@@ -118,23 +157,31 @@ const dictionaryReady = (async () => {
   // Ensure jmdict extraction is complete before checking for the file
   await jmdictReady;
 
+  // Load Jisho cache before initializing dictionary
+  loadJishoCacheFromDisk();
+
   dictionary = new DictionaryManager();
   const jmdictPath = path.join(__dirname, 'jmdict-db');
   const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
   const jmdictExists = fs.existsSync(jmdictFile);
 
+  const onJishoCacheUpdate = (cache: Map<string, any>) => {
+    jishoCache = cache;
+    jishoCacheNeedsSave = true;
+  };
+
   if (jmdictExists) {
     console.log('[Dictionary] jmdict file found, attempting to initialize');
-    await dictionary.initialize('jmdict', jmdictPath, jmdictFile);
+    await dictionary.initialize('jmdict', jmdictPath, jmdictFile, jishoCache, onJishoCacheUpdate);
   } else {
     console.log('[Dictionary] jmdict file not found, using Jisho API');
-    await dictionary.initialize('jisho');
+    await dictionary.initialize('jisho', undefined, undefined, jishoCache, onJishoCacheUpdate);
   }
   console.log('[Dictionary] Initialization complete');
 })();
 
 
-async function processText(text: string) {
+async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
   const tokens = await tokenizer.segment(text);
 
@@ -198,7 +245,97 @@ async function processText(text: string) {
     const isKanaOnly = isPureHiragana || isPureKatakana;
 
     if (isKanaOnly && dictionary) {
-      const dictResult = await dictionary.lookup(wordStr);
+      // Use pre-looked-up cache if available (from batch concurrent lookup)
+      const dictResult = kanaLookupCache?.get(wordStr) ?? await dictionary.lookup(wordStr);
+      if (dictResult) {
+        meaning = dictResult.meaning;
+        if (dictResult.meanings) {
+          meanings = dictResult.meanings;
+        }
+      }
+    }
+
+    // Fallback for pure hiragana particles if still no result from dictionary
+    if (meaning === "Unknown meaning" && isPureHiragana) {
+      meaning = "Kana particle / expression";
+    }
+
+    const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
+    const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
+    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
+    if (meanings) {
+      wordData.meanings = meanings;
+    }
+    results.push(wordData);
+  }
+
+  console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
+
+  return results;
+}
+
+async function processTextWithTokens(text: string, tokens: any[], kanaLookupCache: Map<string, any>) {
+  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
+  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
+  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
+
+  // Count how many times each word appears (for frequencyInContent)
+  const baseFormCounts = new Map<string, number>();
+  const validWords = new Map<string, string>(); // Map surface form to baseForm for lookup
+
+  for (const token of tokens) {
+    const surface = token.surface;
+    if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
+
+    if (!isSingleKana(surface)) {
+      validWords.set(surface, token.baseForm);
+      baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
+    }
+  }
+
+  let cacheHits = 0;
+  let cacheMisses = 0;
+  const results = [];
+  for (const [wordStr, baseForm] of validWords) {
+    const start = Date.now();
+    // Try to look up using baseForm first (for conjugated verbs), then fall back to wordStr
+    const cacheHadBase = wordsCache.has(baseForm);
+    const cacheHadSurface = wordsCache.has(wordStr);
+    let entries = cacheHadBase ? wordsCache.get(baseForm)! : getCachedDictionaryEntries(baseForm);
+
+    // If baseForm lookup failed, try the surface form
+    if (entries.length === 0 && baseForm !== wordStr) {
+      entries = cacheHadSurface ? wordsCache.get(wordStr)! : getCachedDictionaryEntries(wordStr);
+    }
+
+    const lookupTime = Date.now() - start;
+
+    if (cacheHadBase || cacheHadSurface) cacheHits++;
+    else cacheMisses++;
+
+    if (lookupTime > 250) {
+      console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
+    }
+
+    const { variant, entry } = findBestVariant(baseForm, entries);
+
+    let meaning = "Unknown meaning";
+    let meanings: string[] | undefined = undefined;
+    let reading = wordStr;
+
+    if (entry && variant) {
+      reading = variant.pronounced || wordStr;
+      meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
+    }
+
+    // Use dictionary (Jisho API or jmdict) for pure hiragana or katakana words
+    const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
+    const isPureKatakana = /^[ァ-ヴー]+$/.test(wordStr);
+    const isKanaOnly = isPureHiragana || isPureKatakana;
+
+    if (isKanaOnly) {
+      // Use pre-looked-up cache (all kana words looked up concurrently before)
+      const dictResult = kanaLookupCache.get(wordStr);
       if (dictResult) {
         meaning = dictResult.meaning;
         if (dictResult.meanings) {
@@ -338,9 +475,10 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Periodically save cache to disk (every 30 seconds if changed)
+  // Periodically save caches to disk (every 30 seconds if changed)
   setInterval(() => {
     saveCacheToDisk();
+    saveJishoCacheToDisk();
   }, 30000);
 
   app.use((req, _res, next) => {
@@ -384,24 +522,96 @@ async function startServer() {
       return res.status(400).json({ error: "texts must be an array" });
     }
 
+    const batchStart = Date.now();
     console.log(`[API] /api/batch-extract: Processing ${texts.length} items (cache: ${wordsCache.size} words)`);
-    const results = await Promise.all(texts.map(async (item: any) => {
-      const { id, text } = item;
-      if (!text || typeof text !== "string") return { id, error: "No text" };
 
-      const start = Date.now();
-      try {
-        const words = await processText(text);
-        const elapsed = Date.now() - start;
-        console.log(`[API] batch-extract[${id}]: ${words.length} words in ${elapsed}ms`);
-        return { id, words, elapsed };
-      } catch (e: any) {
-        console.error(`[API] batch-extract[${id}]: Error:`, e.message);
-        return { id, error: e.message };
+    // Sort by text length (shorter first) for faster initial cache warmup
+    const sortedTexts = [...texts].sort((a, b) => (a.text?.length ?? 0) - (b.text?.length ?? 0));
+
+    // Tokenize all texts concurrently upfront
+    const tokenStart = Date.now();
+    const tokenizedBatch = await Promise.all(
+      sortedTexts.map(async (item: any) => {
+        if (!item.text || typeof item.text !== "string") return { ...item, tokens: null };
+        try {
+          const tokens = await tokenizer!.segment(item.text);
+          return { ...item, tokens };
+        } catch (e) {
+          return { ...item, tokens: null };
+        }
+      })
+    );
+    const tokenTime = Date.now() - tokenStart;
+    console.log(`[API] /api/batch-extract: Tokenization complete (${tokenTime}ms)`);
+
+    // Collect unique kana-only words from all texts
+    const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
+    const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
+    const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
+
+    const uniqueKanaWords = new Set<string>();
+    for (const item of tokenizedBatch) {
+      if (!item.tokens) continue;
+      for (const token of item.tokens) {
+        const surface = token.surface;
+        if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
+
+        const isPureHiragana = /^[ぁ-ん]+$/.test(surface);
+        const isPureKatakana = /^[ァ-ヴー]+$/.test(surface);
+        if (isPureHiragana || isPureKatakana) {
+          uniqueKanaWords.add(surface);
+        }
       }
-    }));
+    }
 
-    console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words`);
+    // Look up all kana words concurrently
+    const lookupStart = Date.now();
+    console.log(`[API] /api/batch-extract: Looking up ${uniqueKanaWords.size} unique kana words concurrently`);
+    const kanaLookupCache = new Map<string, any>();
+    if (dictionary && uniqueKanaWords.size > 0) {
+      const lookupPromises = Array.from(uniqueKanaWords).map(async (word) => {
+        try {
+          const result = await dictionary.lookup(word);
+          return { word, result };
+        } catch (e) {
+          return { word, result: null };
+        }
+      });
+      const lookupResults = await Promise.all(lookupPromises);
+      for (const { word, result } of lookupResults) {
+        kanaLookupCache.set(word, result);
+      }
+    }
+    const lookupTime = Date.now() - lookupStart;
+    const foundCount = Array.from(kanaLookupCache.values()).filter(v => v !== null).length;
+    console.log(`[API] /api/batch-extract: Kana lookup complete (${lookupTime}ms, ${foundCount}/${uniqueKanaWords.size} found)`);
+
+    // Process texts with pre-looked-up kana cache
+    const processStart = Date.now();
+    const results = await Promise.all(
+      tokenizedBatch.map(async (item: any) => {
+        const { id, text, tokens } = item;
+        if (!text || typeof text !== "string") return { id, error: "No text" };
+        if (!tokens) return { id, error: "Tokenization failed" };
+
+        const start = Date.now();
+        try {
+          // Re-inject tokens to avoid re-tokenizing
+          const words = await processTextWithTokens(text, tokens, kanaLookupCache);
+          const elapsed = Date.now() - start;
+          console.log(`[API] batch-extract[${id}]: ${words.length} words in ${elapsed}ms`);
+          return { id, words, elapsed };
+        } catch (e: any) {
+          console.error(`[API] batch-extract[${id}]: Error:`, e.message);
+          return { id, error: e.message };
+        }
+      })
+    );
+    const processTime = Date.now() - processStart;
+    const totalTime = Date.now() - batchStart;
+
+    console.log(`[API] /api/batch-extract: Text processing complete (${processTime}ms)`);
+    console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words (total: ${totalTime}ms)`);
     res.json(results);
   });
 
@@ -467,6 +677,36 @@ async function startServer() {
     'Authorization': `Bearer ${token}`,
     'Wanikani-Revision': '20170710',
     'Content-Type': 'application/json',
+  });
+
+  app.post("/api/clear-cache", (req, res) => {
+    const wordCacheSize = wordsCache.size;
+    const jishoCacheSize = jishoCache.size;
+
+    wordsCache.clear();
+    jishoCache.clear();
+    jishoCacheNeedsSave = true;
+    markCacheAsDirty();
+
+    console.log(`[API] /api/clear-cache: Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`);
+
+    // Delete cache files
+    try {
+      if (fs.existsSync(CACHE_FILE)) {
+        fs.unlinkSync(CACHE_FILE);
+      }
+      if (fs.existsSync(JISHO_CACHE_FILE)) {
+        fs.unlinkSync(JISHO_CACHE_FILE);
+      }
+      console.log(`[API] /api/clear-cache: Deleted cache files`);
+    } catch (e) {
+      console.error('[API] /api/clear-cache: Error deleting files:', (e as any).message);
+    }
+
+    res.json({
+      cleared: true,
+      message: `Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`
+    });
   });
 
   app.post("/api/wanikani/validate", async (req, res) => {
@@ -564,16 +804,18 @@ async function startServer() {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-  // Save cache on shutdown
+  // Save caches on shutdown
   process.on('SIGINT', () => {
-    console.log('\n[Server] Shutting down, saving cache...');
+    console.log('\n[Server] Shutting down, saving caches...');
     saveCacheToDisk();
+    saveJishoCacheToDisk();
     process.exit(0);
   });
 
   process.on('SIGTERM', () => {
-    console.log('[Server] Terminating, saving cache...');
+    console.log('[Server] Terminating, saving caches...');
     saveCacheToDisk();
+    saveJishoCacheToDisk();
     process.exit(0);
   });
 }

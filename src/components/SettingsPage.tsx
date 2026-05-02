@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Key, RefreshCw, CheckCircle, XCircle, Loader2, AlertCircle, Trash2 } from 'lucide-react';
+import { Key, RefreshCw, CheckCircle, XCircle, Loader2, AlertCircle, Trash2, Zap } from 'lucide-react';
 import { WK_STAGE_NAMES, loadCachedWaniKaniData } from '../lib/wanikani';
+import { clearServerCache } from '../lib/api';
 
 interface WaniKaniUser {
   username: string;
@@ -9,6 +10,7 @@ interface WaniKaniUser {
 
 type TokenStatus = 'idle' | 'testing' | 'valid' | 'invalid';
 type SyncStatus = 'idle' | 'syncing' | 'done' | 'error';
+type ClearCacheStatus = 'idle' | 'clearing' | 'done' | 'error';
 
 export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }) {
   const [token, setToken] = useState('');
@@ -16,6 +18,7 @@ export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }
   const [savedUser, setSavedUser] = useState<WaniKaniUser | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [syncInfo, setSyncInfo] = useState<{ kanjiCount: number; syncedAt: number } | null>(null);
+  const [clearCacheStatus, setClearCacheStatus] = useState<ClearCacheStatus>('idle');
 
   useEffect(() => {
     const storedToken = localStorage.getItem('waniKaniToken');
@@ -87,6 +90,18 @@ export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }
     setTokenStatus('idle');
     setSyncStatus('idle');
     onWaniKaniSync?.();
+  };
+
+  const handleClearServerCache = async () => {
+    setClearCacheStatus('clearing');
+    try {
+      await clearServerCache();
+      setClearCacheStatus('done');
+      setTimeout(() => setClearCacheStatus('idle'), 3000);
+    } catch {
+      setClearCacheStatus('error');
+      setTimeout(() => setClearCacheStatus('idle'), 3000);
+    }
   };
 
   const hasValidToken = tokenStatus === 'valid' || (savedUser !== null && tokenStatus === 'idle');
@@ -227,6 +242,48 @@ export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }
                   Remove WaniKani integration
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Server Cache Management */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-8 py-6 border-b border-gray-100 flex items-center gap-3">
+          <div className="bg-amber-50 p-2 rounded-xl">
+            <Zap className="w-5 h-5 text-amber-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Cache Management</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Clear dictionary and definition caches</p>
+          </div>
+        </div>
+
+        <div className="px-8 py-6 space-y-4">
+          <p className="text-sm text-gray-600">
+            Clear server-side caches to force fresh dictionary lookups. Use this when testing or troubleshooting.
+          </p>
+          <button
+            onClick={handleClearServerCache}
+            disabled={clearCacheStatus === 'clearing'}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 text-sm font-medium rounded-xl hover:bg-amber-100 border border-amber-200 disabled:opacity-50 transition-colors w-full justify-center"
+          >
+            {clearCacheStatus === 'clearing' ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Clearing...</>
+            ) : (
+              <><Trash2 className="w-4 h-4" /> Clear Server Cache</>
+            )}
+          </button>
+          {clearCacheStatus === 'done' && (
+            <div className="flex items-center gap-2 text-green-700 text-sm bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+              <CheckCircle className="w-4 h-4 shrink-0" />
+              Cache cleared! Next lookup will re-fetch from Jisho API.
+            </div>
+          )}
+          {clearCacheStatus === 'error' && (
+            <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              Failed to clear cache. Try again.
             </div>
           )}
         </div>

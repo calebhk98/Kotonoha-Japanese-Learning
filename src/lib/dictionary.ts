@@ -73,6 +73,17 @@ export class JishoApiDictionary implements Dictionary {
   private requestQueue: Array<() => Promise<void>> = [];
   private activeRequests = 0;
   private maxConcurrent = 2; // Limit to 2 concurrent requests to avoid overwhelming Jisho
+  private persistentCache: Map<string, WordLookupResult | null>;
+  private onCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void;
+
+  constructor(persistentCache?: Map<string, WordLookupResult | null>, onCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void) {
+    this.persistentCache = persistentCache || new Map();
+    this.onCacheUpdate = onCacheUpdate;
+    // Load persistent cache into memory
+    for (const [key, value] of this.persistentCache.entries()) {
+      this.cache.set(key, value);
+    }
+  }
 
   async initialize(): Promise<void> {
     try {
@@ -80,7 +91,7 @@ export class JishoApiDictionary implements Dictionary {
       const testRes = await this.fetchFromJisho("test");
       if (testRes) {
         this.initialized = true;
-        console.log("[Dictionary] Jisho API initialized (max 2 concurrent requests)");
+        console.log(`[Dictionary] Jisho API initialized (max 2 concurrent requests, ${this.cache.size} cached)`);
       }
     } catch (e) {
       console.warn("[Dictionary] Jisho API unavailable:", (e as any).message);
@@ -160,10 +171,14 @@ export class JishoApiDictionary implements Dictionary {
           }
 
           this.cache.set(word, lookupResult);
+          this.persistentCache.set(word, lookupResult);
+          this.onCacheUpdate?.(this.persistentCache);
           resolve(lookupResult);
         } catch (e) {
           console.error("[Dictionary.Jisho] Lookup error for", word, ":", (e as any).message);
           this.cache.set(word, null);
+          this.persistentCache.set(word, null);
+          this.onCacheUpdate?.(this.persistentCache);
           resolve(null);
         } finally {
           this.processQueue();
@@ -213,16 +228,34 @@ export class JmdictDictionary implements Dictionary {
       }
       if (results.length === 0) return null;
 
-      // Find exact match or best match
-      const bestMatch = results.find(
+      // Find best match: prioritize entries with exact kana/kanji match + common words
+      let bestMatch = results.find(
         (r) =>
           r.kana.some((k: any) => k.text === word) ||
           r.kanji.some((k: any) => k.text === word)
-      ) || results[0];
+      );
 
-      // Extract all meanings (senses ordered by frequency in jmdict-simplified)
+      // If no exact match, score all results by commonness
+      if (!bestMatch) {
+        bestMatch = results.reduce((best: any, current: any) => {
+          const bestScore = this.getEntryCommonness(best);
+          const currentScore = this.getEntryCommonness(current);
+          return currentScore > bestScore ? current : best;
+        });
+      }
+
+      // Extract all meanings (prioritize more common senses)
       const meanings: string[] = [];
-      for (const sense of bestMatch.sense) {
+      const sensesWithScores = (bestMatch.sense || []).map((sense: any, idx: number) => ({
+        sense,
+        order: idx,
+        commonness: this.getSenseCommonness(sense)
+      }));
+
+      // Sort by commonness (higher first)
+      sensesWithScores.sort((a, b) => b.commonness - a.commonness);
+
+      for (const { sense } of sensesWithScores) {
         if (sense.gloss && sense.gloss.length > 0) {
           const glossTexts = (sense.gloss as any[])
             .filter((g) => g.lang === "en")
@@ -246,6 +279,52 @@ export class JmdictDictionary implements Dictionary {
       return null;
     }
   }
+
+  private getEntryCommonness(entry: any): number {
+    // Score entries by how "common" they appear
+    let score = 0;
+
+    // Prefer entries with kanji (more concrete words)
+    if (entry.kanji && entry.kanji.length > 0) {
+      score += 10;
+    }
+
+    // Prefer entries with multiple kanji variants (widely used)
+    if (entry.kanji && entry.kanji.length > 1) {
+      score += 5;
+    }
+
+    // Prefer entries with multiple senses (more established)
+    if (entry.sense && entry.sense.length > 1) {
+      score += 3;
+    }
+
+    return score;
+  }
+
+  private getSenseCommonness(sense: any): number {
+    // Score senses by how "common" they are
+    let score = 0;
+
+    // Prefer senses with multiple glosses (well-established meanings)
+    if (sense.gloss && Array.isArray(sense.gloss) && sense.gloss.length > 1) {
+      score += 5;
+    }
+
+    // Penalize specialized meanings
+    const gloss = sense.gloss?.[0]?.text || '';
+    const specializedTerms = ['esp.', 'rare', 'archaic', 'obsolete', 'old', 'dated', 'specialized'];
+    if (specializedTerms.some(term => gloss.toLowerCase().includes(term))) {
+      score -= 10;
+    }
+
+    // Prefer common grammatical terms
+    if (gloss.toLowerCase().includes('copula') || gloss.toLowerCase().includes('auxiliary')) {
+      score += 3;
+    }
+
+    return score;
+  }
 }
 
 // ==================== Dictionary Factory ====================
@@ -256,14 +335,16 @@ export class DictionaryManager {
   async initialize(
     usePrimary: "jmdict" | "jisho" | "kanjidata" = "jisho",
     jmdictPath?: string,
-    jmdictFile?: string
+    jmdictFile?: string,
+    jishoCache?: Map<string, WordLookupResult | null>,
+    onJishoCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void
   ): Promise<void> {
     if (usePrimary === "jmdict" && jmdictPath && jmdictFile) {
       const jmdictDict = new JmdictDictionary();
       await jmdictDict.initialize(jmdictPath, jmdictFile);
       if (jmdictDict.isInitialized()) {
         this.primary = jmdictDict;
-        this.fallback = new JishoApiDictionary();
+        this.fallback = new JishoApiDictionary(jishoCache, onJishoCacheUpdate);
         await (this.fallback as JishoApiDictionary).initialize();
         return;
       }
@@ -271,7 +352,7 @@ export class DictionaryManager {
     }
 
     if (usePrimary === "jisho" || usePrimary === "jmdict") {
-      const jishoDict = new JishoApiDictionary();
+      const jishoDict = new JishoApiDictionary(jishoCache, onJishoCacheUpdate);
       await jishoDict.initialize();
       if (jishoDict.isInitialized()) {
         this.primary = jishoDict;
