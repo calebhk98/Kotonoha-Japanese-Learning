@@ -78,21 +78,25 @@ export class LinderaImpl implements Tokenizer {
 
 // Hiogawa Sudachi WASM implementation (with built-in dictionary)
 export class SudachiWasmImpl implements Tokenizer {
-  name = 'Sudachi WASM (Built)';
+  name = 'Sudachi WASM';
   private tokenizer: any = null;
 
   async ready(): Promise<void> {
     try {
-      const { initSync, Tokenizer } = await import('../../sudachi-wasm-built/index.js');
       const fs = await import('fs');
       const path = await import('path');
 
-      // Load and initialize the WASM module
-      const wasmPath = path.join(process.cwd(), 'sudachi-wasm-built', 'index_bg.wasm');
-      const wasmBuffer = fs.readFileSync(wasmPath);
+      // Load the built WASM module with embedded dictionary
+      const wasmPath = (path.default || path).join(process.cwd(), 'sudachi-wasm-built', 'index_bg.wasm');
+      const wasmModule = await import('../../sudachi-wasm-built/index.js');
+      const { initSync, Tokenizer } = wasmModule;
+
+      const wasmBuffer = (fs.readFileSync as any)(wasmPath);
+
+      // Initialize the WASM module with embedded dictionary
       initSync(wasmBuffer);
 
-      // Create tokenizer
+      // Create tokenizer (no dictionary needed - it's embedded)
       this.tokenizer = Tokenizer.create();
       console.log(`[Tokenizer] ${this.name} ready`);
     } catch (e: any) {
@@ -205,9 +209,10 @@ export async function createTokenizer(name?: string): Promise<Tokenizer> {
       tokenizer = new KuromojiImpl();
       break;
     case 'tinysegmenter':
-    default:
       tokenizer = new TinySegmenterImpl();
       break;
+    default:
+      throw new Error(`Unknown tokenizer: ${tokenizerName}`);
   }
 
   await tokenizer.ready();

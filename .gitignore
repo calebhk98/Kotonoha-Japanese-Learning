@@ -11,4 +11,6 @@ jmdict-all-3.6.2.json
 jmdict-db/
 *.dic
 sudachi-dictionary-*/
-sudachi-wasm-built/index_bg.wasmindex_bg.wasm
+# Sudachi WASM: ignore uncompressed binary, track compressed version
+sudachi-wasm-built/index_bg.wasm
+!sudachi-wasm-built/*.gz
