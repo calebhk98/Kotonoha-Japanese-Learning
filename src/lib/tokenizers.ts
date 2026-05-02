@@ -110,17 +110,111 @@ export class SudachiWasmImpl implements Tokenizer {
     const morphemes = this.tokenizer.run(text, 'C');
 
     const result: string[] = [];
+    let i = 0;
 
-    for (const m of morphemes) {
+    while (i < morphemes.length) {
+      const m = morphemes[i];
       const pos = m.part_of_speech[0];
       const surface = m.surface;
 
-      // Skip only punctuation and whitespace
+      // Skip whitespace and punctuation
       if (pos === '補助記号' || /^\s+$/.test(surface)) {
+        i++;
         continue;
       }
 
-      result.push(surface);
+      // Collect leading adverbs/prefixes
+      let phrase = '';
+      while (i < morphemes.length && ['副詞', '接頭辞'].includes(morphemes[i].part_of_speech[0])) {
+        phrase += morphemes[i].surface;
+        i++;
+      }
+
+      // Now get the main content word
+      if (i < morphemes.length) {
+        const mainPos = morphemes[i].part_of_speech[0];
+        phrase += morphemes[i].surface;
+        i++;
+
+        // Keep adding morphemes based on what the main word was
+        while (i < morphemes.length) {
+          const next = morphemes[i];
+          const nextPos = next.part_of_speech[0];
+          const nextSurface = next.surface;
+
+          // Stop at whitespace and punctuation
+          if (nextPos === '補助記号' || /^\s+$/.test(nextSurface)) {
+            break;
+          }
+
+          // Keep suffixes attached to the main word
+          if (nextPos === '接尾辞') {
+            phrase += nextSurface;
+            i++;
+            continue;
+          }
+
+          // For verbs/adjectives: keep conjunction particles and auxiliary chains together
+          if (['動詞', '形容詞'].includes(mainPos)) {
+            if (nextPos === '助詞' && next.part_of_speech[1] === '接続助詞') {
+              phrase += nextSurface;
+              i++;
+              // After conjunction particle, continue collecting dependent verbs and auxiliaries
+              while (i < morphemes.length) {
+                const afterConjunction = morphemes[i];
+                const afterConPos = afterConjunction.part_of_speech[0];
+                const afterConSurface = afterConjunction.surface;
+
+                if (afterConPos === '補助記号' || /^\s+$/.test(afterConSurface)) {
+                  break;
+                }
+
+                // Collect dependent verbs and auxiliaries after the conjunction
+                if ((afterConPos === '動詞' && afterConjunction.part_of_speech[1] === '非自立可能') || afterConPos === '助動詞') {
+                  phrase += afterConSurface;
+                  i++;
+                } else {
+                  break;
+                }
+              }
+              continue;
+            }
+
+            // Keep auxiliary verbs in verb phrases
+            if (nextPos === '助動詞') {
+              phrase += nextSurface;
+              i++;
+              continue;
+            }
+
+            // Keep dependent verbs (非自立) - they're part of the verb chain
+            if (nextPos === '動詞' && next.part_of_speech[1] === '非自立可能') {
+              phrase += nextSurface;
+              i++;
+              continue;
+            }
+
+            // Regular particles end the verb phrase
+            if (nextPos === '助詞') {
+              break;
+            }
+          }
+
+          // For nouns: don't attach auxiliary verbs (like です), they should be separate
+          if (mainPos === '名詞') {
+            // Keep suffixes (already handled above)
+            // But don't attach です or other auxiliaries to nouns
+            break;
+          }
+
+          // Other cases: don't attach
+          break;
+        }
+      }
+
+      if (phrase) {
+        result.push(phrase);
+      }
     }
 
     return result;
