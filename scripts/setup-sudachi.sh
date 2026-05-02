@@ -17,7 +17,7 @@ fi
 # Check if compressed version exists and decompress
 if [ -d "sudachi-wasm-built" ] && [ -f "sudachi-wasm-built/index_bg.wasm.gz" ] && [ ! -f "sudachi-wasm-built/index_bg.wasm" ]; then
     echo "📦 Decompressing Sudachi WASM..."
-    gunzip -f sudachi-wasm-built/index_bg.wasm.gz
+    gunzip -c sudachi-wasm-built/index_bg.wasm.gz > sudachi-wasm-built/index_bg.wasm
     echo "✅ WASM decompressed"
     echo "   Location: $(pwd)/sudachi-wasm-built/"
     echo "   Size: $(du -sh sudachi-wasm-built/index_bg.wasm | cut -f1)"
