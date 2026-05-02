@@ -252,7 +252,7 @@ export class SudachiWasmImpl implements Tokenizer {
       const wasmBuffer = (fs.readFileSync as any)(wasmPath);
 
       // Initialize the WASM module with embedded dictionary
-      initSync(wasmBuffer);
+      initSync({ module: wasmBuffer });
 
       // Create tokenizer (no dictionary needed - it's embedded)
       this.tokenizer = Tokenizer.create();
