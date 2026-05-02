@@ -123,17 +123,63 @@ export class SudachiWasmImpl implements Tokenizer {
         continue;
       }
 
-      // Collect leading adverbs/prefixes
-      let phrase = '';
-      while (i < morphemes.length && ['副詞', '接頭辞'].includes(morphemes[i].part_of_speech[0])) {
-        phrase += morphemes[i].surface;
-        i++;
+      // Collect leading adverbs/prefixes only if they're right before a verb/adjective/copular
+      let adverbPhrase = '';
+      let prefixPhrase = '';
+      let tempI = i;
+      while (tempI < morphemes.length) {
+        const tempPos = morphemes[tempI].part_of_speech[0];
+        if (tempPos === '副詞') {
+          adverbPhrase += morphemes[tempI].surface;
+          tempI++;
+        } else if (tempPos === '接頭辞') {
+          prefixPhrase += morphemes[tempI].surface;
+          tempI++;
+        } else {
+          break;
+        }
       }
 
-      // Now get the main content word
+      // Check what comes after the adverbs/prefixes
+      let phrase = '';
+      if (tempI < morphemes.length) {
+        const nextPos = morphemes[tempI].part_of_speech[0];
+        // Keep adverbs only if followed by verb/adjective
+        if (adverbPhrase && ['動詞', '形容詞', '形状詞'].includes(nextPos)) {
+          phrase = adverbPhrase;
+        } else if (adverbPhrase && nextPos !== '接頭辞') {
+          // Don't keep adverbs if followed by noun or other
+          // (reset to beginning)
+          tempI = i;
+          phrase = '';
+        } else {
+          phrase = adverbPhrase;
+        }
+
+        // Always keep prefixes before their main word
+        phrase += prefixPhrase;
+        i = tempI;
+      }
+
+      // Now get the main content word or auxiliary
       if (i < morphemes.length) {
-        const mainPos = morphemes[i].part_of_speech[0];
-        phrase += morphemes[i].surface;
+        const m = morphemes[i];
+        const mainPos = m.part_of_speech[0];
+
+        // Handle auxiliaries that aren't attached to anything (like でした broken into でし + た)
+        if (mainPos === '助動詞' && !phrase) {
+          phrase = m.surface;
+          i++;
+          // Collect any following auxiliaries
+          while (i < morphemes.length && morphemes[i].part_of_speech[0] === '助動詞') {
+            phrase += morphemes[i].surface;
+            i++;
+          }
+          result.push(phrase);
+          continue;
+        }
+
+        phrase += m.surface;
         i++;
 
         // Special case: number + counter (e.g., 六時, 三時)
@@ -160,8 +206,8 @@ export class SudachiWasmImpl implements Tokenizer {
             continue;
           }
 
-          // For verbs/adjectives: keep conjunction particles and auxiliary chains together
-          if (['動詞', '形容詞'].includes(mainPos)) {
+          // For verbs/adjectives/copular adjectives: keep conjunction particles and auxiliary chains together
+          if (['動詞', '形容詞', '形状詞'].includes(mainPos)) {
             if (nextPos === '助詞' && next.part_of_speech[1] === '接続助詞') {
               phrase += nextSurface;
               i++;
