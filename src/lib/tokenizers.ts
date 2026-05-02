@@ -209,22 +209,12 @@ export async function createTokenizer(name?: string): Promise<Tokenizer> {
       tokenizer = new KuromojiImpl();
       break;
     case 'tinysegmenter':
-    default:
       tokenizer = new TinySegmenterImpl();
       break;
+    default:
+      throw new Error(`Unknown tokenizer: ${tokenizerName}`);
   }
 
-  try {
-    await tokenizer.ready();
-    return tokenizer;
-  } catch (e) {
-    // If requested tokenizer fails, fall back to TinySegmenter
-    if (tokenizerName.toLowerCase() !== 'tinysegmenter') {
-      console.warn(`[Tokenizer] Falling back to TinySegmenter due to: ${(e as any).message}`);
-      const fallback = new TinySegmenterImpl();
-      await fallback.ready();
-      return fallback;
-    }
-    throw e;
-  }
+  await tokenizer.ready();
+  return tokenizer;
 }
