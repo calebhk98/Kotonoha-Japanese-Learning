@@ -136,7 +136,7 @@ const dictionaryReady = (async () => {
 
 async function processText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
-  const segments = await tokenizer.segment(text);
+  const tokens = await tokenizer.segment(text);
 
   const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
   const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
@@ -144,34 +144,43 @@ async function processText(text: string) {
 
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
-  const validWords = new Set<string>();
+  const validWords = new Map<string, string>(); // Map surface form to baseForm for lookup
 
-  for (const segment of segments) {
-    if (segment.trim() === '' || isPunctuation(segment) || isSingleKana(segment)) continue;
+  for (const token of tokens) {
+    const surface = token.surface;
+    if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
 
-    if (!isSingleKana(segment)) {
-      validWords.add(segment);
-      baseFormCounts.set(segment, (baseFormCounts.get(segment) ?? 0) + 1);
+    if (!isSingleKana(surface)) {
+      validWords.set(surface, token.baseForm);
+      baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
     }
   }
 
   let cacheHits = 0;
   let cacheMisses = 0;
   const results = [];
-  for (const wordStr of validWords) {
+  for (const [wordStr, baseForm] of validWords) {
     const start = Date.now();
-    const cacheHad = wordsCache.has(wordStr);
-    const entries = getCachedDictionaryEntries(wordStr);
+    // Try to look up using baseForm first (for conjugated verbs), then fall back to wordStr
+    const cacheHadBase = wordsCache.has(baseForm);
+    const cacheHadSurface = wordsCache.has(wordStr);
+    let entries = cacheHadBase ? wordsCache.get(baseForm)! : getCachedDictionaryEntries(baseForm);
+
+    // If baseForm lookup failed, try the surface form
+    if (entries.length === 0 && baseForm !== wordStr) {
+      entries = cacheHadSurface ? wordsCache.get(wordStr)! : getCachedDictionaryEntries(wordStr);
+    }
+
     const lookupTime = Date.now() - start;
 
-    if (cacheHad) cacheHits++;
+    if (cacheHadBase || cacheHadSurface) cacheHits++;
     else cacheMisses++;
 
     if (lookupTime > 250) {
       console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
     }
 
-    const { variant, entry } = findBestVariant(wordStr, entries);
+    const { variant, entry } = findBestVariant(baseForm, entries);
 
     let meaning = "Unknown meaning";
     let meanings: string[] | undefined = undefined;
@@ -216,7 +225,7 @@ async function processText(text: string) {
 
 async function processStoryText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
-  const segments = await tokenizer.segment(text);
+  const tokenInfos = await tokenizer.segment(text);
 
   const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
   const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
@@ -226,23 +235,25 @@ async function processStoryText(text: string) {
   const tokens: any[] = [];
   let searchStart = 0;
 
-  for (const segment of segments) {
-    const segmentIndex = text.indexOf(segment, searchStart);
+  for (const tokenInfo of tokenInfos) {
+    const surface = tokenInfo.surface;
+    const segmentIndex = text.indexOf(surface, searchStart);
     if (segmentIndex === -1) {
-      console.warn(`[API] Could not find segment "${segment}" in text starting from position ${searchStart}`);
+      console.warn(`[API] Could not find segment "${surface}" in text starting from position ${searchStart}`);
       continue;
     }
 
-    const isVocabWord = !(segment.trim() === '' || isPunctuation(segment) || isSingleKana(segment));
+    const isVocabWord = !(surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface));
 
     tokens.push({
-      surface: segment,
+      surface: surface,
+      baseForm: tokenInfo.baseForm,
       startIndex: segmentIndex,
-      endIndex: segmentIndex + segment.length,
+      endIndex: segmentIndex + surface.length,
       isVocabWord,
     });
 
-    searchStart = segmentIndex + segment.length;
+    searchStart = segmentIndex + surface.length;
   }
 
   // Look up vocab words
@@ -252,8 +263,12 @@ async function processStoryText(text: string) {
   for (const token of vocabTokens) {
     if (tokenMap.has(token.surface)) continue;
 
-    const entries = getCachedDictionaryEntries(token.surface);
-    const { variant, entry } = findBestVariant(token.surface, entries);
+    // Try baseForm first for dictionary lookup
+    let entries = getCachedDictionaryEntries(token.baseForm);
+    if (entries.length === 0 && token.baseForm !== token.surface) {
+      entries = getCachedDictionaryEntries(token.surface);
+    }
+    const { variant, entry } = findBestVariant(token.baseForm, entries);
 
     let meaning = "Unknown meaning";
     let meanings: string[] | undefined = undefined;

@@ -1,4 +1,5 @@
 import kanjiData from "kanji-data";
+import { stemJapaneseWord } from "./stemming.js";
 
 export interface DictionaryVariant {
   written: string;
@@ -141,9 +142,21 @@ function getEntriesByKanjiLookup(wordStr: string): DictionaryEntry[] {
 export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
 
-  // Use global search for all words to ensure correct definitions
-  // searchWords looks up by written form first, then pronunciation
-  const entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
+  // Try the word as-is first
+  let entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
+
+  // If no results and word might be a conjugated verb/adjective, try stems
+  if (entries.length === 0 && wordStr.length > 2) {
+    const stems = stemJapaneseWord(wordStr);
+    // Try each stem until we find results
+    for (const stem of stems.slice(1)) { // Skip the original word (already tried)
+      entries = kanjiData.searchWords(stem) as DictionaryEntry[];
+      if (entries.length > 0) {
+        // Found a match with a stem, cache it under the original word
+        break;
+      }
+    }
+  }
 
   // For pure hiragana input, filter to prefer entries where at least one variant
   // has hiragana in the written form or matches the pronunciation
