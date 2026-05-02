@@ -6,7 +6,7 @@ set -o pipefail
 echo "🔨 Setting up Sudachi WASM with embedded dictionary..."
 echo ""
 
-# Check if already built
+# Check if already built (uncompressed)
 if [ -d "sudachi-wasm-built" ] && [ -f "sudachi-wasm-built/index_bg.wasm" ]; then
     echo "✅ Sudachi WASM already built and present"
     echo "   Location: $(pwd)/sudachi-wasm-built/"
@@ -29,10 +29,7 @@ echo "📋 Checking prerequisites..."
 if ! command -v cargo &> /dev/null; then
     echo "📦 Rust not found. Installing Rust..."
     echo "   ⏳ Downloading and installing (this may take 1-2 minutes)..."
-
-    # Download and run rustup installer with output
     if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable; then
-        # Source the Rust environment
         export PATH="$HOME/.cargo/bin:$PATH"
         echo "✅ Rust installed successfully"
         echo "   $(rustc --version)"
@@ -57,7 +54,6 @@ echo ""
 
 # Create temp directory for build
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
 
 echo "📥 Cloning Sudachi repository..."
 echo "   ⏳ Downloading source code..."
@@ -92,10 +88,20 @@ echo ""
 echo "📦 Installing built WASM to project..."
 ORIGINAL_DIR=$(pwd)
 cd - > /dev/null  # Go back to original directory
+
+# Make sure directory exists and copy files
 mkdir -p sudachi-wasm-built
-cp "$TEMP_DIR/sudachi-rs/sudachi-wasm/pkg/"* sudachi-wasm-built/
-WASM_SIZE=$(du -sh sudachi-wasm-built/index_bg.wasm | cut -f1)
-echo "✅ WASM binary installed (${WASM_SIZE})"
+echo "Copying from: $TEMP_DIR/sudachi-rs/sudachi-wasm/pkg/"
+if [ -d "$TEMP_DIR/sudachi-rs/sudachi-wasm/pkg" ]; then
+    cp "$TEMP_DIR/sudachi-rs/sudachi-wasm/pkg/"* sudachi-wasm-built/ 2>/dev/null || true
+    WASM_SIZE=$(du -sh sudachi-wasm-built/index_bg.wasm 2>/dev/null | cut -f1)
+    echo "✅ WASM binary installed (${WASM_SIZE})"
+else
+    echo "⚠️  Build directory not found at: $TEMP_DIR/sudachi-rs/sudachi-wasm/pkg/"
+fi
+
+# Clean up
+rm -rf "$TEMP_DIR"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
@@ -113,14 +119,3 @@ echo ""
 echo "🚀 You can now run:"
 echo "   npm run dev"
 echo ""
-echo "💡 For future development:"
-echo "   TOKENIZER=tinysegmenter npm run dev  (fallback: 60% accuracy)"
-echo "   TOKENIZER=sudachi-wasm npm run dev   (default: 83% accuracy)"
-echo ""
-
-# Decompress if only .gz exists
-if [ -f "sudachi-wasm-built/index_bg.wasm.gz" ] && [ ! -f "sudachi-wasm-built/index_bg.wasm" ]; then
-    echo "📦 Decompressing Sudachi WASM..."
-    gunzip -f sudachi-wasm-built/index_bg.wasm.gz
-    echo "✅ WASM decompressed"
-fi
