@@ -14,6 +14,16 @@ if [ -d "sudachi-wasm-built" ] && [ -f "sudachi-wasm-built/index_bg.wasm" ]; the
     exit 0
 fi
 
+# Check if compressed version exists and decompress
+if [ -d "sudachi-wasm-built" ] && [ -f "sudachi-wasm-built/index_bg.wasm.gz" ] && [ ! -f "sudachi-wasm-built/index_bg.wasm" ]; then
+    echo "📦 Decompressing Sudachi WASM..."
+    gunzip -f sudachi-wasm-built/index_bg.wasm.gz
+    echo "✅ WASM decompressed"
+    echo "   Location: $(pwd)/sudachi-wasm-built/"
+    echo "   Size: $(du -sh sudachi-wasm-built/index_bg.wasm | cut -f1)"
+    exit 0
+fi
+
 # Check for required tools
 echo "📋 Checking prerequisites..."
 if ! command -v cargo &> /dev/null; then
@@ -107,3 +117,10 @@ echo "💡 For future development:"
 echo "   TOKENIZER=tinysegmenter npm run dev  (fallback: 60% accuracy)"
 echo "   TOKENIZER=sudachi-wasm npm run dev   (default: 83% accuracy)"
 echo ""
+
+# Decompress if only .gz exists
+if [ -f "sudachi-wasm-built/index_bg.wasm.gz" ] && [ ! -f "sudachi-wasm-built/index_bg.wasm" ]; then
+    echo "📦 Decompressing Sudachi WASM..."
+    gunzip -f sudachi-wasm-built/index_bg.wasm.gz
+    echo "✅ WASM decompressed"
+fi
