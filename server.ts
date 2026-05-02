@@ -191,10 +191,13 @@ async function processText(text: string) {
       meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
     }
 
-    // Use dictionary (Jisho API or jmdict) for pure hiragana words first
-    // These are particles, auxiliaries, and other hiragana-only words where kanji-data is unreliable
+    // Use dictionary (Jisho API or jmdict) for pure hiragana or katakana words
+    // These are particles, auxiliaries, and other kana-only words where kanji-data is unreliable
     const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
-    if (isPureHiragana && dictionary) {
+    const isPureKatakana = /^[ァ-ヴー]+$/.test(wordStr);
+    const isKanaOnly = isPureHiragana || isPureKatakana;
+
+    if (isKanaOnly && dictionary) {
       const dictResult = await dictionary.lookup(wordStr);
       if (dictResult) {
         meaning = dictResult.meaning;

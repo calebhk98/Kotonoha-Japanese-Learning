@@ -14,3 +14,4 @@ sudachi-dictionary-*/
 # Sudachi WASM: ignore uncompressed binary, track compressed version
 sudachi-wasm-built/index_bg.wasm
 !sudachi-wasm-built/*.gz
+tokenization-report-*.json
