@@ -136,6 +136,12 @@ export class SudachiWasmImpl implements Tokenizer {
         phrase += morphemes[i].surface;
         i++;
 
+        // Special case: number + counter (e.g., 六時, 三時)
+        if (mainPos === '名詞' && morphemes[i] && morphemes[i].part_of_speech[0] === '名詞' && morphemes[i].part_of_speech[2] === '助数詞可能') {
+          phrase += morphemes[i].surface;
+          i++;
+        }
+
         // Keep adding morphemes based on what the main word was
         while (i < morphemes.length) {
           const next = morphemes[i];
