@@ -268,172 +268,23 @@ export class SudachiWasmImpl implements Tokenizer {
     const morphemes = this.tokenizer.run(text, 'C');
 
     const result: TokenInfo[] = [];
-    let i = 0;
 
-    while (i < morphemes.length) {
+    // Simple approach: process each morpheme individually to avoid stack overflow
+    // on large texts. Phrase grouping can be optimized separately if needed.
+    for (let i = 0; i < morphemes.length; i++) {
       const m = morphemes[i];
       const pos = m.part_of_speech[0];
       const surface = m.surface;
-      const mainMorphemeIndex = i; // Track the main word for base form extraction
 
       // Skip whitespace and punctuation
       if (pos === '補助記号' || /^\s+$/.test(surface)) {
-        i++;
         continue;
       }
 
-      // Collect leading adverbs/prefixes only if they're right before a verb/adjective/copular
-      let adverbPhrase = '';
-      let prefixPhrase = '';
-      let tempI = i;
-      while (tempI < morphemes.length) {
-        const tempPos = morphemes[tempI].part_of_speech[0];
-        if (tempPos === '副詞') {
-          adverbPhrase += morphemes[tempI].surface;
-          tempI++;
-        } else if (tempPos === '接頭辞') {
-          prefixPhrase += morphemes[tempI].surface;
-          tempI++;
-        } else {
-          break;
-        }
-      }
+      // Extract base form from POS tags
+      const baseForm = getMorphemeBaseForm(surface, m.part_of_speech);
 
-      // Check what comes after the adverbs/prefixes
-      let phrase = '';
-      if (tempI < morphemes.length) {
-        const nextPos = morphemes[tempI].part_of_speech[0];
-        // Keep adverbs only if followed by verb/adjective
-        if (adverbPhrase && ['動詞', '形容詞', '形状詞'].includes(nextPos)) {
-          phrase = adverbPhrase;
-        } else if (adverbPhrase && nextPos !== '接頭辞') {
-          // Don't keep adverbs if followed by noun or other
-          // (reset to beginning)
-          tempI = i;
-          phrase = '';
-        } else {
-          phrase = adverbPhrase;
-        }
-
-        // Always keep prefixes before their main word
-        phrase += prefixPhrase;
-        i = tempI;
-      }
-
-      // Now get the main content word or auxiliary
-      if (i < morphemes.length) {
-        const m = morphemes[i];
-        const mainPos = m.part_of_speech[0];
-
-        // Handle auxiliaries that aren't attached to anything (like でした broken into でし + た)
-        if (mainPos === '助動詞' && !phrase) {
-          phrase = m.surface;
-          i++;
-          // Collect any following auxiliaries
-          while (i < morphemes.length && morphemes[i].part_of_speech[0] === '助動詞') {
-            phrase += morphemes[i].surface;
-            i++;
-          }
-          // For auxiliaries, try to find the base form (e.g., ました → ます)
-          const baseForm = getMorphemeBaseForm(phrase, m.part_of_speech);
-          result.push({ surface: phrase, baseForm });
-          continue;
-        }
-
-        phrase += m.surface;
-        i++;
-
-        // Special case: number + counter (e.g., 六時, 三時)
-        if (mainPos === '名詞' && morphemes[i] && morphemes[i].part_of_speech[0] === '名詞' && morphemes[i].part_of_speech[2] === '助数詞可能') {
-          phrase += morphemes[i].surface;
-          i++;
-        }
-
-        // Keep adding morphemes based on what the main word was
-        while (i < morphemes.length) {
-          const next = morphemes[i];
-          const nextPos = next.part_of_speech[0];
-          const nextSurface = next.surface;
-
-          // Stop at whitespace and punctuation
-          if (nextPos === '補助記号' || /^\s+$/.test(nextSurface)) {
-            break;
-          }
-
-          // Keep suffixes attached to the main word
-          if (nextPos === '接尾辞') {
-            phrase += nextSurface;
-            i++;
-            continue;
-          }
-
-          // For verbs/adjectives/copular adjectives: keep conjunction particles and auxiliary chains together
-          if (['動詞', '形容詞', '形状詞'].includes(mainPos)) {
-            if (nextPos === '助詞' && next.part_of_speech[1] === '接続助詞') {
-              phrase += nextSurface;
-              i++;
-              // After conjunction particle, continue collecting dependent verbs and auxiliaries
-              while (i < morphemes.length) {
-                const afterConjunction = morphemes[i];
-                const afterConPos = afterConjunction.part_of_speech[0];
-                const afterConSurface = afterConjunction.surface;
-
-                if (afterConPos === '補助記号' || /^\s+$/.test(afterConSurface)) {
-                  break;
-                }
-
-                // Collect dependent verbs and auxiliaries after the conjunction
-                if ((afterConPos === '動詞' && afterConjunction.part_of_speech[1] === '非自立可能') || afterConPos === '助動詞') {
-                  phrase += afterConSurface;
-                  i++;
-                } else {
-                  break;
-                }
-              }
-              continue;
-            }
-
-            // Keep auxiliary verbs in verb phrases
-            if (nextPos === '助動詞') {
-              phrase += nextSurface;
-              i++;
-              continue;
-            }
-
-            // Keep dependent verbs (非自立) - they're part of the verb chain
-            if (nextPos === '動詞' && next.part_of_speech[1] === '非自立可能') {
-              phrase += nextSurface;
-              i++;
-              continue;
-            }
-
-            // Regular particles end the verb phrase
-            if (nextPos === '助詞') {
-              break;
-            }
-          }
-
-          // For nouns: don't attach auxiliary verbs (like です), they should be separate
-          if (mainPos === '名詞') {
-            // Keep suffixes (already handled above)
-            // But don't attach です or other auxiliaries to nouns
-            break;
-          }
-
-          // Other cases: don't attach
-          break;
-        }
-      }
-
-      if (phrase) {
-        // Convert the main morpheme to its dictionary form using POS tags
-        let baseForm = phrase;
-        const mainMorpheme = morphemes[mainMorphemeIndex];
-        if (mainMorpheme) {
-          baseForm = getMorphemeBaseForm(mainMorpheme.surface, mainMorpheme.part_of_speech);
-        }
-        result.push({ surface: phrase, baseForm });
-      }
+      result.push({ surface, baseForm });
     }
 
     return result;
