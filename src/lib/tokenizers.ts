@@ -83,20 +83,20 @@ export class SudachiWasmImpl implements Tokenizer {
 
   async ready(): Promise<void> {
     try {
-      const pkg = await import('@hiogawa/sudachi.wasm');
-      const { initSync, Tokenizer } = pkg;
-
       const fs = await import('fs');
       const path = await import('path');
 
-      // Load the WASM module from npm package
-      const wasmPath = (path.default || path).join(process.cwd(), 'node_modules/@hiogawa/sudachi.wasm/pkg/index_bg.wasm');
+      // Load the built WASM module with embedded dictionary
+      const wasmPath = (path.default || path).join(process.cwd(), 'sudachi-wasm-built', 'index_bg.wasm');
+      const wasmModule = await import('../../sudachi-wasm-built/index.js');
+      const { initSync, Tokenizer } = wasmModule;
+
       const wasmBuffer = (fs.readFileSync as any)(wasmPath);
 
-      // Initialize the WASM module
+      // Initialize the WASM module with embedded dictionary
       initSync(wasmBuffer);
 
-      // Create tokenizer
+      // Create tokenizer (no dictionary needed - it's embedded)
       this.tokenizer = Tokenizer.create();
       console.log(`[Tokenizer] ${this.name} ready`);
     } catch (e: any) {
