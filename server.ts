@@ -58,6 +58,59 @@ async function ensureJmdictExtracted() {
   }
 }
 
+// Prepare JMnedict if needed
+async function ensureJmnedictPrepared() {
+  const jmnedictFile = path.join(__dirname, 'jmnedict.json');
+  const sampleFile = path.join(__dirname, 'jmnedict-sample.json');
+
+  if (fs.existsSync(jmnedictFile)) {
+    console.log('[JMnedict] Found dictionary file');
+    return jmnedictFile;
+  }
+
+  // Try to use sample file if available
+  if (fs.existsSync(sampleFile)) {
+    console.log('[JMnedict] Using sample dictionary file');
+    try {
+      const data = fs.readFileSync(sampleFile, 'utf-8');
+      fs.writeFileSync(jmnedictFile, data);
+      console.log('[JMnedict] Initialized from sample dictionary');
+      return jmnedictFile;
+    } catch (e: any) {
+      console.warn('[JMnedict] Failed to initialize from sample:', e.message);
+    }
+  }
+
+  // Try to fetch from scriptin's jmdict-simplified project
+  try {
+    console.log('[JMnedict] Attempting to fetch from remote source...');
+    const response = await fetch('https://raw.githubusercontent.com/scriptin/jmdict-simplified/master/jmnedict.json', {
+      signal: AbortSignal.timeout(30000)
+    });
+    if (!response.ok) {
+      console.warn('[JMnedict] Remote fetch failed, will continue without JMnedict');
+      return null;
+    }
+
+    console.log('[JMnedict] Downloading dictionary...');
+    const data = await response.json();
+
+    // Convert to simplified format if needed
+    const simplified = Array.isArray(data) ? data.map((entry: any) => ({
+      kana: entry.kana?.[0]?.text || entry.reading,
+      kanji: entry.kanji?.[0]?.text || entry.written,
+      meanings: entry.senses?.flatMap((sense: any) => sense.glosses?.map((g: any) => g.text || g)) || []
+    })) : [];
+
+    fs.writeFileSync(jmnedictFile, JSON.stringify(simplified, null, 2));
+    console.log('[JMnedict] Successfully downloaded and cached dictionary');
+    return jmnedictFile;
+  } catch (e: any) {
+    console.warn('[JMnedict] Failed to fetch JMnedict:', e.message);
+    return null;
+  }
+}
+
 // Load persisted cache from disk
 function loadCacheFromDisk() {
   try {
@@ -153,8 +206,24 @@ const jmdictReady = (async () => {
   }
 })();
 
+let jmnedictFile: string | null = null;
+
+const jmnedictReady = (async () => {
+  try {
+    const result = await ensureJmnedictPrepared();
+    if (result) {
+      jmnedictFile = result;
+      console.log(`[JMnedict] Dictionary file prepared and ready`);
+    } else {
+      console.log(`[JMnedict] Dictionary file not available, will skip JMnedict`);
+    }
+  } catch (e: any) {
+    console.warn(`[JMnedict] Failed to prepare dictionary:`, e.message);
+  }
+})();
+
 const dictionaryReady = (async () => {
-  // Ensure jmdict extraction is complete before checking for the file
+  // Ensure jmdict and jmnedict preparation is complete before checking for files
   await jmdictReady;
 
   // Load Jisho cache before initializing dictionary
@@ -172,10 +241,10 @@ const dictionaryReady = (async () => {
 
   if (jmdictExists) {
     console.log('[Dictionary] jmdict file found, attempting to initialize');
-    await dictionary.initialize('jmdict', jmdictPath, jmdictFile, jishoCache, onJishoCacheUpdate);
+    await dictionary.initialize('jmdict', jmdictPath, jmdictFile, jmnedictFile as string | undefined, jishoCache, onJishoCacheUpdate);
   } else {
     console.log('[Dictionary] jmdict file not found, using Jisho API');
-    await dictionary.initialize('jisho', undefined, undefined, jishoCache, onJishoCacheUpdate);
+    await dictionary.initialize('jisho', undefined, undefined, jmnedictFile as string | undefined, jishoCache, onJishoCacheUpdate);
   }
   console.log('[Dictionary] Initialization complete');
 })();

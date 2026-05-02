@@ -327,15 +327,110 @@ export class JmdictDictionary implements Dictionary {
   }
 }
 
+// ==================== JMnedict Dictionary ====================
+export class JmnedictDictionary implements Dictionary {
+  private entries: Map<string, WordLookupResult> = new Map();
+  private initialized = false;
+  private cache = new Map<string, WordLookupResult | null>();
+
+  async initialize(jmnedictFile?: string): Promise<void> {
+    try {
+      // Load JMnedict data from file or download
+      if (jmnedictFile) {
+        await this.loadFromFile(jmnedictFile);
+      } else {
+        // Fallback to minimal initialization
+        this.initialized = true;
+        console.log(`[Dictionary] JMnedict initialized (fallback mode, no data file)`);
+        return;
+      }
+      this.initialized = true;
+      console.log(`[Dictionary] JMnedict initialized with ${this.entries.size} entries`);
+    } catch (e) {
+      console.warn("[Dictionary] Failed to initialize JMnedict:", (e as any).message);
+      this.initialized = true; // Allow initialization to proceed even if data loading fails
+    }
+  }
+
+  private async loadFromFile(filePath: string): Promise<void> {
+    try {
+      const fs = (await import('fs')).promises;
+      const data = await fs.readFile(filePath, 'utf-8');
+      const jsonData = JSON.parse(data);
+
+      // Parse JMnedict JSON format
+      if (Array.isArray(jsonData)) {
+        for (const entry of jsonData) {
+          const kana = entry.kana || entry.reading;
+          const kanji = entry.kanji || entry.written;
+          const meanings = entry.meanings || entry.gloss || [];
+
+          if (kana) {
+            // Primary entry by kana reading
+            if (!this.entries.has(kana)) {
+              this.entries.set(kana, {
+                meaning: Array.isArray(meanings) ? meanings[0] : meanings || "Unknown",
+                meanings: Array.isArray(meanings) ? meanings : [meanings],
+                reading: kana,
+              });
+            }
+          }
+
+          if (kanji && kanji !== kana) {
+            // Also index by kanji/written form
+            if (!this.entries.has(kanji)) {
+              this.entries.set(kanji, {
+                meaning: Array.isArray(meanings) ? meanings[0] : meanings || "Unknown",
+                meanings: Array.isArray(meanings) ? meanings : [meanings],
+                reading: kana || kanji,
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[Dictionary.JMnedict] Failed to load from file:", (e as any).message);
+    }
+  }
+
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  async lookup(word: string): Promise<WordLookupResult | null> {
+    // Check cache first
+    if (this.cache.has(word)) {
+      return this.cache.get(word) || null;
+    }
+
+    // Look up in entries
+    const result = this.entries.get(word) || null;
+
+    // Cache the result (including null results to avoid repeated lookups)
+    this.cache.set(word, result);
+
+    if (result) {
+      console.log(`[Dictionary.JMnedict] Found "${word}": ${result.meaning}`);
+    } else {
+      console.log(`[Dictionary.JMnedict] No entry for "${word}"`);
+    }
+
+    return result;
+  }
+}
+
 // ==================== Dictionary Factory ====================
 export class DictionaryManager {
   private primary: Dictionary | null = null;
-  private fallback: Dictionary | null = null;
+  private fallback1: Dictionary | null = null;
+  private fallback2: Dictionary | null = null;
+  private fallback3: Dictionary | null = null;
 
   async initialize(
     usePrimary: "jmdict" | "jisho" | "kanjidata" = "jisho",
     jmdictPath?: string,
     jmdictFile?: string,
+    jmnedictFile?: string,
     jishoCache?: Map<string, WordLookupResult | null>,
     onJishoCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void
   ): Promise<void> {
@@ -344,8 +439,19 @@ export class DictionaryManager {
       await jmdictDict.initialize(jmdictPath, jmdictFile);
       if (jmdictDict.isInitialized()) {
         this.primary = jmdictDict;
-        this.fallback = new JishoApiDictionary(jishoCache, onJishoCacheUpdate);
-        await (this.fallback as JishoApiDictionary).initialize();
+
+        // Add JMnedict as first fallback
+        const jmnedictDict = new JmnedictDictionary();
+        await jmnedictDict.initialize(jmnedictFile);
+        this.fallback1 = jmnedictDict;
+
+        // Jisho API as second fallback
+        this.fallback2 = new JishoApiDictionary(jishoCache, onJishoCacheUpdate);
+        await (this.fallback2 as JishoApiDictionary).initialize();
+
+        // KanjiData as third fallback
+        this.fallback3 = new KanjiDataDictionary();
+        await (this.fallback3 as KanjiDataDictionary).initialize();
         return;
       }
       // If jmdict failed, fall through to try jisho
@@ -356,8 +462,15 @@ export class DictionaryManager {
       await jishoDict.initialize();
       if (jishoDict.isInitialized()) {
         this.primary = jishoDict;
-        this.fallback = new KanjiDataDictionary();
-        await (this.fallback as KanjiDataDictionary).initialize();
+
+        // Add JMnedict as first fallback
+        const jmnedictDict = new JmnedictDictionary();
+        await jmnedictDict.initialize(jmnedictFile);
+        this.fallback1 = jmnedictDict;
+
+        // KanjiData as second fallback
+        this.fallback2 = new KanjiDataDictionary();
+        await (this.fallback2 as KanjiDataDictionary).initialize();
         return;
       }
     }
@@ -366,17 +479,36 @@ export class DictionaryManager {
     const kanjiDict = new KanjiDataDictionary();
     await kanjiDict.initialize();
     this.primary = kanjiDict;
+
+    // Still add JMnedict as fallback for hiragana proper nouns
+    const jmnedictDict = new JmnedictDictionary();
+    await jmnedictDict.initialize(jmnedictFile);
+    this.fallback1 = jmnedictDict;
   }
 
   async lookup(word: string): Promise<WordLookupResult | null> {
     if (!this.primary) return null;
 
+    // For pure hiragana words, try JMnedict first (before other fallbacks)
+    // This gives priority to proper nouns for hiragana-only words
+    const isPureHiragana = /^[ぁ-ん]+$/.test(word);
+    if (isPureHiragana && this.fallback1) {
+      const jmnedictResult = await this.fallback1.lookup(word);
+      if (jmnedictResult) return jmnedictResult;
+    }
+
     const result = await this.primary.lookup(word);
     if (result) return result;
 
-    // Try fallback if primary fails
-    if (this.fallback) {
-      return await this.fallback.lookup(word);
+    // Try remaining fallback chain: Jisho API → KanjiData
+    if (this.fallback2) {
+      const result2 = await this.fallback2.lookup(word);
+      if (result2) return result2;
+    }
+
+    if (this.fallback3) {
+      const result3 = await this.fallback3.lookup(word);
+      if (result3) return result3;
     }
 
     return null;
