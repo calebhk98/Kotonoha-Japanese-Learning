@@ -109,48 +109,18 @@ export class SudachiWasmImpl implements Tokenizer {
     if (!this.tokenizer) throw new Error('Sudachi WASM not initialized');
     const morphemes = this.tokenizer.run(text, 'C');
 
-    // Combine prefixes/suffixes with adjacent words
-    const particles = new Set(['は', 'が', 'を', 'に', 'へ', 'と', 'で', 'も', 'か', 'の', 'て', 'な', 'だ']);
-    const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-
     const result: string[] = [];
-    let i = 0;
 
-    while (i < morphemes.length) {
-      const m = morphemes[i];
-      const surface = m.surface;
+    for (const m of morphemes) {
       const pos = m.part_of_speech[0];
+      const surface = m.surface;
 
-      // Skip punctuation and particles
-      if (isPunctuation(surface) || particles.has(surface)) {
-        i++;
+      // Skip only punctuation and whitespace
+      if (pos === '補助記号' || /^\s+$/.test(surface)) {
         continue;
       }
 
-      // Start building a word unit
-      let word = '';
-
-      // Collect leading prefixes
-      while (i < morphemes.length && morphemes[i].part_of_speech[0] === '接頭辞') {
-        word += morphemes[i].surface;
-        i++;
-      }
-
-      // Add the main word
-      if (i < morphemes.length && !isPunctuation(morphemes[i].surface) && !particles.has(morphemes[i].surface)) {
-        word += morphemes[i].surface;
-        i++;
-      }
-
-      // Collect trailing suffixes
-      while (i < morphemes.length && morphemes[i].part_of_speech[0] === '接尾辞') {
-        word += morphemes[i].surface;
-        i++;
-      }
-
-      if (word) {
-        result.push(word);
-      }
+      result.push(surface);
     }
 
     return result;
