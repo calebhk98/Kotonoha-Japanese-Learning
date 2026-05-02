@@ -1,4 +1,4 @@
-import { INITIAL_CONTENT } from './src/data/content';
+import { INITIAL_CONTENT } from './src/data/content.js';
 import { createTokenizer } from './src/lib/tokenizers';
 import { DictionaryManager } from './src/lib/dictionary';
 import path from 'path';
