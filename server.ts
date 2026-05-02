@@ -522,12 +522,14 @@ async function startServer() {
       return res.status(400).json({ error: "texts must be an array" });
     }
 
+    const batchStart = Date.now();
     console.log(`[API] /api/batch-extract: Processing ${texts.length} items (cache: ${wordsCache.size} words)`);
 
     // Sort by text length (shorter first) for faster initial cache warmup
     const sortedTexts = [...texts].sort((a, b) => (a.text?.length ?? 0) - (b.text?.length ?? 0));
 
     // Tokenize all texts concurrently upfront
+    const tokenStart = Date.now();
     const tokenizedBatch = await Promise.all(
       sortedTexts.map(async (item: any) => {
         if (!item.text || typeof item.text !== "string") return { ...item, tokens: null };
@@ -539,6 +541,8 @@ async function startServer() {
         }
       })
     );
+    const tokenTime = Date.now() - tokenStart;
+    console.log(`[API] /api/batch-extract: Tokenization complete (${tokenTime}ms)`);
 
     // Collect unique kana-only words from all texts
     const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
@@ -561,6 +565,7 @@ async function startServer() {
     }
 
     // Look up all kana words concurrently
+    const lookupStart = Date.now();
     console.log(`[API] /api/batch-extract: Looking up ${uniqueKanaWords.size} unique kana words concurrently`);
     const kanaLookupCache = new Map<string, any>();
     if (dictionary && uniqueKanaWords.size > 0) {
@@ -577,8 +582,12 @@ async function startServer() {
         kanaLookupCache.set(word, result);
       }
     }
+    const lookupTime = Date.now() - lookupStart;
+    const foundCount = Array.from(kanaLookupCache.values()).filter(v => v !== null).length;
+    console.log(`[API] /api/batch-extract: Kana lookup complete (${lookupTime}ms, ${foundCount}/${uniqueKanaWords.size} found)`);
 
     // Process texts with pre-looked-up kana cache
+    const processStart = Date.now();
     const results = await Promise.all(
       tokenizedBatch.map(async (item: any) => {
         const { id, text, tokens } = item;
@@ -598,8 +607,11 @@ async function startServer() {
         }
       })
     );
+    const processTime = Date.now() - processStart;
+    const totalTime = Date.now() - batchStart;
 
-    console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words`);
+    console.log(`[API] /api/batch-extract: Text processing complete (${processTime}ms)`);
+    console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words (total: ${totalTime}ms)`);
     res.json(results);
   });
 
@@ -665,6 +677,36 @@ async function startServer() {
     'Authorization': `Bearer ${token}`,
     'Wanikani-Revision': '20170710',
     'Content-Type': 'application/json',
+  });
+
+  app.post("/api/clear-cache", (req, res) => {
+    const wordCacheSize = wordsCache.size;
+    const jishoCacheSize = jishoCache.size;
+
+    wordsCache.clear();
+    jishoCache.clear();
+    jishoCacheNeedsSave = true;
+    markCacheAsDirty();
+
+    console.log(`[API] /api/clear-cache: Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`);
+
+    // Delete cache files
+    try {
+      if (fs.existsSync(CACHE_FILE)) {
+        fs.unlinkSync(CACHE_FILE);
+      }
+      if (fs.existsSync(JISHO_CACHE_FILE)) {
+        fs.unlinkSync(JISHO_CACHE_FILE);
+      }
+      console.log(`[API] /api/clear-cache: Deleted cache files`);
+    } catch (e) {
+      console.error('[API] /api/clear-cache: Error deleting files:', (e as any).message);
+    }
+
+    res.json({
+      cleared: true,
+      message: `Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`
+    });
   });
 
   app.post("/api/wanikani/validate", async (req, res) => {
