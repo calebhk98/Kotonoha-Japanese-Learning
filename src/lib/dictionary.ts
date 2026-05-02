@@ -228,16 +228,34 @@ export class JmdictDictionary implements Dictionary {
       }
       if (results.length === 0) return null;
 
-      // Find exact match or best match
-      const bestMatch = results.find(
+      // Find best match: prioritize entries with exact kana/kanji match + common words
+      let bestMatch = results.find(
         (r) =>
           r.kana.some((k: any) => k.text === word) ||
           r.kanji.some((k: any) => k.text === word)
-      ) || results[0];
+      );
 
-      // Extract all meanings (senses ordered by frequency in jmdict-simplified)
+      // If no exact match, score all results by commonness
+      if (!bestMatch) {
+        bestMatch = results.reduce((best: any, current: any) => {
+          const bestScore = this.getEntryCommonness(best);
+          const currentScore = this.getEntryCommonness(current);
+          return currentScore > bestScore ? current : best;
+        });
+      }
+
+      // Extract all meanings (prioritize more common senses)
       const meanings: string[] = [];
-      for (const sense of bestMatch.sense) {
+      const sensesWithScores = (bestMatch.sense || []).map((sense: any, idx: number) => ({
+        sense,
+        order: idx,
+        commonness: this.getSenseCommonness(sense)
+      }));
+
+      // Sort by commonness (higher first)
+      sensesWithScores.sort((a, b) => b.commonness - a.commonness);
+
+      for (const { sense } of sensesWithScores) {
         if (sense.gloss && sense.gloss.length > 0) {
           const glossTexts = (sense.gloss as any[])
             .filter((g) => g.lang === "en")
@@ -260,6 +278,52 @@ export class JmdictDictionary implements Dictionary {
       console.error("[Dictionary] JMDict lookup error:", (e as any).message);
       return null;
     }
+  }
+
+  private getEntryCommonness(entry: any): number {
+    // Score entries by how "common" they appear
+    let score = 0;
+
+    // Prefer entries with kanji (more concrete words)
+    if (entry.kanji && entry.kanji.length > 0) {
+      score += 10;
+    }
+
+    // Prefer entries with multiple kanji variants (widely used)
+    if (entry.kanji && entry.kanji.length > 1) {
+      score += 5;
+    }
+
+    // Prefer entries with multiple senses (more established)
+    if (entry.sense && entry.sense.length > 1) {
+      score += 3;
+    }
+
+    return score;
+  }
+
+  private getSenseCommonness(sense: any): number {
+    // Score senses by how "common" they are
+    let score = 0;
+
+    // Prefer senses with multiple glosses (well-established meanings)
+    if (sense.gloss && Array.isArray(sense.gloss) && sense.gloss.length > 1) {
+      score += 5;
+    }
+
+    // Penalize specialized meanings
+    const gloss = sense.gloss?.[0]?.text || '';
+    const specializedTerms = ['esp.', 'rare', 'archaic', 'obsolete', 'old', 'dated', 'specialized'];
+    if (specializedTerms.some(term => gloss.toLowerCase().includes(term))) {
+      score -= 10;
+    }
+
+    // Prefer common grammatical terms
+    if (gloss.toLowerCase().includes('copula') || gloss.toLowerCase().includes('auxiliary')) {
+      score += 3;
+    }
+
+    return score;
   }
 }
 
