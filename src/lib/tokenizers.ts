@@ -281,8 +281,8 @@ export class SudachiWasmImpl implements Tokenizer {
         continue;
       }
 
-      // Extract base form from POS tags
-      const baseForm = getMorphemeBaseForm(surface, m.part_of_speech);
+      // Use Sudachi's normalized form (dictionary form) directly
+      const baseForm = m.normalized_form || surface;
 
       result.push({ surface, baseForm });
     }
