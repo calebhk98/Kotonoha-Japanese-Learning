@@ -30,6 +30,36 @@ This document provides a comprehensive list of movies, TV shows, and animated co
   - *Learning Value:* Casual family dialogue, comedic context aids understanding
   - *Content:* Family comedy; episodes have repetitive humor patterns
 
+- **Hamtaro** (ハムタロウ - Pocketful of Hamsters)
+  - *Format:* Anime series (296 episodes, 11 min each)
+  - *Learning Value:* Extremely simple for very young learners; minimal dialogue
+  - *Content:* Cute hamster adventures with friends
+  - *Pace:* Very slow; excellent for absolute beginners
+
+- **Astro Boy** (鉄腕アトム) — 2003 series
+  - *Format:* Anime series (50 episodes, 24 min each)
+  - *Learning Value:* Classic robot adventures; simple but clear dialogue
+  - *Content:* Powerful robot boy protecting humanity
+  - *Pace:* Engaging enough to maintain interest despite simplicity
+
+- **Tamagotchi!** (たまごっち！)
+  - *Format:* Anime series (70+ episodes, 24 min each)
+  - *Learning Value:* Cute characters, simple slice-of-life narratives
+  - *Content:* Digital pet characters come to life
+  - *Themes:* Friendship, responsibility, adventure
+
+- **Hello Kitty & Friends** (ハローキティ series)
+  - *Format:* Anime series (various, 24 min episodes)
+  - *Learning Value:* Super simple; designed for young children
+  - *Content:* Sanrio character adventures and daily life
+  - *Advantage:* Extremely approachable with minimal language barriers
+
+- **Perman** (パーマン)
+  - *Format:* Anime series (episodes vary, 24 min)
+  - *Learning Value:* Classic comedy with simple dialogue patterns
+  - *Content:* Boy becomes a masked superhero with gadgets
+  - *Note:* Nostalgic classic; humor based on visuals and repetition
+
 ### Studio Ghibli Films (Beginner-Friendly)
 
 - **My Neighbor Totoro** (となりのトトロ)
@@ -50,6 +80,44 @@ This document provides a comprehensive list of movies, TV shows, and animated co
   - *Content:* A fish-girl and a boy's friendship
   - *Difficulty Note:* Dreamlike quality allows for understanding gaps
 
+- **The Secret World of Arrietty** (借りぐらしのアリエッティ)
+  - *Format:* Feature film (104 min)
+  - *Learning Value:* Whispered, gentle dialogue; simple descriptions of daily tasks
+  - *Content:* Tiny family living undetected in human home
+  - *Pace:* Slower, contemplative story with clear visuals
+
+- **The Red Turtle** (赤い亀)
+  - *Format:* Feature film (80 min)
+  - *Learning Value:* Almost no dialogue; purely visual storytelling
+  - *Content:* Man stranded on island befriends a turtle
+  - *Perfect for:* Listening practice without language pressure; enjoy the story visually
+
+### Wholesome & Slice-of-Life Anime (Beginner-Suitable)
+
+- **Kamichu!** (かみちゅ！)
+  - *Format:* Anime series (16 episodes, 24 min each)
+  - *Learning Value:* School setting, gentle comedy, clear dialogue
+  - *Content:* Shy girl discovers she's a Shinto goddess
+  - *Themes:* School life, friendship, supernatural discovery
+
+- **Tamayura** (たまゆら)
+  - *Format:* Anime series (16 episodes, 24 min each)
+  - *Learning Value:* Photography-focused; everyday activities and nature
+  - *Content:* Girls in photography club exploring their town
+  - *Pace:* Calm, contemplative narrative
+
+- **Azuki-chan** (あずきちゃん)
+  - *Format:* Anime series (50 episodes, 24 min each)
+  - *Learning Value:* Cooking-themed; repetitive recipes and kitchen vocabulary
+  - *Content:* Girl loves cooking; shares recipes with friends
+  - *Bonus:* Learn cooking vocabulary while enjoying story
+
+- **Aggretsuko** (アグレッシブ烈子) — Select episodes
+  - *Format:* Anime series (seasons vary, 12-25 min episodes)
+  - *Learning Value:* Short episodes; office/daily life with expressive characters
+  - *Content:* Red panda office worker; slice-of-life comedy
+  - *Note:* Start with Season 1 for simpler language
+
 ### NHK Educational Content
 
 - **NHK Eテレ Kids Programs**
@@ -63,13 +131,79 @@ This document provides a comprehensive list of movies, TV shows, and animated co
   - *Learning Value:* Specifically designed for learners; subtitles available
   - *Content:* Daily scenarios, cultural explanations
 
-### Ghibli Short Films
+- **Eテレ Originals** (NHK Educational Programming)
+  - *Format:* Various shorts (5-20 min)
+  - *Learning Value:* Science, nature, and social lessons for children
+  - *Content:* Experiments, nature observation, life skills
+  - *Examples:* サイエンスゼロ (Science Zero - simplified), Nature documentaries
+
+### Other Studio Ghibli Films
 
 - **Spirited Away** (千と千尋の神隠し) - *Note: More complex, but highly visual*
   - *Format:* Feature film (125 min)
   - *Learning Value:* Fantastical visuals compensate for language difficulty
   - *Content:* Girl navigating a spirit world
   - *Difficulty Note:* Borderline N5/N4; use visuals heavily
+
+- **Castle in the Sky** (ラピュタ - 天空の城ラピュタ)
+  - *Format:* Feature film (124 min)
+  - *Learning Value:* Adventure story with clear action and emotional beats
+  - *Content:* Two teens search for legendary floating castle
+  - *Difficulty Note:* More action-driven than dialogue-dependent; visuals carry story
+
+- **Howl's Moving Castle** (ハウルの動く城) - *Early scenes*
+  - *Format:* Feature film (119 min)
+  - *Learning Value:* Beautiful visuals; romantic scenes have slower, clearer dialogue
+  - *Content:* Woman cursed to old age meets mysterious wizard
+  - *Tip:* The opening and romantic scenes are more accessible than action sequences
+
+### Ultra-Short Form Content (5-15 minutes)
+
+- **Pop Team Epic** (ポプテピピック)
+  - *Format:* Anime series (3-5 min episodes)
+  - *Learning Value:* Surreal comedy; visual humor dominates; minimal language needed
+  - *Content:* Absurdist comedy with rapid-fire jokes
+  - *Perfect for:* Quick daily viewing; humor transcends language
+
+- **Splatoon Short Films** (スプラトゥーン)
+  - *Format:* Short anime films (5-15 min)
+  - *Learning Value:* Action-driven; simple dialogue between colorful characters
+  - *Content:* Video game universe adaptations
+  - *Visuals:* Bright and engaging; story secondary to action
+
+- **Official Sanrio Character Shorts**
+  - *Format:* Various shorts (5-10 min)
+  - *Learning Value:* Minimal dialogue; adorable character interactions
+  - *Content:* Hello Kitty, Badtz-Maru, and other Sanrio character adventures
+  - *Perfect for:* Stress relief + listening practice combined
+
+### International Children's Content (Japanese Dub)
+
+- **Bluey** (ブルーイ - Australian show, Japanese dub available)
+  - *Format:* Animated series (7 min episodes)
+  - *Learning Value:* Very simple family dialogue; repetitive vocabulary
+  - *Content:* Blue heeler puppy family's everyday adventures
+  - *Perfect for:* Absolute beginners; relatable family scenarios
+
+- **Peppa Pig** (ペッパピッグ - Japanese dub)
+  - *Format:* Animated series (5 min episodes)
+  - *Learning Value:* Designed for preschoolers; extremely simple dialogue
+  - *Content:* Pig family adventures
+  - *Advantage:* Extremely clear pronunciation; repetitive patterns
+
+### Stop-Motion & Visual-Heavy Films
+
+- **Mary and the Witch's Flower** (メアリと魔女の花)
+  - *Format:* Feature film (102 min)
+  - *Learning Value:* Magical adventure; visually driven; simple character interactions
+  - *Content:* Girl finds magical flower and gains witch powers
+  - *Studio:* Studio Ponoc (Ghibli-adjacent quality)
+
+- **Patema Inverted** (パテマ・インバーテッド)
+  - *Format:* Feature film (98 min)
+  - *Learning Value:* Science-fiction concept; relatively simple dialogue; visual-heavy
+  - *Content:* Girl discovers people living upside-down
+  - *Pace:* Engaging mystery that holds attention despite language difficulty
 
 ---
 
