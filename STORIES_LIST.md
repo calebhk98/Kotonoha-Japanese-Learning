@@ -68,6 +68,46 @@ This document provides a comprehensive list of all stories currently implemented
 
 ---
 
+## Short Japanese Nursery Rhymes, Poems & Children's Stories (Issue #146)
+
+*Quick reads (2-5 minutes) — authentic Japanese originals equivalent to "Jack and Jill" or "Humpty Dumpty". Perfect for N5 beginners.*
+
+### Japanese Nursery Rhymes & Folk Songs (わらべうた)
+- **Toryanse** (とうりゃんせ) — Traditional children's chant/gate-passing game
+- **Dondon Pattsun** — Hand-clapping rhyme
+- **Ika no Osushi** (いかのおすし) — Safety rhyme (stranger awareness)
+- **Atchi muite hoi** (あっちむいてホイ) — Pointing game chant
+- **Janken pon** (じゃんけんぽん) — Rock paper scissors song
+- **Mushi no Koe** (むしのこえ) — Insect voices poem
+- **Haru yo koi** (はるよこい) — Seasonal poem/chant
+- Traditional counting rhymes & number chants
+
+### Very Short Folk Stories (Japanese Originals)
+- Shortened versions of classic folktales for young learners
+- Brief yokai encounters (oni, yōkai, ghosts, fictional creatures)
+- Short children's fables unique to Japanese culture
+- Basic myths/common beliefs (supernatural creatures)
+
+### Classical Japanese Children's Poetry
+- **Haiku for children** — Famous examples or new compositions
+- **Tanka** — Short classical poems
+- Traditional verses suitable for young learners
+- Seasonal poems (kigo-based)
+
+### Famous Picture Books by Japanese Authors
+- **Yoshito Usui works** (Shin-chan creator) — if accessible for young readers
+- **Keiko Kasza** — Japanese picture book author
+- **Kazuo Iwamura** — Nature & character-focused picture books
+- Other Japanese children's picture book authors
+
+### Children's Songs & Poems
+- **Traditional Japanese children's songs** — with narrative elements
+- **Seasonal rhymes & chants**
+- **Activity songs** — with story components
+- **Lullabies** (子守唄 - komoriuta) with narrative
+
+---
+
 ## Planned Stories from GitHub Issues
 
 ### N5 Level Stories (Issues #58-#112) — Beginner/Everyday Topics
@@ -220,12 +260,13 @@ This document provides a comprehensive list of all stories currently implemented
 ## Summary Statistics
 
 - **Implemented Stories:** 22
+- **Short Japanese Nursery Rhymes, Poems & Stories (Issue #146):** ~25-30
 - **Iconic Japanese Children's Stories (Issue #145):** 17
 - **Planned N5 Stories (daily/practical):** 55
 - **Planned N5-N4 Stories (literature/classics):** 9
 - **Planned Aesop's Fables/Western Tales:** 8
 - **Recommended Resources (not full implementations):** 24
-- **Total Planned/To-Implement:** 113
+- **Total Planned/To-Implement:** ~138-143
 
 ---
 
