@@ -117,37 +117,110 @@ This document provides a comprehensive list of all songs planned for the Japanes
 30. **Fuyu Yo Koi** (冬よ来い) - Winter is coming song
     - [Category: Seasonal] - Winter arrival, snow and cold themes
 
+31. **Iro no Uta** (色の歌) - Colors song
+    - [Category: Educational] - Learning basic colors through song
+
+32. **Katachi no Uta** (形の歌) - Shapes song
+    - [Category: Educational] - Basic shapes (circle, square, triangle)
+
+#### Weather & Nature Songs (N5)
+33. **Ame no Hi** (雨の日) - Rainy day song
+    - [Category: Weather] - About rain, puddles, umbrellas
+
+34. **Yuki Furutoru** (雪降る) - It's snowing song
+    - [Category: Weather/Seasonal] - Winter snowfall, playful
+
+35. **Kaze no Uta** (風の歌) - Wind song
+    - [Category: Weather/Nature] - About breezy days and wind
+
+36. **Kumino Uta** (雲の歌) - Cloud song
+    - [Category: Nature] - Cloud shapes and sky observation
+
+37. **Tenki no Ko** (天気の子) - Weather children song
+    - [Category: Weather] - Learning about different weather types
+
+#### Transportation Songs (N5)
+38. **Densha de Iko** (電車で行こ) - Let's go by train song
+    - [Category: Transportation] - Train ride, journey song
+
+39. **Kuruma no Uta** (車の歌) - Car/automobile song
+    - [Category: Transportation] - Cars and driving, movement
+
+40. **Hikouki** (飛行機) - Airplane song
+    - [Category: Transportation] - Flying, adventure
+
+41. **Basu no Uta** (バスの歌) - Bus song
+    - [Category: Transportation] - Bus rides, public transport
+
+#### Food & Eating Songs (N5)
+42. **Okome no Uta** (お米の歌) - Rice song
+    - [Category: Food] - About rice, staple food
+
+43. **Yasai no Uta** (野菜の歌) - Vegetable song
+    - [Category: Food] - Learning vegetables through song
+
+44. **Kudamono no Uta** (果物の歌) - Fruit song
+    - [Category: Food] - Learning fruit names
+
+45. **Gohani Nattara** (ご飯になったら) - When it becomes rice/meal song
+    - [Category: Meal Song] - Meal preparation and eating
+
+#### Job & Profession Songs (N5-N4)
+46. **Shoubou-shi** (消防士) - Firefighter song
+    - [Category: Profession] - Community helper, brave and helpful
+
+47. **Keisatsu** (警察) - Police officer song
+    - [Category: Profession] - Police, safety and protection
+
+48. **Isha san** (医者さん) - Doctor song
+    - [Category: Profession] - Healthcare worker, helping people
+
+49. **Sensei** (先生) - Teacher song
+    - [Category: Profession] - Teachers and education
+
+50. **Benkyou** (勉強) - Studying/learning song
+    - [Category: School/Learning] - About homework and study time
+
 #### Popular & Universal Children's Songs (N5)
-31. **Happy Birthday** (たんじょうびおめでとう / バースデーソング)
+51. **Happy Birthday** (たんじょうびおめでとう / バースデーソング)
     - [Category: Celebration/Holiday] - Universal birthday song, sung at every Japanese school party
 
-32. **Rajio Taiso** (ラジオ体操) - Radio Calisthenics
+52. **Rajio Taiso** (ラジオ体操) - Radio Calisthenics
     - [Category: Exercise/Activity Song] - THE iconic morning exercise routine in Japan, taught in all schools
 
-33. **Sayonara no Uta** (さようならのうた) - Goodbye/Parting song
+53. **Sayonara no Uta** (さようならのうた) - Goodbye/Parting song
     - [Category: School/Goodbye] - End of day parting song, very common in schools
 
-34. **Arigatou Gozaimasu** (ありがとうございます) - Thank you song
+54. **Arigatou Gozaimasu** (ありがとうございます) - Thank you song
     - [Category: Gratitude Song] - Teaches politeness and gratitude
 
-35. **Baby Shark** (ベビーシャーク) - Children's pop song
+55. **Baby Shark** (ベビーシャーク) - Children's pop song
     - [Category: Children's Pop] - Modern simple song, very repetitive, great for beginners
 
-36. **Gakkou wa Yoi Tokoro** (学校はいいところ) - School song
+56. **Gakkou wa Yoi Tokoro** (学校はいいところ) - School song
     - [Category: Children's Song/School] - Song about school, simple daily vocabulary
 
+57. **Undokai no Uta** (運動会の歌) - Sports day song
+    - [Category: School Event] - About athletic competitions and school sports day
+
+58. **Bunkasai** (文化祭) - School culture festival song
+    - [Category: School Event] - School festival celebration
+
 #### Family & Relationship Songs (N5)
-37. **Oneesan** (お姉さん) - Older sister song
+59. **Oneesan** (お姉さん) - Older sister song
     - [Category: Family Song] - Simple family relationships vocabulary
 
-38. **Oniisan** (お兄さん) - Older brother song
+60. **Oniisan** (お兄さん) - Older brother song
     - [Category: Family Song] - Simple family relationships vocabulary
 
-39. **Ojiiisan** (おじいさん) - Grandfather song
+61. **Ojiiisan** (おじいさん) - Grandfather song
     - [Category: Family Song] - Gentle family song
 
-40. **Obaasan** (おばあさん) - Grandmother song
+62. **Obaasan** (おばあさん) - Grandmother song
     - [Category: Family Song] - Warm family relationships
+
+63. **Kazoku** (家族) - Family song
+    - [Category: Family Song] - All family members together
 
 ---
 
@@ -155,77 +228,130 @@ This document provides a comprehensive list of all songs planned for the Japanes
 
 *Simple story elements, more varied vocabulary, still beginner-friendly.*
 
+#### More School & Activity Songs (N5-N4)
+64. **Asaikai no Uta** (朝礼の歌) - Morning assembly song
+    - [Category: School Routine] - Start of school day gathering
+
+65. **Soji no Jikan** (掃除の時間) - Cleaning time song
+    - [Category: School Routine] - Classroom cleaning activity
+
+66. **Natsuyasumi** (夏休み) - Summer vacation song
+    - [Category: Holiday/School] - About summer break and freedom
+
+67. **Fuyu Yasumi** (冬休み) - Winter vacation/holiday song
+    - [Category: Holiday/School] - About winter break and Christmas
+
+#### Animal & Nature Observation Songs (N5-N4)
+68. **Inu no Uta** (犬の歌) - Dog song
+    - [Category: Animal] - About dogs, barking sounds
+
+69. **Neko no Uta** (猫の歌) - Cat song
+    - [Category: Animal] - About cats, meowing
+
+70. **Tori no Uta** (鳥の歌) - Bird song
+    - [Category: Animal/Nature] - Various bird sounds
+
+71. **Usagi no Uta** (ウサギの歌) - Rabbit song
+    - [Category: Animal] - About rabbits, hopping
+
+72. **Hana no Uta** (花の歌) - Flower song
+    - [Category: Nature] - About blooming flowers
+
 #### Holiday & Seasonal Songs (N5-N4)
-41. **Jingle Bells Japanese** (ジングルベル) - Christmas song
+73. **Jingle Bells Japanese** (ジングルベル) - Christmas song
     - [Category: Holiday] - Famous Christmas carol in Japanese, simple and recognizable
 
-42. **Omoshiroi Kurisumasu** (楽しいクリスマス) or **Kurisumasu no Uta** - Japanese Christmas songs
+74. **Kurisumasu no Uta** (クリスマスの歌) - Christmas song (Japan version)
     - [Category: Holiday] - Japan-specific Christmas celebration songs
 
-43. **Shogatsu no Uta** (正月のうた) - New Year's celebration song
+75. **Shogatsu no Uta** (正月のうた) - New Year's celebration song
     - [Category: Holiday] - New Year's traditional celebration song
 
-44. **Obon Odori** (お盆踊り) - Obon festival dance/song
+76. **Obon Odori** (お盆踊り) - Obon festival dance/song
     - [Category: Festival/Holiday] - Summer ancestor festival dance and song
 
+77. **Tanabata no Uta** (七夕の歌) - Tanabata Festival extended version
+    - [Category: Festival/Holiday] - Star festival celebration, romantic themes
+
 #### Anime & Character Songs (N5-N4)
-45. **Chibi Maruko-chan Theme** (ちびまる子ちゃん) - Anime theme
+78. **Chibi Maruko-chan Theme** (ちびまる子ちゃん) - Anime theme
     - [Category: Anime Opening] - Everyday comedy anime, slightly more narrative
 
-46. **Totoro Walk Song** (となりのトトロ) - Studio Ghibli inspired
+79. **Totoro Walk Song** (となりのトトロ) - Studio Ghibli inspired
     - [Category: Studio Ghibli/Nature] - Whimsical nature-themed, simple storytelling
 
-47. **Ponyo** (ポニョ) - Studio Ghibli theme
+80. **Ponyo** (ポニョ) - Studio Ghibli theme
     - [Category: Studio Ghibli] - Simple magical girl adventure, fun and upbeat
 
-48. **Sailor Moon Theme** (セーラームーン) - Classic magical girl anime
+81. **Sailor Moon Theme** (セーラームーン) - Classic magical girl anime
     - [Category: Anime Opening] - Iconic 90s anime, relatively simple for N4
 
-49. **Kaguya-hime Song** (かぐや姫) - Bamboo princess ballad
+82. **Digimon Adventure Theme** (デジモンアドベンチャー)
+    - [Category: Anime Opening] - 90s digital monster anime, catchy and memorable
+
+83. **Beyblade Theme** (ベイブレード)
+    - [Category: Anime Opening] - Spinning battle toys, energetic opening
+
+84. **Kaguya-hime Song** (かぐや姫) - Bamboo princess ballad
     - [Category: Folklore/Legend] - Traditional Japanese folktale adapted to song
 
-50. **Urashima Taro Song** (浦島太郎) - Fisherman folklore ballad
+85. **Urashima Taro Song** (浦島太郎) - Fisherman folklore ballad
     - [Category: Folklore/Legend] - Classic Japanese folklore, narrative and simple
 
+86. **Momotaro Extended Version** (桃太郎) - Extended story song
+    - [Category: Folklore/Legend] - Longer narrative version of peach boy tale
+
 #### Traditional & Seasonal Songs (N5-N4)
-51. **Akatsuki Kasanete** (赤とんぼ) - Traditional autumn song
+87. **Akatsuki Kasanete** (赤とんぼ) - Traditional autumn song
     - [Category: Traditional/Seasonal] - Autumn-themed, simple imagery and emotions
 
-52. **Gondola no Uta** (ゴンドラの唄) - Classic 1915 song
+88. **Gondola no Uta** (ゴンドラの唄) - Classic 1915 song
     - [Category: Traditional/Nostalgic] - Gentle, romantic, simple melody
 
-53. **Momiji** (もみじ) - Autumn leaves song
+89. **Momiji** (もみじ) - Autumn leaves song
     - [Category: Traditional/Seasonal] - Fall imagery, simple and poetic
 
-54. **Tanko Bushi** (炭坑節) - Coal miner's traditional song
+90. **Tanko Bushi** (炭坑節) - Coal miner's traditional song
     - [Category: Traditional/Folk Dance] - Historic work song with dance, energetic
 
-55. **Hanagasa Odori** (花笠踊り) - Traditional Yamagata dance song
+91. **Hanagasa Odori** (花笠踊り) - Traditional Yamagata dance song
     - [Category: Traditional/Festival] - Regional festival dance with song
 
+92. **Yosakoina** (よさこい) - Yosakoina dance song (Kochi festival)
+    - [Category: Traditional/Festival] - Regional celebration dance with infectious rhythm
+
 #### Children's & Comedy Songs (N5-N4)
-56. **Oji Panda** (おじぱんだ) - Children's comedy song
+93. **Oji Panda** (おじぱんだ) - Children's comedy song
     - [Category: Children's Comedy Song] - Humorous, simple, very Japanese humor
 
-57. **Neko Neko Neko** (猫 猫 猫) - Children's animal song
+94. **Neko Neko Neko** (猫 猫 猫) - Children's animal song
     - [Category: Children's Animal Song] - About cats, repetitive and fun
 
-58. **Kaeru no Gasso** (かえるの合奏) - Frog concert song
+95. **Kaeru no Gasso** (かえるの合奏) - Frog concert song
     - [Category: Children's Animal Song] - Frog sounds and nature, playful
 
+96. **Usagi Usagi** (ウサギ ウサギ) - Rabbit jumping song
+    - [Category: Children's Animal Song] - About rabbits hopping, playful repetition
+
 #### Historical & Cultural Songs (N5-N4)
-59. **Doyatte** (どやって) - Traditional work song
+97. **Doyatte** (どやって) - Traditional work song
     - [Category: Traditional/Folk] - Japanese folk work song, repetitive rhythm
 
-60. **Kagome Kagome** (かごめかごめ) - Traditional children's game chant
+98. **Kagome Kagome** (かごめかごめ) - Traditional children's game chant
     - [Category: Nursery Rhyme/Folk Game] - Ancient Japanese game song, mysterious and fun
 
-61. **Bonenkai** (忘年会) - Year-end party celebration song
+99. **Bonenkai** (忘年会) - Year-end party celebration song
     - [Category: Holiday/Celebration] - New Year's Eve celebration, festive
 
+100. **Aizu Bandai Yama** (会津盆踊り) - Regional Bon dance song
+     - [Category: Traditional/Festival] - Fukushima region summer folk song
+
 #### Simple Modern J-Pop (N5-N4)
-62. **Sekai wa Hitiro** (世界は一色) - Simple modern song
-    - [Category: Modern J-Pop] - Contemporary song with accessible vocabulary and emotion
+101. **Sekai wa Hitiro** (世界は一色) - Simple modern song
+     - [Category: Modern J-Pop] - Contemporary song with accessible vocabulary and emotion
+
+102. **Okoru Kuno Opening** (おかあさんといっしょ) - Famous NHK children's show theme
+     - [Category: NHK/Educational] - Iconic morning TV show theme, generations of kids
 
 ---
 
@@ -234,40 +360,62 @@ This document provides a comprehensive list of all songs planned for the Japanes
 *More nuanced storytelling, expanded vocabulary, clearer narrative elements.*
 
 #### Studio Ghibli & Film Themes (N4)
-63. **Kiki's Delivery Service Theme** (魔女の宅急便) - Studio Ghibli
-    - [Category: Studio Ghibli] - Coming-of-age adventure, beautiful and accessible
+103. **Kiki's Delivery Service Theme** (魔女の宅急便) - Studio Ghibli
+     - [Category: Studio Ghibli] - Coming-of-age adventure, beautiful and accessible
 
-64. **Howl's Moving Castle Theme** (ハウルの動く城) - Studio Ghibli
-    - [Category: Studio Ghibli] - Romantic fantasy adventure, poetic lyrics
+104. **Howl's Moving Castle Theme** (ハウルの動く城) - Studio Ghibli
+     - [Category: Studio Ghibli] - Romantic fantasy adventure, poetic lyrics
 
-65. **Princess Mononoke Theme** (もののけ姫) - Studio Ghibli
-    - [Category: Studio Ghibli] - Epic fantasy, more complex but impactful
+105. **Princess Mononoke Theme** (もののけ姫) - Studio Ghibli
+     - [Category: Studio Ghibli] - Epic fantasy, more complex but impactful
+
+106. **Laputa: Castle in the Sky Theme** (天空の城ラピュタ) - Studio Ghibli
+     - [Category: Studio Ghibli] - Adventure and mystery, beautiful orchestration
+
+107. **Nausicaa Valley of the Wind Theme** (風の谷のナウシカ) - Studio Ghibli
+     - [Category: Studio Ghibli] - Ecological themes, epic scale
 
 #### Anime Openings (N4)
-66. **Hanasaku Iroha Theme** (花咲くいろは) - Slice-of-life anime
-    - [Category: Anime Opening] - Inn/family life comedy, warm and character-focused
+108. **Hanasaku Iroha Theme** (花咲くいろは) - Slice-of-life anime
+     - [Category: Anime Opening] - Inn/family life comedy, warm and character-focused
 
-67. **Tamayura Theme** (たまゆら) - Photography/slice-of-life
-    - [Category: Anime Opening] - Sweet coming-of-age, good for vocabulary
+109. **Tamayura Theme** (たまゆら) - Photography/slice-of-life
+     - [Category: Anime Opening] - Sweet coming-of-age, good for vocabulary
 
-68. **Tari Tari Theme** (タリタリ) - School music anime
-    - [Category: Anime Opening] - High school musical club, creative themes
+110. **Tari Tari Theme** (タリタリ) - School music anime
+     - [Category: Anime Opening] - High school musical club, creative themes
 
-69. **Nichijou Opening** (日常) - Daily life comedy
-    - [Category: Anime Opening] - Absurdist humor, unique language patterns
+111. **Nichijou Opening** (日常) - Daily life comedy
+     - [Category: Anime Opening] - Absurdist humor, unique language patterns
 
-70. **Yama no Susume Opening** (ヤマノススメ) - Mountain climbing adventure
-    - [Category: Anime Opening] - Adventure & friendship, good for N4
+112. **Yama no Susume Opening** (ヤマノススメ) - Mountain climbing adventure
+     - [Category: Anime Opening] - Adventure & friendship, good for N4
 
-71. **K-On! Theme** (けいおん！) - School band comedy
-    - [Category: Anime Opening] - School girls in music club, very popular
+113. **K-On! Theme** (けいおん！) - School band comedy
+     - [Category: Anime Opening] - School girls in music club, very popular
+
+114. **New Game! Opening** (ニューゲーム！) - Game development comedy
+     - [Category: Anime Opening] - Work life, game creation industry
+
+115. **Love Live! School Idol Project** (ラブライブ！) - School idol anime
+     - [Category: Anime Opening] - Music and friendship themes
 
 #### Movies & Popular Themes (N4)
-72. **Your Name (Zenzenzense)** (君の名は - ぜんぜんぜんぜん) - RADWIMPS
-    - [Category: Movie Theme] - Popular film, accessible lyrics, modern J-pop
+116. **Your Name (Zenzenzense)** (君の名は - ぜんぜんぜんぜん) - RADWIMPS
+     - [Category: Movie Theme] - Popular film, accessible lyrics, modern J-pop
 
-73. **Weathering with You Theme** (天気の子) - RADWIMPS
-    - [Category: Movie Theme] - Modern romance fantasy, contemporary language
+117. **Weathering with You Theme** (天気の子) - RADWIMPS
+     - [Category: Movie Theme] - Modern romance fantasy, contemporary language
+
+118. **Spirited Away Theme** (千と千尋の神隠し) - Studio Ghibli film
+     - [Category: Movie Theme/Studio Ghibli] - Iconic film, emotional and complex
+
+119. **A Letter to Momo Theme** (もものかんづめ / 手紙)
+     - [Category: Movie Theme] - Heartwarming family film
+
+#### N4 Educational & Cultural Songs
+120. **Kokoro no Neesan** (心のお姉さん) - Kindness and emotions song
+     - [Category: Character Education] - About helping others and emotions
 
 ---
 
@@ -276,33 +424,36 @@ This document provides a comprehensive list of all songs planned for the Japanes
 *Advanced vocabulary, complex emotional themes, more poetic language.*
 
 #### Anime with Complex Stories (N4-N3)
-74. **Natsume's Book of Friends Opening** (夏目友人帳) - Supernatural/drama
-    - [Category: Anime Opening] - Emotional supernatural tale, literary quality
+121. **Natsume's Book of Friends Opening** (夏目友人帳) - Supernatural/drama
+     - [Category: Anime Opening] - Emotional supernatural tale, literary quality
 
-75. **Bungo Stray Dogs Opening** (文豪ストレイドッグス) - Mystery/action
-    - [Category: Anime Opening] - Literary references, complex themes
+122. **Bungo Stray Dogs Opening** (文豪ストレイドッグス) - Mystery/action
+     - [Category: Anime Opening] - Literary references, complex themes
 
-76. **Steins;Gate Opening** (シュタインズ・ゲート) - Sci-fi thriller
-    - [Category: Anime Opening] - Time travel narrative, scientific vocabulary
+123. **Steins;Gate Opening** (シュタインズ・ゲート) - Sci-fi thriller
+     - [Category: Anime Opening] - Time travel narrative, scientific vocabulary
 
-77. **A Place Further Than The Universe** (宇宙より遠い場所) - Adventure/friendship
-    - [Category: Anime Opening] - Antarctic expedition, motivational themes
+124. **A Place Further Than The Universe** (宇宙より遠い場所) - Adventure/friendship
+     - [Category: Anime Opening] - Antarctic expedition, motivational themes
 
-#### N3+ Popular J-Pop Artists
-78. **Yonezu Kenshi Songs** (米津玄師) - Contemporary popular artist
-    - [Category: Modern J-Pop] - Various accessible songs, poetic lyrics
+125. **Attack on Titan Opening** (進撃の巨人) - Action/mystery epic
+     - [Category: Anime Opening] - Epic scale, complex narrative
 
-79. **Official Hairando** (Official髭男dism) - Modern band
-    - [Category: Modern J-Pop] - Contemporary music with clear storytelling
+126. **Ergo Proxy Opening** (エルゴプラクシー) - Cyberpunk philosophical anime
+     - [Category: Anime Opening] - Dystopian themes, complex language
 
-80. **Mrs. Green Apple** (ミセスグリーンアップル) - Modern pop-rock
-    - [Category: Modern J-Pop] - Upbeat contemporary music
+127. **Darker than Black Opening** (darker than black) - Spy thriller anime
+     - [Category: Anime Opening] - Noir style, sophisticated vocabulary
 
-81. **Sakura Sakamoto** (坂本真綾) - Singer/Voice actress
-    - [Category: Modern J-Pop/Anime] - Known for anime themes and pop music
+#### N4-N3 Contemporary & Classic Songs
+128. **Yonezu Kenshi Songs** (米津玄師) - Contemporary popular artist
+     - [Category: Modern J-Pop] - Various accessible songs, poetic lyrics
 
-82. **RADWIMPS** (ラッドウィンプス) - Popular indie rock band
-    - [Category: Modern J-Pop] - Movie soundtracks and indie rock, creative lyrics
+129. **Official Hairando** (Official髭男dism) - Modern band
+     - [Category: Modern J-Pop] - Contemporary music with clear storytelling
+
+130. **Mrs. Green Apple** (ミセスグリーンアップル) - Modern pop-rock
+     - [Category: Modern J-Pop] - Upbeat contemporary music
 
 ---
 
@@ -310,35 +461,38 @@ This document provides a comprehensive list of all songs planned for the Japanes
 
 *Advanced vocabulary, complex emotions, literary and artistic language, cultural depth.*
 
-#### Drama & Literary Themes
-83. **Ergo Proxy Opening** (エルゴプラクシー) - Cyberpunk philosophical anime
-    - [Category: Anime Opening] - Dystopian themes, complex language
+#### Drama & Literary Themes (N3+)
+131. **Death Note Opening** (デスノート) - Psychological thriller
+     - [Category: Anime Opening] - Intense narrative, complex moral themes
 
-84. **Darker than Black Opening** (darker than black) - Spy thriller anime
-    - [Category: Anime Opening] - Noir style, sophisticated vocabulary
+#### Advanced Anime (N3+)
+132. **Demon Slayer Opening** (鬼滅の刃 - Kimetsu no Yaiba) - Action/supernatural
+     - [Category: Anime Opening] - Modern epic, emotional depth
 
-85. **Death Note Opening** (デスノート) - Psychological thriller
-    - [Category: Anime Opening] - Intense narrative, complex moral themes
+133. **Jujutsu Kaisen Opening** (呪術廻戦) - Action/supernatural
+     - [Category: Anime Opening] - Modern supernatural action, complex lore
 
-#### Anime & Media (N3+)
-86. **Demon Slayer Opening** (鬼滅の刃 - Kimetsu no Yaiba) - Action/supernatural
-    - [Category: Anime Opening] - Modern epic, emotional depth
+134. **Mob Psycho 100 Opening** (モブサイコ 100) - Supernatural comedy
+     - [Category: Anime Opening] - Unique perspective, creative language
 
-87. **Jujutsu Kaisen Opening** (呪術廻戦) - Action/supernatural
-    - [Category: Anime Opening] - Modern supernatural action, complex lore
+135. **Sakura Sakamoto** (坂本真綾) - Singer/Voice actress
+     - [Category: Modern J-Pop/Anime] - Known for anime themes and pop music
 
-88. **Mob Psycho 100 Opening** (モブサイコ 100) - Supernatural comedy
-    - [Category: Anime Opening] - Unique perspective, creative language
+136. **RADWIMPS** (ラッドウィンプス) - Popular indie rock band
+     - [Category: Modern J-Pop] - Movie soundtracks and indie rock, creative lyrics
 
-#### Advanced Contemporary J-Pop
-89. **Utada Hikaru** (宇多田ヒカル) - Multi-generation artist
-    - [Category: Modern J-Pop] - Complex emotional depth, sophisticated music
+#### Advanced Contemporary J-Pop (N3+)
+137. **Utada Hikaru** (宇多田ヒカル) - Multi-generation artist
+     - [Category: Modern J-Pop] - Complex emotional depth, sophisticated music
 
-90. **Chara** (CHARA) - Alternative pop artist
-    - [Category: Modern J-Pop] - Artistic and poetic, experimental language
+138. **Chara** (CHARA) - Alternative pop artist
+     - [Category: Modern J-Pop] - Artistic and poetic, experimental language
 
-91. **Misia** (ミーシャ) - Soul/R&B influenced
-    - [Category: Modern J-Pop] - Emotional depth, complex musical arrangements
+139. **Misia** (ミーシャ) - Soul/R&B influenced
+     - [Category: Modern J-Pop] - Emotional depth, complex musical arrangements
+
+140. **Oka Takatoshi** (岡崎体臣) or similar indie artists
+     - [Category: Indie/Underground] - More experimental Japanese music
 
 ---
 
@@ -411,37 +565,47 @@ Below are additional categories we plan to develop for future expansion:
 
 ## Summary Statistics
 
-- **Currently Planned (Active):** 91 songs
+- **Currently Planned (Active):** 140 songs
 - **Difficulty Breakdown:**
-  - N5: 40 songs (including universal children's songs like Happy Birthday, Rajio Taiso, body awareness songs)
-  - N5-N4: 22 songs
-  - N4: 11 songs
-  - N4-N3: 9 songs
-  - N3+: 9 songs
+  - N5: 63 songs (universal children's songs + educational + nature + food + jobs)
+  - N5-N4: 38 songs (school routines, animals, holidays, anime, folklore)
+  - N4: 18 songs (Studio Ghibli, anime openings, movies, educational)
+  - N4-N3: 10 songs (complex anime, modern J-pop)
+  - N3+: 10 songs (advanced anime, literary themes, contemporary artists)
+
 - **Key Categories:**
-  - Anime Openings & Themes (20+ songs)
-  - Traditional/Folk Songs (15+ songs)
-  - Nursery Rhymes & Game Songs (8+ songs)
-  - Family & Children's Songs (7+ songs)
+  - Anime Openings & Themes (30+ songs)
+  - Traditional/Folk Songs & Regional Dances (20+ songs)
+  - Nursery Rhymes & Game Songs (10+ songs)
+  - Family & Relationship Songs (8+ songs)
+  - Educational Songs (Numbers, Days, Months, Seasons, Colors, Shapes) (8+ songs)
+  - Weather & Nature Observation Songs (7+ songs)
+  - Transportation Songs (4+ songs)
+  - Food & Eating Songs (4+ songs)
+  - Job & Profession Songs (5+ songs)
+  - School & Activity Songs (8+ songs)
+  - Animal & Nature Songs (8+ songs)
+  - Holiday & Seasonal Songs (10+ songs)
   - Lullabies & Gentle Songs (2+ songs)
-  - Educational Songs (Days, Months, Seasons) (6+ songs)
-  - Action/Body Awareness Songs (2+ songs)
-  - Holiday & Seasonal Songs (7+ songs)
-  - School/Meal Songs (2+ songs)
-  - Studio Ghibli & Film Themes (5+ songs)
-  - Modern J-Pop & Contemporary Artists (10+ songs)
-  - Drama & Literary Themes (3+ songs)
-  - Regional Folk Traditions (3+ songs)
+  - Action/Body Awareness Songs (3+ songs)
+  - Studio Ghibli & Film Themes (7+ songs)
+  - Modern J-Pop & Contemporary Artists (8+ songs)
+
 - **Future Expansion Goal:** 200+ songs across all difficulty levels
 
 ### N5 Songs Include Universal Children's Staples
 - Happy Birthday (birthday parties in every Japanese school)
 - Rajio Taiso (radio calisthenics - taught in all schools as morning exercise)
 - Days of the week, Months, Seasonal awareness songs
-- Body awareness songs (Atama Kata Hiza Pon, etc.)
+- Body awareness songs (Atama Kata Hiza Pon, Ipppon Bashi)
 - Meal time gratitude songs (Itadakimasu)
 - School greeting/goodbye songs
-- Game songs used in schools nationwide (Toryanse, Janken Pon, etc.)
+- Game songs used in schools nationwide (Toryanse, Janken Pon, Atchi Muite Hoi)
+- Weather songs (rain, snow, wind, clouds)
+- Transportation songs (trains, cars, buses, airplanes)
+- Food songs (rice, vegetables, fruits)
+- Job/profession songs (firefighter, police, doctor, teacher)
+- Animal observation songs (dogs, cats, rabbits, birds, frogs)
 
 ---
 
