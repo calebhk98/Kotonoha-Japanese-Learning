@@ -38,6 +38,36 @@ This document provides a comprehensive list of all stories currently implemented
 
 ---
 
+## Iconic Japanese Children's Stories & Characters (Issue #145)
+
+*Authentic Japanese children's media — stories that Japanese kids actually grow up with. Perfect for N5/N4 learners seeking culturally-appropriate content.*
+
+### Extremely Popular Children's Characters/Stories
+- **Anpanman** (アンパンマン) — The most iconic Japanese children's character with simple adventure stories
+- **Chibi Maruko-chan** (ちびまる子ちゃん) — Everyday life comedy, very relatable for kids
+- **Crayon Shin-chan** (クレヨンしんちゃん) — Humorous family/daily life stories
+- **Doraemon** (ドラえもん) — Robot friend's daily adventures (already in resources; consider implementing as stories)
+
+### Studio Ghibli / Miyazaki Adaptations (Picture Book Style)
+- **Totoro** (となりのトトロ) — My Neighbor Totoro, simple creature story
+- **Ponyo** (ポニョ) — Simple fish-girl adventure
+- **Howl's Moving Castle** (ハウルの動く城) — If simplified for N5/N4
+
+### Classic Japanese Manga for Kids
+- **Astro Boy** (鉄腕アトム) — Tezuka classic, simple robot adventures
+- **Kimba the White Lion** (ジャングル大帝) — Tezuka, animal adventure
+- **Gegege no Kitaro** (ゲゲゲの鬼太郎) — Yokai/folklore-based stories, iconic in Japan
+
+### Modern Popular Children's Series
+- **Yo-Kai Watch** (妖怪ウォッチ) — Modern folklore/creature stories, very popular
+- **Sanrio Characters stories** (Hello Kitty, Badtz-Maru, etc.) — Simple slice-of-life narratives
+
+### Japanese Picture Books / Light Stories
+- Stories by **Kazuo Iwamura** (岩村和朗) — Japanese children's illustrator, simple nature stories
+- **Totoro-style nature observation stories** — Simple observations of creatures/nature
+
+---
+
 ## Planned Stories from GitHub Issues
 
 ### N5 Level Stories (Issues #58-#112) — Beginner/Everyday Topics
@@ -190,11 +220,12 @@ This document provides a comprehensive list of all stories currently implemented
 ## Summary Statistics
 
 - **Implemented Stories:** 22
+- **Iconic Japanese Children's Stories (Issue #145):** 17
 - **Planned N5 Stories (daily/practical):** 55
 - **Planned N5-N4 Stories (literature/classics):** 9
 - **Planned Aesop's Fables/Western Tales:** 8
 - **Recommended Resources (not full implementations):** 24
-- **Total Planned:** 96
+- **Total Planned/To-Implement:** 113
 
 ---
 
