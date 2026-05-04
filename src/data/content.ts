@@ -10,6 +10,18 @@ export interface Content {
   imageUrl?: string;
 }
 
+export interface Story extends Content {
+  type: 'story';
+}
+
+/**
+ * Get all story content items.
+ * @returns Array of story objects (filtered from all content)
+ */
+export function getStories(): Story[] {
+  return INITIAL_CONTENT.filter((item): item is Story => item.type === 'story');
+}
+
 export const INITIAL_CONTENT: Content[] = [
   {
     id: "story-1",

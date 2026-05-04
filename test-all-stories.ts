@@ -1,4 +1,4 @@
-import { INITIAL_CONTENT } from './src/data/content';
+import { getStories } from './src/data/content';
 import { createTokenizer } from './src/lib/tokenizers';
 import { DictionaryManager } from './src/lib/dictionary';
 import path from 'path';
@@ -52,8 +52,8 @@ async function runTokenizationTest(): Promise<void> {
   };
 
   // Process each story
-  for (const content of INITIAL_CONTENT) {
-    if (content.type !== 'story') continue;
+  const stories = getStories();
+  for (const content of stories) {
 
     console.log(`📖 Processing: ${content.title}`);
     console.log(`   Text length: ${content.text.length} characters`);

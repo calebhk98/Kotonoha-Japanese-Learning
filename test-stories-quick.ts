@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { createTokenizer } from './src/lib/tokenizers';
 import { DictionaryManager } from './src/lib/dictionary';
-import { INITIAL_CONTENT } from './src/data/content';
+import { getStories } from './src/data/content';
 
 interface StoryResult {
   title: string;
@@ -35,7 +35,7 @@ async function main() {
     await dictionary.initialize('jisho');
   }
 
-  const stories = INITIAL_CONTENT;
+  const stories = getStories();
   const results: StoryResult[] = [];
   const missingWordsMap = new Map<string, number>();
 
@@ -51,7 +51,6 @@ async function main() {
   const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
   for (const story of stories) {
-    if (story.type !== 'story') continue;
     process.stdout.write('.');
     const tokens = await tokenizer.segment(story.text);
     let storyWithDefs = 0;
