@@ -252,7 +252,7 @@ export class SudachiWasmImpl implements Tokenizer {
       const wasmBuffer = (fs.readFileSync as any)(wasmPath);
 
       // Initialize the WASM module with embedded dictionary
-      initSync(wasmBuffer);
+      initSync({ module: wasmBuffer });
 
       // Create tokenizer (no dictionary needed - it's embedded)
       this.tokenizer = Tokenizer.create();
@@ -281,8 +281,8 @@ export class SudachiWasmImpl implements Tokenizer {
         continue;
       }
 
-      // Extract base form from POS tags
-      const baseForm = getMorphemeBaseForm(surface, m.part_of_speech);
+      // Use Sudachi's normalized form (dictionary form) directly
+      const baseForm = m.normalized_form || surface;
 
       result.push({ surface, baseForm });
     }

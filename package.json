@@ -13,7 +13,11 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:stories": "npx tsx test-stories-quick.ts",
+    "test:stories:full": "npx tsx test-all-stories.ts",
+    "add-story": "npx tsx scripts/add-story.ts",
+    "migrate-stories": "npx tsx scripts/migrate-stories.ts"
   },
   "dependencies": {
     "@didmar/sudachi-wasm": "^0.6.11-didmar.0",
