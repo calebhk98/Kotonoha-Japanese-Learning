@@ -45,13 +45,23 @@ async function main() {
 
   console.log(`\n📖 Testing ${stories.length} stories (quiet mode)...\n`);
 
+  // Filter out particles and punctuation
+  const particles = new Set(['は', 'が', 'を', 'に', 'へ', 'と', 'で', 'も', 'か', 'の', 'て', 'な', 'だ']);
+  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
+  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
+
   for (const story of stories) {
+    if (story.type !== 'story') continue;
     process.stdout.write('.');
-    const tokens = await tokenizer.segment(story.content);
+    const tokens = await tokenizer.segment(story.text);
     let storyWithDefs = 0;
     let storyMissing = 0;
 
     for (const token of tokens) {
+      const surface = token.surface;
+      // Skip filtered words
+      if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
+
       totalWords++;
       const def = await dictionary.lookup(token.baseForm);
 
