@@ -108,6 +108,63 @@ This document provides a comprehensive list of all stories currently implemented
 
 ---
 
+## School, Emotions, Character Education & Interactive Stories (Issue #147)
+
+*Stories for <2nd graders covering school adjustment, emotional literacy, character development, and unique Japanese storytelling approaches.*
+
+### School-Related Stories
+- Stories about starting school, school adjustment, making friends
+- First day of school experiences
+- Classroom routines and situations
+- Dealing with emotions at school (nervousness, excitement, shyness)
+- Simple school scenarios (lunch, recess, learning activities)
+
+### Onomatopoeia-Heavy Stories (unique to Japanese!)
+- Stories built around sound words and sensory descriptions
+- Common patterns: ぱたぱた (pitter-patter), ふわふわ (fluffy), ざあざあ (splashing), しゅっしゅ (whoosh)
+- Interactive sound-based narratives
+
+### Simple Moral & Character Education Stories (道徳 - dōtoku)
+- Kindness and helping others
+- Courage and bravery
+- Honesty and truthfulness
+- Perseverance and trying hard
+- Sharing and cooperation
+- Respect for others
+
+### Emotion Recognition & Expression Stories
+- About feelings: happy, sad, scared, angry, frustrated, surprised
+- Emotional literacy for young children
+- How to identify emotions in self and others
+- Simple emotion-based narratives
+
+### Interactive & Participatory Stories
+- Peekaboo-style stories (hiding/revealing)
+- Question-based narratives ("What comes next?", "Can you guess?")
+- Reader participation elements
+- Call-and-response style stories
+
+### Job & Profession Stories
+- What does a firefighter/police officer/doctor/teacher do?
+- Simple explanation narratives
+- Community helpers theme
+- Day-in-the-life of different professions
+
+### Body Awareness & Growing Up Stories
+- Body parts and what they do
+- Hygiene and self-care (washing hands, brushing teeth, bathing)
+- Getting dressed and choosing clothes
+- Sleep and rest routines
+- Growing and changing
+
+### Repetitive & Cumulative Stories
+- Japanese equivalents of "The House That Jack Built"
+- Build-on patterns for memorization and prediction
+- Circular/cyclical narrative structures
+- Pattern-based learning
+
+---
+
 ## Planned Stories from GitHub Issues
 
 ### N5 Level Stories (Issues #58-#112) — Beginner/Everyday Topics
@@ -262,11 +319,12 @@ This document provides a comprehensive list of all stories currently implemented
 - **Implemented Stories:** 22
 - **Short Japanese Nursery Rhymes, Poems & Stories (Issue #146):** ~25-30
 - **Iconic Japanese Children's Stories (Issue #145):** 17
+- **School, Emotions, Character Education & Interactive Stories (Issue #147):** ~30-35
 - **Planned N5 Stories (daily/practical):** 55
 - **Planned N5-N4 Stories (literature/classics):** 9
 - **Planned Aesop's Fables/Western Tales:** 8
 - **Recommended Resources (not full implementations):** 24
-- **Total Planned/To-Implement:** ~138-143
+- **Total Planned/To-Implement:** ~168-178
 
 ---
 
