@@ -60,6 +60,299 @@ This document provides a comprehensive list of movies, TV shows, and animated co
   - *Content:* Boy becomes a masked superhero with gadgets
   - *Note:* Nostalgic classic; humor based on visuals and repetition
 
+### Very Young Children's Shows (Ages 4-7)
+
+- **いないいないばあっ!** (Peek-a-Boo!)
+  - *Format:* NHK educational TV (15 min episodes)
+  - *Learning Value:* Designed for babies/toddlers; extremely simple, repetitive
+  - *Content:* Interactive peek-a-boo games with characters
+  - *Perfect for:* Youngest learners; visual + simple sound patterns
+
+- **おかあさんといっしょ** (With Mom)
+  - *Format:* NHK daily program (20 min)
+  - *Learning Value:* Songs, movement, extremely clear speech
+  - *Content:* Educational songs, dance, character interactions
+  - *Features:* Counting, colors, emotions, daily routines
+
+- **しまじろう** (Shimajiro)
+  - *Format:* Anime series (11 min episodes)
+  - *Learning Value:* Toddler protagonist; relatable daily life; simple dialogue
+  - *Content:* Tiger cub and friends navigating preschool/early school
+  - *Themes:* Sharing, friendship, emotions, learning
+
+- **きかんしゃトーマス** (Thomas the Tank Engine - Japanese dub)
+  - *Format:* Anime series (11-26 min episodes)
+  - *Learning Value:* Minimal character dialogue; narration-driven
+  - *Content:* Colorful trains and their adventures
+  - *Advantage:* Charming visuals; easy to follow without understanding every word
+
+- **ミッフィー** (Miffy/Nijntje)
+  - *Format:* Anime series (7 min episodes)
+  - *Learning Value:* Ultra-simple picture book style; minimal dialogue
+  - *Content:* Cute rabbit and gentle adventures
+  - *Perfect for:* Very visual learners; calming content
+
+- **メルちゃん** (Mell-chan)
+  - *Format:* Anime series (24 min episodes)
+  - *Learning Value:* Doll character; daily life and self-care routines
+  - *Content:* A cheerful doll and her friends
+  - *Themes:* Friendship, caring, imagination
+
+- **アンパンマン** (revisited for very young)
+  - *Episodes:* Episodes 1-20 (earliest/simplest)
+  - *Note:* Repetitive adventures; same villain, predictable outcomes
+  - *Perfect for:* Youngest viewers; pure comfort viewing
+
+- **カラー・カットくん** (Color Cutter)
+  - *Format:* Educational short series
+  - *Learning Value:* Primary colors, shapes, creative play
+  - *Content:* Learning through color and shape recognition
+
+- **ピングー** (Pingu - Japanese dub)
+  - *Format:* Stop-motion series (5-7 min episodes)
+  - *Learning Value:* Almost no dialogue; penguin sounds and music tell the story
+  - *Content:* Penguin family adventures in Antarctic
+  - *Advantage:* Pure visual storytelling; universal humor
+
+- **くまのプーさん** (Winnie the Pooh - Japanese version)
+  - *Format:* Animated series/films
+  - *Learning Value:* Slow pacing, gentle characters, minimal dialogue
+  - *Content:* Bear and friends in Hundred Acre Wood
+  - *Perfect for:* Calming content with simple daily adventures
+
+### Popular Anime for Young Children
+
+- **ポケットモンスター** (Pokémon) — Early Kanto episodes
+  - *Format:* Anime series (24 min episodes)
+  - *Learning Value:* Simple adventures, repetitive battle structure
+  - *Content:* Ash and Pikachu's journey to become Pokémon master
+  - *Tip:* Early episodes simpler than later seasons
+
+- **かいけつゾロリ** (Zoro the Great Adventure)
+  - *Format:* Anime series (24 min episodes)
+  - *Learning Value:* Comedic adventure; visual humor; simple explanations
+  - *Content:* Clever fox and animal friends solving mysteries
+  - *Age Group:* Ages 5-8 friendly
+
+- **ニャッキ** (Nyaki)
+  - *Format:* NHK short animation series
+  - *Learning Value:* Minimal dialogue; musical, quirky adventures
+  - *Content:* Yellow creature exploring the world
+  - *Themes:* Discovery, curiosity, music
+
+- **ワニワニパニック** - Various educational anime compilations
+  - *Format:* Short segments
+  - *Learning Value:* Educational content; number recognition, letters
+  - *Content:* Simple lessons wrapped in animation
+
+### Disney & Pixar Films (Japanese Dub)
+
+- **ライオン・キング** (The Lion King)
+  - *Format:* Feature film (88 min)
+  - *Learning Value:* Epic adventure with simple emotional beats
+  - *Content:* Young lion's journey to adulthood
+  - *Advantage:* Music-driven narrative; visuals compensate for language
+
+- **アナと雪の女王** (Frozen)
+  - *Format:* Feature film (102 min)
+  - *Learning Value:* Popular music; clear character dialogue
+  - *Content:* Sisters' adventure and magical frozen world
+  - *Tip:* Repetitive songs aid vocabulary retention
+
+- **アラジン** (Aladdin)
+  - *Format:* Feature film (90 min)
+  - *Learning Value:* Adventure story; magical elements; character-driven
+  - *Content:* Street urchin and magical lamp adventure
+  - *Music:* Songs provide natural language repetition
+
+- **塔の上のラプンツェル** (Tangled)
+  - *Format:* Feature film (100 min)
+  - *Learning Value:* Coming-of-age; adventure; clear dialogue
+  - *Content:* Long-haired princess escaping tower
+  - *Themes:* Dreams, independence, adventure
+
+- **モアナ** (Moana)
+  - *Format:* Feature film (107 min)
+  - *Learning Value:* Ocean-themed adventure; strong character voice acting
+  - *Content:* Girl's ocean voyage and self-discovery
+  - *Advantage:* Visual beauty; emotional connection to character
+
+- **トイ・ストーリー** (Toy Story) — Original
+  - *Format:* Feature film (81 min)
+  - *Learning Value:* Simple dialogue; relatable friendship themes
+  - *Content:* Toys' secret lives when humans absent
+  - *Perfect for:* Young learners who love toys
+
+- **トイ・ストーリー2** (Toy Story 2)
+  - *Format:* Feature film (92 min)
+  - *Learning Value:* Expanded world; character development; adventure
+  - *Content:* Woody's rescue adventure
+  - *Pace:* Engaging; good balance of action and dialogue
+
+- **ファインディング・ニモ** (Finding Nemo)
+  - *Format:* Feature film (100 min)
+  - *Learning Value:* Ocean journey; emotional father-son story
+  - *Content:* Fish's quest to find his captured son
+  - *Visual Appeal:* Beautiful underwater world holds attention
+
+- **ザ・グッドダイナソー** (The Good Dinosaur)
+  - *Format:* Feature film (93 min)
+  - *Learning Value:* Friendship adventure; simple emotional story
+  - *Content:* Dinosaur and human boy's journey
+  - *Advantage:* Slower pacing than some Pixar films
+
+- **モンスターズ・インク** (Monsters, Inc.)
+  - *Format:* Feature film (92 min)
+  - *Learning Value:* Colorful characters; friendship themes; humor
+  - *Content:* Monsters working at scare factory
+  - *Themes:* Unexpected friendships, protection, family
+
+- **バグズ・ライフ** (A Bug's Life)
+  - *Format:* Feature film (95 min)
+  - *Learning Value:* Ant protagonist; community themes
+  - *Content:* Misfit ant creates circus troupe to fight grasshoppers
+  - *Humor:* Physical comedy translates across languages
+
+- **ニモを探して** (Finding Dory)
+  - *Format:* Feature film (97 min)
+  - *Learning Value:* Sequel to Finding Nemo; similar pacing
+  - *Content:* Blue fish's quest to find her family
+  - *Themes:* Memory, persistence, friendship
+
+- **シンデレラ** (Cinderella - Disney)
+  - *Format:* Feature film (74 min)
+  - *Learning Value:* Classic fairy tale; clear storytelling
+  - *Content:* Girl's magical transformation and royal ball
+  - *Music:* Memorable songs aid memory
+
+- **白雪姫** (Snow White and the Seven Dwarfs)
+  - *Format:* Feature film (83 min)
+  - *Learning Value:* Classic tale; distinct character voices
+  - *Content:* Princess, evil queen, and forest adventure
+  - *Charm:* Dwarfs' simple characterization
+
+- **眠れる森の美女** (Sleeping Beauty)
+  - *Format:* Feature film (75 min)
+  - *Learning Value:* Fairy tale with magical elements
+  - *Content:* Princess cursed; prince's rescue
+  - *Music:* Classic Disney songs
+
+- **ジャングル・ブック** (The Jungle Book)
+  - *Format:* Feature film (78 min)
+  - *Learning Value:* Adventure in animal world; memorable characters
+  - *Content:* Man-cub raised by jungle animals
+  - *Themes:* Growing up, belonging, friendship
+
+- **インサイド・ヘッド** (Inside Out)
+  - *Format:* Feature film (98 min)
+  - *Learning Value:* Emotion vocabulary; character-driven story
+  - *Content:* Emotions personified; girl's emotional journey
+  - *Educational:* Learning about feelings in context
+
+- **ズートピア** (Zootopia)
+  - *Format:* Feature film (108 min)
+  - *Learning Value:* Mystery story; diverse animal characters
+  - *Content:* Rabbit cop and fox investigate crime
+  - *Humor:* Visual gags + clever dialogue
+
+### Picture Book Adaptations & Visual Stories
+
+- **ぐりとぐら** (Guri and Gura)
+  - *Format:* Picture book adaptation/shorts (10-15 min)
+  - *Learning Value:* Classic Japanese picture book; minimal dialogue
+  - *Content:* Two hedgehog friends' simple adventures
+  - *Themes:* Cooking, friendship, nature
+
+- **きんぎょがにげた** (Goldfish Are Escaping)
+  - *Format:* Picture book adaptation (10 min)
+  - *Learning Value:* Search-and-find format; simple narration
+  - *Content:* Boy searches for escaped goldfish
+  - *Interactive:* Viewers look for goldfish on screen
+
+- **はらぺこあおむし** (The Very Hungry Caterpillar)
+  - *Format:* Picture book animation (6 min)
+  - *Learning Value:* Food vocabulary; metamorphosis concept
+  - *Content:* Caterpillar's week-long eating journey
+  - *Perfect for:* Youngest learners; beloved classic
+
+- **わたしのワンピース** (My One-Piece Dress)
+  - *Format:* Picture book animation (10 min)
+  - *Learning Value:* Color and nature vocabulary
+  - *Content:* Girl's magical dress changes with surroundings
+  - *Themes:* Imagination, creativity, nature
+
+- **ねずみくんのチョッキ** (Mice Man's Vest)
+  - *Format:* Picture book adaptation (10 min)
+  - *Learning Value:* Clothing vocabulary; repetitive structure
+  - *Content:* Mouse's sweater borrowed by increasingly large animals
+  - *Perfect for:* Repetition-based learning
+
+### International Shows (Japanese Dub)
+
+- **ブルーイ** (Bluey) — Already listed, worth emphasizing
+  - *Format:* Animated series (7 min episodes)
+  - *For Ages:* 4-6 perfect audience
+  - *Repeat Viewing:* Episodes often repeated; families watch same ones multiple times
+
+- **ペッパ・ピッグ** (Peppa Pig)
+  - *Format:* Animated series (5 min episodes)
+  - *Learning Value:* Preschool family dynamics; simple British content
+  - *Content:* Piglet family's daily adventures
+  - *Perfect for:* Very young; repetitive episodes
+
+- **パディントン** (Paddington - Japanese dub)
+  - *Format:* Animated films
+  - *Learning Value:* British politeness; simple family dynamics
+  - *Content:* Bear in London; heartwarming adventures
+
+- **アーサーとミニモイ** (Arthur and the Minimoys)
+  - *Format:* Animated film (94 min)
+  - *Learning Value:* Fantasy adventure; imaginative world
+  - *Content:* Boy discovers tiny civilization in garden
+  - *Themes:* Adventure, courage, environmental awareness
+
+- **セサミ・ストリート** (Sesame Street - Japanese version, if available)
+  - *Format:* Educational TV series
+  - *Learning Value:* Alphabet, numbers, social skills
+  - *Content:* Muppets and human friends learning together
+  - *Classic:* Timeless educational format
+
+### Other Very Young-Friendly Films
+
+- **メアリと魔女の花** (Mary and the Witch's Flower) — Already listed, emphasizing for young viewers
+  - *Format:* Feature film (102 min)
+  - *For Young Kids:* Magical girl adventure, not too scary
+
+- **ウォーリー** (WALL-E)
+  - *Format:* Feature film (98 min)
+  - *Learning Value:* Minimal dialogue; love story told through actions
+  - *Content:* Robot's lonely world and adventure
+  - *Perfect for:* Visual learners; unique soundtrack
+
+- **ターボ** (Turbo)
+  - *Format:* Feature film (96 min)
+  - *Learning Value:* Dream-focused adventure; inspiring protagonist
+  - *Content:* Snail who dreams of racing
+  - *Themes:* Dreams, determination, individuality
+
+- **ペット** (The Secret Life of Pets)
+  - *Format:* Feature film (87 min)
+  - *Learning Value:* Urban setting; character-driven comedy
+  - *Content:* Pets' secret lives while owners away
+  - *Humor:* Physical comedy; relatable pet situations
+
+- **モンスター・ホテル** (Hotel Transylvania)
+  - *Format:* Feature film (91 min)
+  - *Learning Value:* Monster characters; father-daughter story
+  - *Content:* Dracula's hotel; comedy over scares
+  - *Note:* Monsters are silly, not scary
+
+- **ヒックとドラゴン** (How to Train Your Dragon)
+  - *Format:* Feature film (98 min)
+  - *Learning Value:* Adventure; underdog story; character growth
+  - *Content:* Boy befriends dragon
+  - *Themes:* Understanding, acceptance, courage
+
 ### Studio Ghibli Films (Beginner-Friendly)
 
 - **My Neighbor Totoro** (となりのトトロ)
