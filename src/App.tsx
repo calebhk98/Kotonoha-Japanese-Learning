@@ -5,6 +5,7 @@ import { useContentData, applyWaniKaniToWords } from './hooks/useContentData';
 import { ContentDetail } from './components/ContentDetail';
 import { ImportModal } from './components/ImportModal';
 import { WordDetailModal } from './components/WordDetailModal';
+import { WordDetailPage } from './components/WordDetailPage';
 import { SettingsPage } from './components/SettingsPage';
 import { WordInfo } from './types';
 
@@ -35,6 +36,7 @@ export default function App() {
     }
   });
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [displayCount, setDisplayCount] = useState(12);
   const [view, setView] = useState<'home' | 'vocab' | 'scoring' | 'settings'>('home');
   const [showImportOpts, setShowImportOpts] = useState(false);
@@ -45,6 +47,35 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [comprehensionFilter, setComprehensionFilter] = useState<'all' | 'almost' | 'ready'>('all');
+
+  // URL routing for word detail page
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/word/')) {
+        const word = decodeURIComponent(path.slice(6));
+        setSelectedWord(word);
+      } else {
+        setSelectedWord(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    handlePopState();
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateToWord = (word: string) => {
+    setSelectedWord(word);
+    window.history.pushState({ type: 'word', word }, '', `/word/${encodeURIComponent(word)}`);
+  };
+
+  const navigateBack = () => {
+    if (selectedWord) {
+      setSelectedWord(null);
+      window.history.back();
+    }
+  };
 
   const ALL_CONTENT = useMemo(() => {
     const map = new Map<string, Content>();
@@ -167,6 +198,15 @@ export default function App() {
     return 'text-red-700 bg-red-50 border-red-200';
   };
 
+  if (selectedWord) {
+    return (
+      <WordDetailPage
+        word={selectedWord}
+        onBack={navigateBack}
+      />
+    );
+  }
+
   if (selectedContent) {
     return (
       <ContentDetail
@@ -183,7 +223,7 @@ export default function App() {
              loadVocabForContent(updatedContent, true);
              updatedVocab = true;
           }
-          
+
           if (!INITIAL_CONTENT.find(c => c.id === updatedContent.id)) {
              setCustomContent(prev => prev.map(c => c.id === updatedContent.id ? updatedContent : c));
           } else {
@@ -210,11 +250,11 @@ export default function App() {
             });
             const gradedWords = await res.json();
             const newWord = gradedWords[0];
-            
+
             const newVocab = { ...contentVocab };
             const existingList = newVocab[selectedContent.id] || [];
             newVocab[selectedContent.id] = [newWord, ...existingList];
-            
+
             setContentVocab(newVocab);
             localStorage.setItem('contentVocab', JSON.stringify(newVocab));
           } catch (e) {
@@ -222,6 +262,7 @@ export default function App() {
             alert('Failed to add word');
           }
         }}
+        onWordClick={navigateToWord}
       />
     );
   }

@@ -22,7 +22,7 @@ interface ParagraphTokens {
   tokens: Token[];
 }
 
-export function ContentReader({ content, vocab, onBack }: { content: Content; vocab?: WordInfo[]; onBack: () => void }) {
+export function ContentReader({ content, vocab, onBack, onWordClick }: { content: Content; vocab?: WordInfo[]; onBack: () => void; onWordClick?: (word: string) => void }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showFurigana, setShowFurigana] = useState(true);
   const [showHoverDefs, setShowHoverDefs] = useState(true);
@@ -124,7 +124,11 @@ export function ContentReader({ content, vocab, onBack }: { content: Content; vo
 
         if (showHoverDefs) {
           elements.push(
-            <span key={`word-${token.startIndex}`} className="relative group cursor-pointer inline-block mx-0.5 border-b border-dashed border-gray-300 hover:border-indigo-500 transition-colors">
+            <span
+              key={`word-${token.startIndex}`}
+              className="relative group cursor-pointer inline-block mx-0.5 border-b border-dashed border-gray-300 hover:border-indigo-500 transition-colors"
+              onClick={() => onWordClick?.(info.word)}
+            >
               {inner}
               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] sm:max-w-xs bg-gray-900 border border-gray-700 text-white p-3 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none text-left">
                 <div className="flex flex-col gap-1">
@@ -141,7 +145,15 @@ export function ContentReader({ content, vocab, onBack }: { content: Content; vo
             </span>
           );
         } else {
-          elements.push(<span key={`word-${token.startIndex}`}>{inner}</span>);
+          elements.push(
+            <span
+              key={`word-${token.startIndex}`}
+              className="cursor-pointer"
+              onClick={() => onWordClick?.(info.word)}
+            >
+              {inner}
+            </span>
+          );
         }
       } else {
         elements.push(<span key={`token-${token.startIndex}`}>{token.surface}</span>);

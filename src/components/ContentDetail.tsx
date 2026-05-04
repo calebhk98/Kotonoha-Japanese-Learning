@@ -28,6 +28,7 @@ export function ContentDetail({
   onUpdateContent,
   onAddWord,
   knownWordSet,
+  onWordClick,
 }: {
   content: Content;
   onBack: () => void;
@@ -38,6 +39,7 @@ export function ContentDetail({
   onUpdateContent?: (updatedContent: Content) => void;
   onAddWord?: (addedWordStr: string) => void;
   knownWordSet?: Set<string>;
+  onWordClick?: (word: string) => void;
 }) {
   const [view, setView] = useState<'intro' | 'lesson' | 'consume'>('intro');
   const [isEditing, setIsEditing] = useState(false);
@@ -63,10 +65,11 @@ export function ContentDetail({
 
   if (view === 'consume') {
     return (
-      <ContentReader 
-        content={content} 
+      <ContentReader
+        content={content}
         vocab={[...status.unknownWords, ...status.knownWords]}
-        onBack={() => setView('intro')} 
+        onBack={() => setView('intro')}
+        onWordClick={onWordClick}
       />
     );
   }
