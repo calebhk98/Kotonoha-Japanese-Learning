@@ -63,9 +63,13 @@ async function main() {
       if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
 
       totalWords++;
-      const def = await dictionary.lookup(token.baseForm);
+      let def = await dictionary.lookup(token.baseForm);
+      // Try surface form if base form didn't work
+      if (!def) {
+        def = await dictionary.lookup(surface);
+      }
 
-      if (def && def.length > 0) {
+      if (def) {
         storyWithDefs++;
         totalWithDefs++;
       } else {
