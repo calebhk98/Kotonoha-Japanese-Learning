@@ -3,6 +3,7 @@ import path from 'path';
 import { createTokenizer } from './src/lib/tokenizers';
 import { DictionaryManager } from './src/lib/dictionary';
 import { getStories } from './src/data/content';
+import { LookupCache } from './src/lib/lookupCache';
 
 interface StoryResult {
   title: string;
@@ -27,6 +28,7 @@ async function main() {
   const startTime = Date.now();
   const tokenizer = await createTokenizer('sudachi-wasm');
   const dictionary = new DictionaryManager();
+  const cache = new LookupCache();
 
   const jmdictFile = path.join(process.cwd(), 'jmdict-all-3.6.2.json');
   if (fs.existsSync(jmdictFile)) {
@@ -55,17 +57,28 @@ async function main() {
     const tokens = await tokenizer.segment(story.text);
     let storyWithDefs = 0;
     let storyMissing = 0;
+    let storyTotal = 0;
 
     for (const token of tokens) {
       const surface = token.surface;
       // Skip filtered words
       if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
 
+      storyTotal++;
       totalWords++;
-      let def = await dictionary.lookup(token.baseForm);
-      // Try surface form if base form didn't work
-      if (!def) {
-        def = await dictionary.lookup(surface);
+
+      // Check cache first
+      let def: any = null;
+      if (cache.has(token.baseForm)) {
+        def = cache.get(token.baseForm);
+      } else {
+        def = await dictionary.lookup(token.baseForm);
+        // Try surface form if base form didn't work
+        if (!def) {
+          def = await dictionary.lookup(surface);
+        }
+        // Cache the result (null or definition)
+        cache.set(token.baseForm, def ? JSON.stringify(def) : null);
       }
 
       if (def) {
@@ -81,11 +94,11 @@ async function main() {
       }
     }
 
-    const accuracy = tokens.length > 0 ? (storyWithDefs / tokens.length) * 100 : 100;
+    const accuracy = storyTotal > 0 ? (storyWithDefs / storyTotal) * 100 : 100;
     results.push({
       title: story.title,
       accuracy,
-      total: tokens.length,
+      total: storyTotal,
       withDefs: storyWithDefs,
       missing: storyMissing,
     });
@@ -157,7 +170,10 @@ async function main() {
 
   const reportPath = `/tmp/test-results-${Date.now()}.json`;
   fs.writeFileSync(reportPath, JSON.stringify(jsonResults, null, 2));
-  console.log(`\n📁 Full results saved to: ${reportPath}\n`);
+  console.log(`\n📁 Full results saved to: ${reportPath}`);
+
+  // Save cache for next run
+  cache.save();
 }
 
 main().catch(console.error);
