@@ -1,0 +1,11 @@
+{
+  "id": "example-1",
+  "title": "Example Story Template",
+  "type": "story",
+  "description": "This is an example of how to structure a story in the new format.",
+  "level": "n5",
+  "imageUrl": "https://example.com/image.jpg",
+  "tags": ["example", "template"],
+  "author": "system",
+  "dateAdded": "2026-05-04"
+}

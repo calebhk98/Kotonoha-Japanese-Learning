@@ -1,3 +1,5 @@
+import { loadStoriesFromDisk } from '../lib/storyLoader';
+
 export type ContentType = 'story' | 'video' | 'music';
 
 export interface Content {
@@ -16,10 +18,13 @@ export interface Story extends Content {
 
 /**
  * Get all story content items.
+ * Loads from disk (src/stories/) first, falls back to INITIAL_CONTENT.
  * @returns Array of story objects (filtered from all content)
  */
 export function getStories(): Story[] {
-  return INITIAL_CONTENT.filter((item): item is Story => item.type === 'story');
+  const diskStories = loadStoriesFromDisk();
+  const allContent = diskStories.length > 0 ? diskStories : INITIAL_CONTENT;
+  return allContent.filter((item): item is Story => item.type === 'story');
 }
 
 export const INITIAL_CONTENT: Content[] = [
