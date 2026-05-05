@@ -30,7 +30,10 @@ interface StoryMetadata {
   tags?: string[];
   author?: string;
   dateAdded?: string;
+  // Relationships - use ONE of these, not both:
+  // Use parentId for episodes/variants of a single story (e.g., Urashima Taro Part 1, Part 2)
   parentId?: string;
+  // Use seriesId for independent episodes grouped into a series (e.g., Pokemon Episode 1, 2, 3)
   seriesId?: string;
   episodeNumber?: number;
   variantType?: 'kanji' | 'hiragana' | 'simplified' | 'full' | string;
@@ -196,8 +199,9 @@ export function getParentStory(
 }
 
 /**
- * Get all child stories (episodes and variants) for a given story
- * Useful for displaying all parts of a single story (e.g., Urashima Taro parts 1-3)
+ * Get all child stories (episodes and variants) for a given story.
+ * Use this for stories split into parts via parentId (e.g., Urashima Taro Part 1, Part 2).
+ * NOT for series episodes - use getSeriesStories() instead.
  * @param storyId The parent story ID
  * @param storiesWithMetadata All stories with their metadata
  * @returns Array of child stories sorted by episode number, variants last
@@ -235,8 +239,9 @@ export function getChildren(
 }
 
 /**
- * Get all stories in a series
- * Useful for displaying all episodes of a series (e.g., all 10 Pokemon episodes)
+ * Get all stories in a series.
+ * Use this for independent episodes grouped into a series via seriesId (e.g., Pokemon Episode 1, 2, 3).
+ * NOT for story parts - use getChildren() instead.
  * @param seriesId The series ID
  * @param storiesWithMetadata All stories with their metadata
  * @returns Array of stories in the series
