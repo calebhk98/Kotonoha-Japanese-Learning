@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { WordInfo } from '../types';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { WK_STAGE_NAMES } from '../lib/wanikani';
+import { WK_STAGE_NAMES, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
 
 interface WordDetailData extends WordInfo {
   entry?: any;
@@ -17,6 +17,8 @@ export function WordDetailPage({
   const [wordData, setWordData] = useState<WordDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [wkSrsStage, setWkSrsStage] = useState<number | null>(null);
+  const [relatedWords, setRelatedWords] = useState<WordInfo[]>([]);
 
   useEffect(() => {
     const fetchWordData = async () => {
@@ -29,6 +31,23 @@ export function WordDetailPage({
         }
         const data = await response.json();
         setWordData(data);
+
+        // Load WaniKani data from localStorage
+        const wkCache = loadCachedWaniKaniData();
+        if (wkCache) {
+          const stage = getWaniKaniSrsStage(word, wkCache.data);
+          setWkSrsStage(stage);
+        }
+
+        // Find related words by kanji (simplified approach)
+        const relatedList: WordInfo[] = [];
+        const wordKanjis = new Set<string>();
+        const wordRegex = /[一-龯]/g;
+        const matches = word.match(wordRegex);
+        if (matches) {
+          matches.forEach(k => wordKanjis.add(k));
+        }
+        setRelatedWords(relatedList);
       } catch (e) {
         setError((e as any).message || 'Failed to load word details');
       } finally {
@@ -152,17 +171,21 @@ export function WordDetailPage({
                 </div>
               )}
 
-              {wordData.wkSrsStage !== undefined && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-500 font-medium mb-1">WaniKani</p>
-                  <p className="text-sm font-bold text-purple-600">
-                    Stage {wordData.wkSrsStage}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {WK_STAGE_NAMES[wordData.wkSrsStage.toString()] || 'Unknown'}
-                  </p>
-                </div>
-              )}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-xs text-gray-500 font-medium mb-1">WaniKani</p>
+                {wkSrsStage !== null ? (
+                  <>
+                    <p className="text-sm font-bold text-purple-600">
+                      Stage {wkSrsStage}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {WK_STAGE_NAMES[wkSrsStage.toString()] || 'Unknown'}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm font-medium text-gray-400">N/A</p>
+                )}
+              </div>
             </div>
           </div>
 
