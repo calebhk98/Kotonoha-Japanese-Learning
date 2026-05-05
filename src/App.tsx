@@ -67,7 +67,7 @@ export default function App() {
 
   const navigateToWord = (word: string) => {
     setSelectedWord(word);
-    window.history.pushState({ type: 'word', word }, '', `/word/${encodeURIComponent(word)}`);
+    window.history.pushState({ type: 'word', word, scrollPos: window.scrollY }, '', `/word/${encodeURIComponent(word)}`);
   };
 
   const navigateBack = () => {
@@ -203,6 +203,7 @@ export default function App() {
       <WordDetailPage
         word={selectedWord}
         onBack={navigateBack}
+        allWords={Object.values(contentVocab).flat()}
       />
     );
   }

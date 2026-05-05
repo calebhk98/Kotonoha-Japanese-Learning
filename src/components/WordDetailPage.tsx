@@ -9,16 +9,26 @@ interface WordDetailData extends WordInfo {
 
 export function WordDetailPage({
   word,
-  onBack
+  onBack,
+  allWords = []
 }: {
   word: string;
   onBack: () => void;
+  allWords?: WordInfo[];
 }) {
   const [wordData, setWordData] = useState<WordDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wkSrsStage, setWkSrsStage] = useState<number | null>(null);
   const [relatedWords, setRelatedWords] = useState<WordInfo[]>([]);
+
+  const handleBack = () => {
+    const scrollPos = window.history.state?.scrollPos;
+    onBack();
+    if (scrollPos !== undefined) {
+      setTimeout(() => window.scrollTo(0, scrollPos), 0);
+    }
+  };
 
   useEffect(() => {
     const fetchWordData = async () => {
@@ -39,15 +49,32 @@ export function WordDetailPage({
           setWkSrsStage(stage);
         }
 
-        // Find related words by kanji (simplified approach)
-        const relatedList: WordInfo[] = [];
+        // Find related words by kanji
         const wordKanjis = new Set<string>();
         const wordRegex = /[一-龯]/g;
         const matches = word.match(wordRegex);
         if (matches) {
           matches.forEach(k => wordKanjis.add(k));
         }
-        setRelatedWords(relatedList);
+
+        const relatedList: WordInfo[] = [];
+        if (wordKanjis.size > 0) {
+          const seen = new Set<string>([word]);
+          for (const w of allWords) {
+            if (seen.has(w.word)) continue;
+            const wMatches = w.word.match(wordRegex);
+            if (wMatches) {
+              for (const k of wMatches) {
+                if (wordKanjis.has(k)) {
+                  relatedList.push(w);
+                  seen.add(w.word);
+                  break;
+                }
+              }
+            }
+          }
+        }
+        setRelatedWords(relatedList.slice(0, 10));
       } catch (e) {
         setError((e as any).message || 'Failed to load word details');
       } finally {
@@ -56,7 +83,7 @@ export function WordDetailPage({
     };
 
     fetchWordData();
-  }, [word]);
+  }, [word, allWords]);
 
   if (loading) {
     return (
@@ -64,7 +91,7 @@ export function WordDetailPage({
         <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
           <div className="max-w-3xl mx-auto flex items-center">
             <button
-              onClick={onBack}
+              onClick={handleBack}
               className="flex items-center gap-2 text-gray-600 hover:text-black transition"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -85,7 +112,7 @@ export function WordDetailPage({
         <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
           <div className="max-w-3xl mx-auto flex items-center">
             <button
-              onClick={onBack}
+              onClick={handleBack}
               className="flex items-center gap-2 text-gray-600 hover:text-black transition"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -249,6 +276,25 @@ export function WordDetailPage({
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Related Words */}
+          {relatedWords.length > 0 && (
+            <div className="space-y-3 border-t border-gray-100 pt-6">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Related Words</h2>
+              <p className="text-sm text-gray-600">Words that share kanji with this word:</p>
+              <div className="flex flex-wrap gap-2">
+                {relatedWords.map((w, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => window.location.hash = `/word/${encodeURIComponent(w.word)}`}
+                    className="px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
+                  >
+                    {w.word}
+                  </button>
+                ))}
               </div>
             </div>
           )}
