@@ -73,6 +73,23 @@ export const morphemeDefinitions: Record<string, string> = {
   られる: "Passive / potential form",
   れる: "Passive / potential form",
   せる: "Causative form",
+
+  // Verb stems and additional components
+  き: "Verb stem / past tense form (行く→行った)",
+  け: "Verb stem (助ける, etc.)",
+  げ: "Verb stem (逃げる, etc.)",
+  べ: "Verb stem (食べる, etc.)",
+  り: "Verb connection / stem (帰る, etc.)",
+  れ: "Verb stem variation",
+  め: "Verb stem (止める, etc.)",
+  じ: "Hour/o'clock indicator (時)",
+  ま: "Counter/word component (毎朝, etc.)",
+  あ: "Verb stem component",
+  う: "Verb stem / auxiliary",
+  く: "Verb stem / adverbial",
+  み: "Suffix / verb stem",
+  む: "Suffix / verb direction",
+  ち: "Verb stem component",
 };
 
 export function getMorphemeDefinition(morpheme: string): string | undefined {
