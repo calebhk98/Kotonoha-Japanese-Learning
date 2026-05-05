@@ -16,6 +16,10 @@ interface StoryArgs {
   description?: string;
   level?: string;
   imageUrl?: string;
+  parentId?: string;
+  episodeNumber?: number;
+  variantType?: string;
+  relatedStories?: string;
   help?: boolean;
 }
 
@@ -35,6 +39,14 @@ function parseArgs(): StoryArgs {
       args.level = process.argv[++i];
     } else if (arg === '--imageUrl' && i + 1 < process.argv.length) {
       args.imageUrl = process.argv[++i];
+    } else if (arg === '--parentId' && i + 1 < process.argv.length) {
+      args.parentId = process.argv[++i];
+    } else if (arg === '--episodeNumber' && i + 1 < process.argv.length) {
+      args.episodeNumber = parseInt(process.argv[++i], 10);
+    } else if (arg === '--variantType' && i + 1 < process.argv.length) {
+      args.variantType = process.argv[++i];
+    } else if (arg === '--relatedStories' && i + 1 < process.argv.length) {
+      args.relatedStories = process.argv[++i];
     }
   }
 
@@ -47,16 +59,37 @@ function showHelp() {
 
 Usage: npx tsx scripts/add-story.ts [options]
 
-Options:
-  --title TEXT          Story title (required)
-  --description TEXT    Story description (required)
-  --level LEVEL         Difficulty level: n5, n4, n3, etc. (optional)
-  --imageUrl URL        URL to story image (optional)
+Required Options:
+  --title TEXT          Story title
+  --description TEXT    Story description
+
+Optional Options:
+  --level LEVEL         Difficulty level: n5, n4, n3, etc.
+  --imageUrl URL        URL to story image
+
+Related Stories Options:
+  --parentId ID         Link to parent story (for episodes/variants)
+  --episodeNumber NUM   Episode number for ordering (use with parentId)
+  --variantType TYPE    Type of variant: kanji, hiragana, simplified, full, etc.
+  --relatedStories JSON JSON array of related story objects
+                        Example: '[{"id":"story-123","type":"variant","description":"Kanji version"}]'
+
   --help                Show this help message
 
 Examples:
   npx tsx scripts/add-story.ts --title "My Story" --description "A simple story"
-  npx tsx scripts/add-story.ts --title "Tokyo" --description "A trip to Tokyo" --level n5
+
+  npx tsx scripts/add-story.ts \\
+    --title "浦島太郎 Part 1" \\
+    --description "The first episode of Urashima Taro" \\
+    --parentId "story-parent-id" \\
+    --episodeNumber 1
+
+  npx tsx scripts/add-story.ts \\
+    --title "Art Class (hiragana)" \\
+    --description "Art class with hiragana text" \\
+    --parentId "story-art-class-id" \\
+    --variantType "hiragana"
 `);
 }
 
@@ -86,6 +119,17 @@ async function addStory(args: StoryArgs) {
     process.exit(1);
   }
 
+  let relatedStories: Array<{ id: string; type: string; description?: string }> | undefined;
+  if (args.relatedStories) {
+    try {
+      relatedStories = JSON.parse(args.relatedStories);
+    } catch (error) {
+      console.error('❌ Error: Invalid JSON in --relatedStories');
+      console.log(`Error: ${error}`);
+      process.exit(1);
+    }
+  }
+
   const storiesDir = path.join(process.cwd(), 'src', 'stories');
   const folderName = sanitizeFolderName(args.title);
   const storyPath = path.join(storiesDir, folderName);
@@ -106,15 +150,20 @@ async function addStory(args: StoryArgs) {
     fs.mkdirSync(storyPath, { recursive: true });
 
     // Create metadata.json
-    const metadata = {
+    const metadata: Record<string, unknown> = {
       id: generateId(),
       title: args.title,
       type: 'story',
       description: args.description,
-      ...(args.level && { level: args.level }),
-      ...(args.imageUrl && { imageUrl: args.imageUrl }),
       dateAdded: new Date().toISOString(),
     };
+
+    if (args.level) metadata.level = args.level;
+    if (args.imageUrl) metadata.imageUrl = args.imageUrl;
+    if (args.parentId) metadata.parentId = args.parentId;
+    if (args.episodeNumber !== undefined) metadata.episodeNumber = args.episodeNumber;
+    if (args.variantType) metadata.variantType = args.variantType;
+    if (relatedStories) metadata.relatedStories = relatedStories;
 
     fs.writeFileSync(
       path.join(storyPath, 'metadata.json'),
@@ -138,6 +187,16 @@ async function addStory(args: StoryArgs) {
     console.log(`📁 Location: ${storyPath}`);
     console.log(`📝 ID: ${metadata.id}`);
     console.log(`📖 Title: ${args.title}`);
+
+    if (args.parentId) {
+      if (args.episodeNumber !== undefined) {
+        console.log(`🎬 Episode: ${args.episodeNumber}`);
+      } else if (args.variantType) {
+        console.log(`🔄 Variant: ${args.variantType}`);
+      }
+      console.log(`👁️ Parent ID: ${args.parentId}`);
+    }
+
     console.log(`\n📄 Files created:`);
     console.log(`  • metadata.json - Story metadata`);
     console.log(`  • content.md - Story content (edit this file)`);
