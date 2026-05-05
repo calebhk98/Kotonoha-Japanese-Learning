@@ -21,6 +21,7 @@ import {
 } from "./src/lib/scoring.js";
 import { DictionaryManager } from "./src/lib/dictionary.js";
 import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
+import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,58 +59,6 @@ async function ensureJmdictExtracted() {
   }
 }
 
-// Prepare JMnedict if needed
-async function ensureJmnedictPrepared() {
-  const jmnedictFile = path.join(__dirname, 'jmnedict.json');
-  const sampleFile = path.join(__dirname, 'jmnedict-sample.json');
-
-  if (fs.existsSync(jmnedictFile)) {
-    console.log('[JMnedict] Found dictionary file');
-    return jmnedictFile;
-  }
-
-  // Try to use sample file if available
-  if (fs.existsSync(sampleFile)) {
-    console.log('[JMnedict] Using sample dictionary file');
-    try {
-      const data = fs.readFileSync(sampleFile, 'utf-8');
-      fs.writeFileSync(jmnedictFile, data);
-      console.log('[JMnedict] Initialized from sample dictionary');
-      return jmnedictFile;
-    } catch (e: any) {
-      console.warn('[JMnedict] Failed to initialize from sample:', e.message);
-    }
-  }
-
-  // Try to fetch from scriptin's jmdict-simplified project
-  try {
-    console.log('[JMnedict] Attempting to fetch from remote source...');
-    const response = await fetch('https://raw.githubusercontent.com/scriptin/jmdict-simplified/master/jmnedict.json', {
-      signal: AbortSignal.timeout(30000)
-    });
-    if (!response.ok) {
-      console.warn('[JMnedict] Remote fetch failed, will continue without JMnedict');
-      return null;
-    }
-
-    console.log('[JMnedict] Downloading dictionary...');
-    const data = await response.json();
-
-    // Convert to simplified format if needed
-    const simplified = Array.isArray(data) ? data.map((entry: any) => ({
-      kana: entry.kana?.[0]?.text || entry.reading,
-      kanji: entry.kanji?.[0]?.text || entry.written,
-      meanings: entry.senses?.flatMap((sense: any) => sense.glosses?.map((g: any) => g.text || g)) || []
-    })) : [];
-
-    fs.writeFileSync(jmnedictFile, JSON.stringify(simplified, null, 2));
-    console.log('[JMnedict] Successfully downloaded and cached dictionary');
-    return jmnedictFile;
-  } catch (e: any) {
-    console.warn('[JMnedict] Failed to fetch JMnedict:', e.message);
-    return null;
-  }
-}
 
 // Load persisted cache from disk
 function loadCacheFromDisk() {
