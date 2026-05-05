@@ -6,8 +6,11 @@ coverage/
 *.log
 .env*
 !.env.example
+# Cache files - ignore uncompressed, track compressed versions for instant setup
 .word-cache.json
 .jisho-cache.json
+!.word-cache.json.gz
+!.jisho-cache.json.gz
 jmdict-all-3.6.2.json
 jmdict-db/
 *.dic
