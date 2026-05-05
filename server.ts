@@ -22,6 +22,7 @@ import {
 import { DictionaryManager } from "./src/lib/dictionary.js";
 import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
+import { getMorphemeDefinition } from "./src/lib/morphemeDefinitions.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -210,12 +211,19 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
   const validWords = new Map<string, string>(); // Map surface form to baseForm for lookup
+  const morphemes = new Map<string, number>(); // Track morpheme frequencies
 
   for (const token of tokens) {
     const surface = token.surface;
-    if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
+    if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    if (!isSingleKana(surface)) {
+    if (isSingleKana(surface)) {
+      // Check if it's a morpheme we have a definition for
+      const morphemeDef = getMorphemeDefinition(surface);
+      if (morphemeDef) {
+        morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
+      }
+    } else {
       validWords.set(surface, token.baseForm);
       baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
     }
@@ -287,6 +295,23 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     results.push(wordData);
   }
 
+  // Add morpheme definitions
+  for (const [morpheme, frequency] of morphemes) {
+    const meaning = getMorphemeDefinition(morpheme) || "Grammatical morpheme";
+    const morphemeData: any = {
+      word: morpheme,
+      reading: morpheme,
+      meaning,
+      jlpt: 0,
+      joyo: false,
+      score: 0,
+      breakdown: { jlptScore: 0, joyoPenalty: 0, highestGrade: null, freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [] },
+      frequencyInContent: frequency,
+      isMorpheme: true
+    };
+    results.push(morphemeData);
+  }
+
   console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
 
   return results;
@@ -300,12 +325,19 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
   const validWords = new Map<string, string>(); // Map surface form to baseForm for lookup
+  const morphemes = new Map<string, number>(); // Track morpheme frequencies
 
   for (const token of tokens) {
     const surface = token.surface;
-    if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
+    if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    if (!isSingleKana(surface)) {
+    if (isSingleKana(surface)) {
+      // Check if it's a morpheme we have a definition for
+      const morphemeDef = getMorphemeDefinition(surface);
+      if (morphemeDef) {
+        morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
+      }
+    } else {
       validWords.set(surface, token.baseForm);
       baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
     }
@@ -376,6 +408,23 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     results.push(wordData);
   }
 
+  // Add morpheme definitions
+  for (const [morpheme, frequency] of morphemes) {
+    const meaning = getMorphemeDefinition(morpheme) || "Grammatical morpheme";
+    const morphemeData: any = {
+      word: morpheme,
+      reading: morpheme,
+      meaning,
+      jlpt: 0,
+      joyo: false,
+      score: 0,
+      breakdown: { jlptScore: 0, joyoPenalty: 0, highestGrade: null, freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [] },
+      frequencyInContent: frequency,
+      isMorpheme: true
+    };
+    results.push(morphemeData);
+  }
+
   console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
 
   return results;
@@ -401,6 +450,7 @@ async function processStoryText(text: string) {
       continue;
     }
 
+    const isMorpheme = isSingleKana(surface) && getMorphemeDefinition(surface) !== undefined;
     const isVocabWord = !(surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface));
 
     tokens.push({
@@ -409,6 +459,7 @@ async function processStoryText(text: string) {
       startIndex: segmentIndex,
       endIndex: segmentIndex + surface.length,
       isVocabWord,
+      isMorpheme,
     });
 
     searchStart = segmentIndex + surface.length;
@@ -466,11 +517,30 @@ async function processStoryText(text: string) {
     });
   }
 
+  // Add morpheme definitions to tokenMap
+  const morphemeTokens = tokens.filter(t => t.isMorpheme);
+  for (const token of morphemeTokens) {
+    if (!tokenMap.has(token.surface)) {
+      const meaning = getMorphemeDefinition(token.surface) || "Grammatical morpheme";
+      tokenMap.set(token.surface, {
+        word: token.surface,
+        reading: token.surface,
+        meaning,
+        jlpt: 0,
+        joyo: false,
+        score: 0,
+        breakdown: { jlptScore: 0, joyoPenalty: 0, highestGrade: null, freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [] },
+        isMorpheme: true
+      });
+    }
+  }
+
   // Enrich tokens with word info
   const enrichedTokens = tokens.map(token => {
-    if (token.isVocabWord && tokenMap.has(token.surface)) {
+    if ((token.isVocabWord || token.isMorpheme) && tokenMap.has(token.surface)) {
       return {
         ...token,
+        isVocabWord: token.isVocabWord || token.isMorpheme,
         wordInfo: tokenMap.get(token.surface),
       };
     }

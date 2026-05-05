@@ -21,6 +21,7 @@ export interface WordInfo {
   wkSrsStage?: number;           // WaniKani SRS stage (1-9), undefined if not in WaniKani
   frequencyInContent?: number;   // how many times this word's base form appears in the source text
   breakdown?: ScoreBreakdown;
+  isMorpheme?: boolean;          // true if this is a grammatical morpheme (conjugation, verb ending, etc.)
 }
 
 export type LessonType = 'mcq' | 'flashcard'; // multiple choice or flashcards
