@@ -21,6 +21,7 @@ import {
 } from "./src/lib/scoring.js";
 import { DictionaryManager } from "./src/lib/dictionary.js";
 import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
+import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,54 +59,6 @@ async function ensureJmdictExtracted() {
   }
 }
 
-// Prepare JMnedict if needed
-async function ensureJmnedictPrepared() {
-  const jmnedictFile = path.join(__dirname, 'jmnedict.json');
-  const jmnedictGzFile = path.join(__dirname, 'jmnedict.json.gz');
-  const sampleFile = path.join(__dirname, 'jmnedict-sample.json');
-
-  // Check if already extracted
-  if (fs.existsSync(jmnedictFile)) {
-    console.log('[JMnedict] Found dictionary file');
-    return jmnedictFile;
-  }
-
-  // Try to decompress from .gz file
-  if (fs.existsSync(jmnedictGzFile)) {
-    console.log('[JMnedict] Decompressing dictionary...');
-    try {
-      const { gunzip } = await import('zlib');
-      const data = fs.readFileSync(jmnedictGzFile);
-      const decompressed = await new Promise<Buffer>((resolve, reject) => {
-        gunzip(data, (err, result) => {
-          if (err) reject(err);
-          else resolve(result);
-        });
-      });
-      fs.writeFileSync(jmnedictFile, decompressed);
-      console.log('[JMnedict] Successfully decompressed dictionary');
-      return jmnedictFile;
-    } catch (e: any) {
-      console.warn('[JMnedict] Failed to decompress:', e.message);
-    }
-  }
-
-  // Fall back to sample file
-  if (fs.existsSync(sampleFile)) {
-    console.log('[JMnedict] Using sample dictionary file');
-    try {
-      const data = fs.readFileSync(sampleFile, 'utf-8');
-      fs.writeFileSync(jmnedictFile, data);
-      console.log('[JMnedict] Initialized from sample dictionary');
-      return jmnedictFile;
-    } catch (e: any) {
-      console.warn('[JMnedict] Failed to initialize from sample:', e.message);
-    }
-  }
-
-  console.warn('[JMnedict] No dictionary file available');
-  return null;
-}
 
 // Load persisted cache from disk
 function loadCacheFromDisk() {
