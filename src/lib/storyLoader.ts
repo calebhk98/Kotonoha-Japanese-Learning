@@ -139,3 +139,42 @@ export function getParentStory(
 
   return storiesWithMetadata.find(s => s.story.id === story.metadata.parentId)?.story ?? null;
 }
+
+/**
+ * Get all child stories (episodes and variants) for a given story
+ * Useful for displaying all parts of a series (e.g., all Pokemon episodes)
+ * @param storyId The parent story ID
+ * @param storiesWithMetadata All stories with their metadata
+ * @returns Array of child stories sorted by episode number, variants last
+ */
+export function getChildren(
+  storyId: string,
+  storiesWithMetadata: Array<{ story: Content; metadata: StoryMetadata }>
+) {
+  const children: Array<{ story: Content; metadata: StoryMetadata; isVariant: boolean }> = [];
+
+  for (const item of storiesWithMetadata) {
+    if (item.metadata.parentId === storyId) {
+      children.push({
+        ...item,
+        isVariant: !!item.metadata.variantType,
+      });
+    }
+  }
+
+  // Sort: episodes first (by episode number), then variants
+  children.sort((a, b) => {
+    if (a.isVariant && !b.isVariant) return 1;
+    if (!a.isVariant && b.isVariant) return -1;
+
+    if (!a.isVariant && !b.isVariant) {
+      const aNum = a.metadata.episodeNumber ?? 0;
+      const bNum = b.metadata.episodeNumber ?? 0;
+      return aNum - bNum;
+    }
+
+    return a.story.title.localeCompare(b.story.title);
+  });
+
+  return children.map(c => ({ story: c.story, metadata: c.metadata }));
+}
