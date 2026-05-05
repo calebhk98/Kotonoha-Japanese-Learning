@@ -2,11 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { Content } from '../data/content';
 
-interface RelatedStory {
+interface RelatedContent {
   id: string;
   type: 'episode' | 'variant' | 'series';
   description?: string;
 }
+
+interface RelatedStory extends RelatedContent {}
 
 interface SeriesMetadata {
   id: string;
@@ -38,6 +40,32 @@ interface StoryMetadata {
   episodeNumber?: number;
   variantType?: 'kanji' | 'hiragana' | 'simplified' | 'full' | string;
   relatedStories?: RelatedStory[];
+}
+
+interface MusicMetadata {
+  id: string;
+  title: string;
+  type: 'music';
+  description: string;
+  level?: string;
+  imageUrl?: string;
+  mediaUrl?: string;
+  tags?: string[];
+  artist?: string;
+  dateAdded?: string;
+}
+
+interface VideoMetadata {
+  id: string;
+  title: string;
+  type: 'video';
+  description: string;
+  level?: string;
+  imageUrl?: string;
+  mediaUrl?: string;
+  tags?: string[];
+  creator?: string;
+  dateAdded?: string;
 }
 
 /**
@@ -133,6 +161,114 @@ export function loadStoriesFromDisk(): Content[] {
   }
 
   return stories.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/**
+ * Load all music content from the music directory.
+ * Each music item should be in a folder with:
+ * - metadata.json (music metadata)
+ * - transcript.md (lyrics or transcript in markdown)
+ *
+ * @returns Array of Content objects with loaded music data
+ */
+export function loadMusicFromDisk(): Content[] {
+  const musicDir = path.join(process.cwd(), 'src', 'music');
+
+  // Return empty array if music directory doesn't exist yet
+  if (!fs.existsSync(musicDir)) {
+    return [];
+  }
+
+  const music: Content[] = [];
+  const musicFolders = fs.readdirSync(musicDir).filter(file => {
+    const fullPath = path.join(musicDir, file);
+    return fs.statSync(fullPath).isDirectory();
+  });
+
+  for (const folder of musicFolders) {
+    const folderPath = path.join(musicDir, folder);
+    const metadataPath = path.join(folderPath, 'metadata.json');
+    const transcriptPath = path.join(folderPath, 'transcript.md');
+
+    // Skip if metadata or transcript file is missing
+    if (!fs.existsSync(metadataPath) || !fs.existsSync(transcriptPath)) {
+      console.warn(`⚠️  Skipping music ${folder}: missing metadata.json or transcript.md`);
+      continue;
+    }
+
+    try {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as MusicMetadata;
+      const text = fs.readFileSync(transcriptPath, 'utf-8');
+
+      music.push({
+        id: metadata.id,
+        title: metadata.title,
+        type: 'music',
+        description: metadata.description,
+        text: text.trim(),
+        mediaUrl: metadata.mediaUrl,
+        imageUrl: metadata.imageUrl,
+      });
+    } catch (error) {
+      console.warn(`⚠️  Error loading music from ${folder}:`, error);
+    }
+  }
+
+  return music.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/**
+ * Load all video content from the videos directory.
+ * Each video item should be in a folder with:
+ * - metadata.json (video metadata)
+ * - transcript.md (video transcript in markdown)
+ *
+ * @returns Array of Content objects with loaded video data
+ */
+export function loadVideosFromDisk(): Content[] {
+  const videosDir = path.join(process.cwd(), 'src', 'videos');
+
+  // Return empty array if videos directory doesn't exist yet
+  if (!fs.existsSync(videosDir)) {
+    return [];
+  }
+
+  const videos: Content[] = [];
+  const videoFolders = fs.readdirSync(videosDir).filter(file => {
+    const fullPath = path.join(videosDir, file);
+    return fs.statSync(fullPath).isDirectory();
+  });
+
+  for (const folder of videoFolders) {
+    const folderPath = path.join(videosDir, folder);
+    const metadataPath = path.join(folderPath, 'metadata.json');
+    const transcriptPath = path.join(folderPath, 'transcript.md');
+
+    // Skip if metadata or transcript file is missing
+    if (!fs.existsSync(metadataPath) || !fs.existsSync(transcriptPath)) {
+      console.warn(`⚠️  Skipping video ${folder}: missing metadata.json or transcript.md`);
+      continue;
+    }
+
+    try {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as VideoMetadata;
+      const text = fs.readFileSync(transcriptPath, 'utf-8');
+
+      videos.push({
+        id: metadata.id,
+        title: metadata.title,
+        type: 'video',
+        description: metadata.description,
+        text: text.trim(),
+        mediaUrl: metadata.mediaUrl,
+        imageUrl: metadata.imageUrl,
+      });
+    } catch (error) {
+      console.warn(`⚠️  Error loading video from ${folder}:`, error);
+    }
+  }
+
+  return videos.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /**
