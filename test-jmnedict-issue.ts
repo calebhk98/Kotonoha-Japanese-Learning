@@ -54,18 +54,32 @@ async function testIssue37() {
   const dictionary = new DictionaryManager();
   const jmdictPath = path.join(__dirname, 'jmdict-db');
   const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
-  const jmnedictFile = path.join(__dirname, 'jmnedict.json');
+  const fullDictFile = path.join(__dirname, 'jmnedict.json');
+  const sampleDictFile = path.join(__dirname, 'jmnedict-sample.json');
+
+  // Check if we have the full dictionary or fallback
+  const fs = await import('fs');
+  const hasFullDict = fs.existsSync(fullDictFile);
+  const jmnedictFile = hasFullDict ? fullDictFile : sampleDictFile;
 
   // Initialize with JMnedict support
   await dictionary.initialize('jmdict', jmdictPath, jmdictFile, jmnedictFile);
-  console.log('[Setup] Dictionary initialized with JMnedict fallback\n');
 
-  // Test cases from the issue
-  const testCases = [
-    { word: 'たなか', keyword: 'tanaka', description: 'Tanaka - surname (should use JMnedict)' },
-    { word: 'とうきょう', keyword: 'tokyo', description: 'Tokyo (city)' },
-    { word: 'ぎふ', keyword: 'gifu', description: 'Gifu (place name in JMnedict)' },
-  ];
+  console.log(`[Setup] Dictionary initialized with JMnedict fallback`);
+  console.log(`[Setup] Using ${hasFullDict ? 'full dictionary (743K+ entries)' : 'sample dictionary (9 entries)'}\n`);
+
+  // Test cases from the issue (work with both full and sample dictionaries)
+  const testCases = hasFullDict
+    ? [
+        { word: 'たなか', keyword: 'tanaka', description: 'Tanaka - surname (should use JMnedict)' },
+        { word: 'とうきょう', keyword: 'tokyo', description: 'Tokyo (city)' },
+        { word: 'ぎふ', keyword: 'gifu', description: 'Gifu (place name in JMnedict)' },
+      ]
+    : [
+        { word: 'たなか', keyword: 'tanaka', description: 'Tanaka - surname (sample file)' },
+        { word: 'とうきょう', keyword: 'tokyo', description: 'Tokyo (sample file)' },
+        { word: 'さとう', keyword: 'sato', description: 'Sato - surname (sample file)' },
+      ];
 
   console.log('Running test cases:\n');
   const results: TestResult[] = [];
