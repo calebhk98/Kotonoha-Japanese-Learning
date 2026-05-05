@@ -8,6 +8,18 @@ interface RelatedStory {
   description?: string;
 }
 
+interface SeriesMetadata {
+  id: string;
+  title: string;
+  type: 'series';
+  description: string;
+  level?: string;
+  imageUrl?: string;
+  tags?: string[];
+  author?: string;
+  dateAdded?: string;
+}
+
 interface StoryMetadata {
   id: string;
   title: string;
@@ -19,9 +31,52 @@ interface StoryMetadata {
   author?: string;
   dateAdded?: string;
   parentId?: string;
+  seriesId?: string;
   episodeNumber?: number;
   variantType?: 'kanji' | 'hiragana' | 'simplified' | 'full' | string;
   relatedStories?: RelatedStory[];
+}
+
+/**
+ * Load all series from the series directory.
+ * Each series should be in a folder with:
+ * - metadata.json (series metadata only, no content.md needed)
+ *
+ * @returns Array of SeriesMetadata objects
+ */
+export function loadSeriesFromDisk(): SeriesMetadata[] {
+  const seriesDir = path.join(process.cwd(), 'src', 'series');
+
+  // Return empty array if series directory doesn't exist yet
+  if (!fs.existsSync(seriesDir)) {
+    return [];
+  }
+
+  const series: SeriesMetadata[] = [];
+  const seriesFolders = fs.readdirSync(seriesDir).filter(file => {
+    const fullPath = path.join(seriesDir, file);
+    return fs.statSync(fullPath).isDirectory();
+  });
+
+  for (const folder of seriesFolders) {
+    const folderPath = path.join(seriesDir, folder);
+    const metadataPath = path.join(folderPath, 'metadata.json');
+
+    // Skip if metadata file is missing
+    if (!fs.existsSync(metadataPath)) {
+      console.warn(`⚠️  Skipping series ${folder}: missing metadata.json`);
+      continue;
+    }
+
+    try {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as SeriesMetadata;
+      series.push(metadata);
+    } catch (error) {
+      console.warn(`⚠️  Error loading series from ${folder}:`, error);
+    }
+  }
+
+  return series.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /**
@@ -142,7 +197,7 @@ export function getParentStory(
 
 /**
  * Get all child stories (episodes and variants) for a given story
- * Useful for displaying all parts of a series (e.g., all Pokemon episodes)
+ * Useful for displaying all parts of a single story (e.g., Urashima Taro parts 1-3)
  * @param storyId The parent story ID
  * @param storiesWithMetadata All stories with their metadata
  * @returns Array of child stories sorted by episode number, variants last
@@ -177,4 +232,22 @@ export function getChildren(
   });
 
   return children.map(c => ({ story: c.story, metadata: c.metadata }));
+}
+
+/**
+ * Get all stories in a series
+ * Useful for displaying all episodes of a series (e.g., all 10 Pokemon episodes)
+ * @param seriesId The series ID
+ * @param storiesWithMetadata All stories with their metadata
+ * @returns Array of stories in the series
+ */
+export function getSeriesStories(
+  seriesId: string,
+  storiesWithMetadata: Array<{ story: Content; metadata: StoryMetadata }>
+) {
+  const seriesStories = storiesWithMetadata
+    .filter(item => item.metadata.seriesId === seriesId)
+    .map(item => item.story);
+
+  return seriesStories;
 }

@@ -17,6 +17,7 @@ interface StoryArgs {
   level?: string;
   imageUrl?: string;
   parentId?: string;
+  seriesId?: string;
   episodeNumber?: number;
   variantType?: string;
   relatedStories?: string;
@@ -41,6 +42,8 @@ function parseArgs(): StoryArgs {
       args.imageUrl = process.argv[++i];
     } else if (arg === '--parentId' && i + 1 < process.argv.length) {
       args.parentId = process.argv[++i];
+    } else if (arg === '--seriesId' && i + 1 < process.argv.length) {
+      args.seriesId = process.argv[++i];
     } else if (arg === '--episodeNumber' && i + 1 < process.argv.length) {
       args.episodeNumber = parseInt(process.argv[++i], 10);
     } else if (arg === '--variantType' && i + 1 < process.argv.length) {
@@ -67,8 +70,9 @@ Optional Options:
   --level LEVEL         Difficulty level: n5, n4, n3, etc.
   --imageUrl URL        URL to story image
 
-Related Stories Options:
-  --parentId ID         Link to parent story (for episodes/variants)
+Story Relationships:
+  --parentId ID         Link to parent story (for episodes/variants of a single story)
+  --seriesId ID         Link to a series (for independent episodes in a series like Pokemon)
   --episodeNumber NUM   Episode number for ordering (use with parentId)
   --variantType TYPE    Type of variant: kanji, hiragana, simplified, full, etc.
   --relatedStories JSON JSON array of related story objects
@@ -84,6 +88,11 @@ Examples:
     --description "The first episode of Urashima Taro" \\
     --parentId "story-parent-id" \\
     --episodeNumber 1
+
+  npx tsx scripts/add-story.ts \\
+    --title "Pokemon Episode 1" \\
+    --description "Pikachu appears" \\
+    --seriesId "series-pokemon-id"
 
   npx tsx scripts/add-story.ts \\
     --title "Art Class (hiragana)" \\
@@ -161,6 +170,7 @@ async function addStory(args: StoryArgs) {
     if (args.level) metadata.level = args.level;
     if (args.imageUrl) metadata.imageUrl = args.imageUrl;
     if (args.parentId) metadata.parentId = args.parentId;
+    if (args.seriesId) metadata.seriesId = args.seriesId;
     if (args.episodeNumber !== undefined) metadata.episodeNumber = args.episodeNumber;
     if (args.variantType) metadata.variantType = args.variantType;
     if (relatedStories) metadata.relatedStories = relatedStories;
@@ -194,7 +204,11 @@ async function addStory(args: StoryArgs) {
       } else if (args.variantType) {
         console.log(`🔄 Variant: ${args.variantType}`);
       }
-      console.log(`👁️ Parent ID: ${args.parentId}`);
+      console.log(`👁️ Parent Story ID: ${args.parentId}`);
+    }
+
+    if (args.seriesId) {
+      console.log(`📺 Series ID: ${args.seriesId}`);
     }
 
     console.log(`\n📄 Files created:`);
