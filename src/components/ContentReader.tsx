@@ -132,12 +132,17 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
               {inner}
               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] sm:max-w-xs bg-gray-900 border border-gray-700 text-white p-3 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none text-left">
                 <div className="flex flex-col gap-1">
+                  {info.isMorpheme && (
+                    <span className="inline-block px-2 py-1 bg-blue-600 text-blue-50 rounded text-xs font-bold w-fit mb-1">
+                      Morpheme
+                    </span>
+                  )}
                   <span className="text-xs text-gray-400 font-medium">{info.reading}</span>
                   <span className="font-bold text-base">{info.word}</span>
                   <span className="text-sm border-t border-gray-700 pt-1 mt-1 text-gray-200">{info.meaning}</span>
                   <div className="flex gap-2 mt-1 text-xs text-gray-400 font-medium">
                     {info.jlpt > 0 && <span>N{info.jlpt}</span>}
-                    <span>Score: {info.score}</span>
+                    {!info.isMorpheme && <span>Score: {info.score}</span>}
                   </div>
                 </div>
                 <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-6 border-x-transparent border-t-6 border-t-gray-900" />
