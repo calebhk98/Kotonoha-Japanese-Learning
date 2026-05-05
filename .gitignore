@@ -18,3 +18,4 @@ sudachi-wasm-built/index_bg.wasm
 tokenization-report-*.json
 .cache/
 jmnedict.json
+JMnedict.xml.gz
