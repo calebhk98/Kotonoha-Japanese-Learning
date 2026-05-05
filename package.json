@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "setup-sudachi": "bash scripts/setup-sudachi.sh",
-    "setup-jmnedict": "npx tsx scripts/setup-jmnedict.ts",
-    "postinstall": "bash scripts/setup-sudachi.sh || echo 'ℹ️  Sudachi setup skipped (Rust not installed). Run: npm run setup-sudachi' && npm run setup-jmnedict || echo 'ℹ️  JMnedict setup skipped (network unavailable). Run: npm run setup-jmnedict'",
+    "postinstall": "bash scripts/setup-sudachi.sh || echo 'ℹ️  Sudachi setup skipped (Rust not installed). Run: npm run setup-sudachi'",
     "dev": "tsx server.ts",
     "start": "node server.ts",
     "build": "vite build",
