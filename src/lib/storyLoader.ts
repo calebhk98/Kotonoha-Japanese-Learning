@@ -2,6 +2,24 @@ import fs from 'fs';
 import path from 'path';
 import { Content } from '../data/content';
 
+interface RelatedStory {
+  id: string;
+  type: 'episode' | 'variant' | 'series';
+  description?: string;
+}
+
+interface SeriesMetadata {
+  id: string;
+  title: string;
+  type: 'series';
+  description: string;
+  level?: string;
+  imageUrl?: string;
+  tags?: string[];
+  author?: string;
+  dateAdded?: string;
+}
+
 interface StoryMetadata {
   id: string;
   title: string;
@@ -12,6 +30,56 @@ interface StoryMetadata {
   tags?: string[];
   author?: string;
   dateAdded?: string;
+  // Relationships - use ONE of these, not both:
+  // Use parentId for episodes/variants of a single story (e.g., Urashima Taro Part 1, Part 2)
+  parentId?: string;
+  // Use seriesId for independent episodes grouped into a series (e.g., Pokemon Episode 1, 2, 3)
+  seriesId?: string;
+  episodeNumber?: number;
+  variantType?: 'kanji' | 'hiragana' | 'simplified' | 'full' | string;
+  relatedStories?: RelatedStory[];
+}
+
+/**
+ * Load all series from the series directory.
+ * Each series should be in a folder with:
+ * - metadata.json (series metadata only, no content.md needed)
+ *
+ * @returns Array of SeriesMetadata objects
+ */
+export function loadSeriesFromDisk(): SeriesMetadata[] {
+  const seriesDir = path.join(process.cwd(), 'src', 'series');
+
+  // Return empty array if series directory doesn't exist yet
+  if (!fs.existsSync(seriesDir)) {
+    return [];
+  }
+
+  const series: SeriesMetadata[] = [];
+  const seriesFolders = fs.readdirSync(seriesDir).filter(file => {
+    const fullPath = path.join(seriesDir, file);
+    return fs.statSync(fullPath).isDirectory();
+  });
+
+  for (const folder of seriesFolders) {
+    const folderPath = path.join(seriesDir, folder);
+    const metadataPath = path.join(folderPath, 'metadata.json');
+
+    // Skip if metadata file is missing
+    if (!fs.existsSync(metadataPath)) {
+      console.warn(`⚠️  Skipping series ${folder}: missing metadata.json`);
+      continue;
+    }
+
+    try {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as SeriesMetadata;
+      series.push(metadata);
+    } catch (error) {
+      console.warn(`⚠️  Error loading series from ${folder}:`, error);
+    }
+  }
+
+  return series.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /**
@@ -65,4 +133,126 @@ export function loadStoriesFromDisk(): Content[] {
   }
 
   return stories.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/**
+ * Find related stories by ID
+ * @param storyId The story ID to find relations for
+ * @param allStories All loaded stories with metadata
+ * @returns Object with episodes, variants, and series related to this story
+ */
+export function findRelatedStories(
+  storyId: string,
+  storiesWithMetadata: Array<{ story: Content; metadata: StoryMetadata }>
+) {
+  const story = storiesWithMetadata.find(s => s.story.id === storyId);
+  if (!story) return { episodes: [], variants: [], series: [] };
+
+  const episodes: Content[] = [];
+  const variants: Content[] = [];
+  const series: Content[] = [];
+
+  const mainMetadata = story.metadata;
+
+  for (const item of storiesWithMetadata) {
+    if (item.story.id === storyId) continue;
+
+    const meta = item.metadata;
+
+    if (meta.parentId === storyId) {
+      if (meta.variantType) {
+        variants.push(item.story);
+      } else if (meta.episodeNumber !== undefined) {
+        episodes.push(item.story);
+      }
+    }
+
+    if (mainMetadata.relatedStories?.some(r => r.id === item.story.id)) {
+      if (meta.variantType) {
+        variants.push(item.story);
+      } else {
+        series.push(item.story);
+      }
+    }
+  }
+
+  episodes.sort((a, b) => {
+    const aNum = storiesWithMetadata.find(s => s.story.id === a.id)?.metadata.episodeNumber ?? 0;
+    const bNum = storiesWithMetadata.find(s => s.story.id === b.id)?.metadata.episodeNumber ?? 0;
+    return aNum - bNum;
+  });
+
+  return { episodes, variants, series };
+}
+
+/**
+ * Get parent story if this is an episode or variant
+ */
+export function getParentStory(
+  storyId: string,
+  storiesWithMetadata: Array<{ story: Content; metadata: StoryMetadata }>
+) {
+  const story = storiesWithMetadata.find(s => s.story.id === storyId);
+  if (!story?.metadata.parentId) return null;
+
+  return storiesWithMetadata.find(s => s.story.id === story.metadata.parentId)?.story ?? null;
+}
+
+/**
+ * Get all child stories (episodes and variants) for a given story.
+ * Use this for stories split into parts via parentId (e.g., Urashima Taro Part 1, Part 2).
+ * NOT for series episodes - use getSeriesStories() instead.
+ * @param storyId The parent story ID
+ * @param storiesWithMetadata All stories with their metadata
+ * @returns Array of child stories sorted by episode number, variants last
+ */
+export function getChildren(
+  storyId: string,
+  storiesWithMetadata: Array<{ story: Content; metadata: StoryMetadata }>
+) {
+  const children: Array<{ story: Content; metadata: StoryMetadata; isVariant: boolean }> = [];
+
+  for (const item of storiesWithMetadata) {
+    if (item.metadata.parentId === storyId) {
+      children.push({
+        ...item,
+        isVariant: !!item.metadata.variantType,
+      });
+    }
+  }
+
+  // Sort: episodes first (by episode number), then variants
+  children.sort((a, b) => {
+    if (a.isVariant && !b.isVariant) return 1;
+    if (!a.isVariant && b.isVariant) return -1;
+
+    if (!a.isVariant && !b.isVariant) {
+      const aNum = a.metadata.episodeNumber ?? 0;
+      const bNum = b.metadata.episodeNumber ?? 0;
+      return aNum - bNum;
+    }
+
+    return a.story.title.localeCompare(b.story.title);
+  });
+
+  return children.map(c => ({ story: c.story, metadata: c.metadata }));
+}
+
+/**
+ * Get all stories in a series.
+ * Use this for independent episodes grouped into a series via seriesId (e.g., Pokemon Episode 1, 2, 3).
+ * NOT for story parts - use getChildren() instead.
+ * @param seriesId The series ID
+ * @param storiesWithMetadata All stories with their metadata
+ * @returns Array of stories in the series
+ */
+export function getSeriesStories(
+  seriesId: string,
+  storiesWithMetadata: Array<{ story: Content; metadata: StoryMetadata }>
+) {
+  const seriesStories = storiesWithMetadata
+    .filter(item => item.metadata.seriesId === seriesId)
+    .map(item => item.story);
+
+  return seriesStories;
 }
