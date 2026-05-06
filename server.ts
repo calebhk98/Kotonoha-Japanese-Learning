@@ -586,21 +586,47 @@ async function startServer() {
       }
     }
 
-    // Look up all kana words concurrently
+    // Look up all kana words with concurrency limit
     const lookupStart = Date.now();
-    console.log(`[API] /api/batch-extract: Looking up ${uniqueKanaWords.size} unique kana words concurrently`);
+    console.log(`[API] /api/batch-extract: Looking up ${uniqueKanaWords.size} unique kana words with concurrency limit`);
     const kanaLookupCache = new Map<string, any>();
     if (dictionary && uniqueKanaWords.size > 0) {
-      const lookupPromises = Array.from(uniqueKanaWords).map(async (word) => {
-        try {
-          const result = await dictionary.lookup(word);
-          return { word, result };
-        } catch (e) {
-          return { word, result: null };
+      const words = Array.from(uniqueKanaWords);
+      const concurrencyLimit = 5;
+      const results: { word: string; result: any }[] = [];
+
+      let activeCount = 0;
+      let index = 0;
+
+      await new Promise<void>((resolve, reject) => {
+        const processNext = async () => {
+          if (index >= words.length && activeCount === 0) {
+            resolve();
+            return;
+          }
+
+          if (activeCount < concurrencyLimit && index < words.length) {
+            const word = words[index++];
+            activeCount++;
+
+            try {
+              const result = await dictionary.lookup(word);
+              results.push({ word, result });
+            } catch (e) {
+              results.push({ word, result: null });
+            } finally {
+              activeCount--;
+              processNext().catch(reject);
+            }
+          }
+        };
+
+        for (let i = 0; i < concurrencyLimit; i++) {
+          processNext().catch(reject);
         }
       });
-      const lookupResults = await Promise.all(lookupPromises);
-      for (const { word, result } of lookupResults) {
+
+      for (const { word, result } of results) {
         kanaLookupCache.set(word, result);
       }
     }
