@@ -166,6 +166,18 @@ export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
     }
   }
 
+  // For pure hiragana/katakana words, strongly prefer entries with hiragana-only written form
+  // (particles, grammar words) over kanji entries (e.g., prefer に as particle over に as reading of 荷)
+  const isPureKana = /^[ぁ-ん|ァ-ヴー]+$/.test(wordStr);
+  if (isPureKana && entries.length > 0) {
+    const hiraganaOnly = entries.filter(entry =>
+      entry.variants?.some(v => /^[ぁ-ん]+$/.test(v.written))
+    );
+    if (hiraganaOnly.length > 0) {
+      entries = hiraganaOnly;
+    }
+  }
+
   // If still no results, fall back to all results but limit to first 10 (best matches are early)
   if (entries.length === 0) {
     entries = allEntries.slice(0, 10);
