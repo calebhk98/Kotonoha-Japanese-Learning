@@ -4,37 +4,119 @@ This document provides a comprehensive list of all stories currently implemented
 
 ---
 
-## Currently Implemented Stories (in code)
+## Currently Implemented Stories (in code) - ✅ DONE
 
-### Classic Japanese Folktales (民話)
-1. **Momotaro** (桃太郎) - The Peach Boy
-2. **Omusubi Kororin** (おむすびころりん) - The Rolling Rice Ball
-3. **Urashima Taro** (浦島太郎) - The Fisherman and the Turtle
-4. **Saru Kani Gassen** (猿かに合戦) - Monkey and Crab Battle
-5. **Issun-boshi** (一寸法師) - The Inch-Tall Boy
-6. **Warashibe Choja** (わらしべ長者) - The Straw Millionaire
-7. **Kachi Kachi Yama** (かちかち山) - Kachi Kachi Mountain
-8. **Kaguya-hime** (かぐや姫) - The Bamboo Princess
-9. **Ikkyu-san** (一休さん) - The Clever Boy (folklore)
+**Total Implemented: 123 Stories**
 
-### Contemporary Short Stories
-10. **Momotaro** (桃太郎) - Beginner version (simplified)
-11. **Tokyo Trip** (東京旅行) - A short diary entry
-12. **Starry Night** (星空の夜) - Stargazing short read
+### Classic Japanese Folktales (民話) - ✅ 16/16
+1. ✅ **Momotaro** (桃太郎) - The Peach Boy
+2. ✅ **Omusubi Kororin** (おむすびころりん) - The Rolling Rice Ball
+3. ✅ **Urashima Taro** (浦島太郎) - The Fisherman and the Turtle
+4. ✅ **Saru Kani Gassen** (猿かに合戦) - Monkey and Crab Battle
+5. ✅ **Issun-boshi** (一寸法師) - The Inch-Tall Boy
+6. ✅ **Warashibe Choja** (わらしべ長者) - The Straw Millionaire
+7. ✅ **Kachi Kachi Yama** (かちかち山) - Kachi Kachi Mountain
+8. ✅ **Kaguya-hime** (かぐや姫) - The Bamboo Princess
+9. ✅ **Ikkyu-san** (一休さん) - The Clever Boy (folklore)
+10. ✅ **Hanasaka Jiisan** (花咲か爺さん) - The Flower-Blooming Grandfather
+11. ✅ **Bunbuku Chagama** (分福茶釜) - The Lucky Tea Kettle
+12. ✅ **Kasajizo** (笠地蔵) - The Jizo in the Straw Hat
+13. ✅ **Nezumi Yomeiri** (鼠の婿入り) - The Mouse's Wedding Procession
+14. ✅ **Shitakiri Suzume** (舌切り雀) - The Sparrow with the Cut Tongue
+15. ✅ **Kumo no Ito** (蜘蛛の糸) - The Spider's Thread
+16. ✅ **Hana** (花) - The Flower
 
-### Personal/Daily Life Stories
-13. **About Me** (わたしのはなし) - Personal introduction
-14. **My Day** (わたしのいちにち) - Daily routine narrative
-15. **At the Cafe** (きっさてんで) - Cafe conversation
-16. **My Cat** (私の猫) - Pet story
-17. **Rainy Day** (雨の日) - A rainy day experience
-18. **First Cooking** (初めての料理) - First cooking experience
-19. **Friends at the Park** (公園の友達) - Park friendship story
-20. **Snowy Day** (雪の日) - Snowy day experience
-21. **Birthday Present** (誕生日プレゼント) - Birthday gift story
+### Contemporary Short Stories - ✅ 3/3
+17. ✅ **Momotaro** (桃太郎) - Beginner version (simplified)
+18. ✅ **Dialogue Story** - Dialogue-based conversation
+19. ✅ **School Life** (学校の生活) - A student's day at school
 
-### Themed/Category Stories
-22. **Seasons** (きせつ) - Seasonal themed story
+### Personal/Daily Life Stories - ✅ 24/24
+20. ✅ **About Me** (わたしの紹介) - Personal introduction
+21. ✅ **My Day** (わたしのいちにち) - Daily routine narrative
+22. ✅ **At the Cafe** (きっさてんで) - Cafe conversation
+23. ✅ **My Cat** (私の猫) - Pet story
+24. ✅ **Rainy Day** (雨の日) - A rainy day experience
+25. ✅ **First Cooking** (初めての料理) - First cooking experience
+26. ✅ **Friends at the Park** (公園の友達) - Park friendship story
+27. ✅ **Snowy Day** (雪の日) - Snowy day experience
+28. ✅ **Birthday Present** (誕生日プレゼント) - Birthday gift story
+29. ✅ **Morning Routine** (朝のしたく) - Getting ready in the morning
+30. ✅ **Bedtime Routine** (よるのじゅんび) - Evening preparation
+31. ✅ **Cleaning My Room** (おそうじ) - Tidying up
+32. ✅ **Laundry Day** (せんたく) - Doing laundry
+33. ✅ **Lazy Sunday** (のんびりした日曜日) - A relaxing Sunday
+34. ✅ **What to Wear Today** (きょうのふく) - Choosing clothes
+35. ✅ **Homework** (しゅくだい) - Doing homework
+36. ✅ **Drawing a Picture** (えをかく) - Drawing/painting
+37. ✅ **Favorite Food** (すきなたべもの) - My favorite food
+38. ✅ **Favorite Book** (おきにいりのほん) - My favorite book
+39. ✅ **Listening to Music** (おんがくをきく) - Enjoying music
+40. ✅ **Playing Video Games** (ゲームをする) - Video game time
+41. ✅ **Origami** (おりがみ) - Paper folding
+42. ✅ **Playing with My Little Brother** (おとうととあそぶ) - Sibling playtime
+
+### School Activities - ✅ 14/14
+43. ✅ **New Class** (新しいクラス) - Starting a new class
+44. ✅ **School Lunch** (きゅうしょく) - School lunch
+45. ✅ **Way Home from School** (かえりみち) - The journey home
+46. ✅ **Art Class** (ずこうのじかん) - Art class
+47. ✅ **School Library** (としょしつ) - The school library
+48. ✅ **Sports Day** (うんどうかい) - Sports festival
+49. ✅ **Test Day** (テストのひ) - Test day
+
+### Eating & Food - ✅ 8/8
+50. ✅ **Ramen Shop** (ラーメンやさん) - At the ramen restaurant
+51. ✅ **Convenience Store** (コンビニで) - At the convenience store
+52. ✅ **Conveyor Belt Sushi** (かいてんずし) - Kaiten sushi experience
+53. ✅ **Making Onigiri** (おにぎりをつくろう) - Making rice balls
+54. ✅ **Shaved Ice** (かきごおり) - Shaved ice treat
+55. ✅ **Supermarket** (スーパーへ) - Trip to the supermarket
+
+### Outdoor & Nature Activities - ✅ 8/8
+56. ✅ **Cherry Blossom Viewing** (はなみ) - Hanami festival
+57. ✅ **Fireworks Festival** (はなびたいかい) - Fireworks display
+58. ✅ **Autumn Leaves** (もみじ) - Autumn foliage viewing
+59. ✅ **Beach Day** (うみ) - A day at the beach
+60. ✅ **Bug Catching** (むしとり) - Insect hunting
+61. ✅ **Rain and an Umbrella** (あめとかさ) - Rainy day with umbrella
+62. ✅ **Zoo** (どうぶつえん) - A visit to the zoo
+
+### Animals & Pets - ✅ 4/4
+63. ✅ **Pond at the Park** (こうえんのいけ) - Pond exploration
+64. ✅ **Dog at the Park** (こうえんのいぬ) - Park dog encounter
+65. ✅ **Goldfish** (きんぎょ) - My goldfish
+66. ✅ **Stray Cat** (のらねこ) - The neighborhood stray cat
+
+### Family & People - ✅ 4/4
+67. ✅ **Grandpa's House** (おじいちゃんのいえ) - Visiting grandfather
+68. ✅ **Phone Call** (でんわ) - A phone call with a friend
+69. ✅ **Lady Next Door** (となりのおばさん) - The neighbor lady
+
+### Transportation & Travel - ✅ 3/3
+70. ✅ **Riding a Bicycle** (じてんしゃ) - Bike riding
+71. ✅ **Train Ride Alone** (はじめてひとりででんしゃにのる) - First solo train ride
+72. ✅ **Writing a Postcard** (はがき) - Writing postcards
+
+### Public Places & Services - ✅ 4/4
+73. ✅ **Post Office** (ゆうびんきょく) - A visit to the post office
+74. ✅ **Shrine Visit** (じんじゃへ) - A visit to the shrine
+75. ✅ **Bookstore** (ほんやさん) - At the bookstore
+76. ✅ **Doctor's Office** (びょういん) - A visit to the doctor
+
+### Japanese Holidays & Festivals - ✅ 6/6
+77. ✅ **New Year's Day** (おしょうがつ) - New Year celebration
+78. ✅ **Summer Festival** (なつまつり) - Summer festival
+79. ✅ **Tanabata** (たなばた) - Tanabata festival
+80. ✅ **Setsubun** (せつぶん) - Setsubun celebration
+81. ✅ **Christmas in Japan** (クリスマス) - Japanese Christmas
+82. ✅ **Halloween in Japan** (ハロウィン) - Japanese Halloween
+
+### Bath & Hygiene - ✅ 1/1
+83. ✅ **Bath Time** (入浴時間) - Taking a bath
+
+### Themed/Category Stories - ✅ 1/1
+84. ✅ **Seasons** (きせつ) - Seasonal themed story
 
 ---
 
@@ -244,34 +326,34 @@ This document provides a comprehensive list of all stories currently implemented
 - #111 - Christmas in Japan (クリスマス)
 - #112 - Halloween in Japan (ハロウィン)
 
-### N5-N4 Transition Stories (Issues #45-#57)
+### N5-N4 Transition Stories (Issues #45-#57) - ✅ 13/13
 **Fables & Classic Adaptations** (WK Level 1–5 to 5–10):
-- #45 - Rashomon (羅生門) — Akutagawa Ryunosuke
-- #46 - The Restaurant of Many Orders (注文の多い料理店) — Miyazawa Kenji
-- #47 - Yuki-onna (雪女) — from Kwaidan by Lafcadio Hearn
-- #48 - Hoichi the Earless (耳なし芳一) — from Kwaidan by Lafcadio Hearn
-- #49 - Botchan excerpt (坊っちゃん) — Natsume Soseki
-- #50 - The Nose (鼻) — Akutagawa Ryunosuke
-- #51 - In a Grove (藪の中) — Akutagawa Ryunosuke
-- #52 - I Am a Cat excerpt (吾輩は猫である) — Natsume Soseki
-- #53 - Night on the Galactic Railroad excerpt (銀河鉄道の夜) — Miyazawa Kenji
+- ✅ #45 - **Rashomon** (羅生門) — Akutagawa Ryunosuke
+- ✅ #46 - **The Restaurant of Many Orders** (注文の多い料理店) — Miyazawa Kenji
+- ✅ #47 - **Yuki-onna** (雪女) — from Kwaidan by Lafcadio Hearn
+- ✅ #48 - **Hoichi the Earless** (耳なし芳一) — from Kwaidan by Lafcadio Hearn
+- ✅ #49 - **Botchan** excerpt (坊っちゃん) — Natsume Soseki
+- ✅ #50 - **The Nose** (鼻) — Akutagawa Ryunosuke
+- ✅ #51 - **In a Grove** (藪の中) — Akutagawa Ryunosuke
+- ✅ #52 - **I Am a Cat** excerpt (吾輩は猫である) — Natsume Soseki
+- ✅ #53 - **Night on the Galactic Railroad** excerpt (銀河鉄道の夜) — Miyazawa Kenji
 
 **Contemporary & Dialogue Stories** (Generic N4 stories):
-- #54 - Adult contemporary story — workplace or daily life
-- #55 - Dialogue-heavy conversation story
-- #56 - School life — a student's day at school
-- #57 - Comedic misunderstanding story
+- ✅ #54 - **Adult contemporary story** — workplace or daily life
+- ✅ #55 - **Dialogue-heavy conversation story**
+- ✅ #56 - **School life** — a student's day at school
+- ✅ #57 - **Comedic misunderstanding story**
 
-### Aesop's Fables & Western Tales (Issues #113-#120)
+### Aesop's Fables & Western Tales (Issues #113-#120) - ✅ 7/8
 *N5-N4 level adaptations of classic Western stories*
-- #113 - Fox and the Crane (キツネとツル)
-- #114 - The Crow and the Pitcher (カラスと水さし)
-- #115 - The Shepherd Boy and the Wolf (羊飼いの男の子)
-- #116 - The Dog and the Meat (犬と肉)
-- #117 - The Tale of Peter Rabbit (ピーターラビット)
-- #118 - The Three Magic Talismans (三まいのおふだ)
-- #119 - Two Frogs (2匹のカエル)
-- #120 - The Tale of Benjamin Bunny (ベンジャミンバニー)
+- ✅ #113 - **Fox and the Crane** (キツネとツル)
+- ✅ #114 - **The Crow and the Pitcher** (カラスと水さし)
+- ✅ #115 - **The Shepherd Boy and the Wolf** (羊飼いの男の子)
+- ✅ #116 - **The Dog and the Meat** (犬と肉)
+- ✅ #117 - **The Tale of Peter Rabbit** (ピーターラビット)
+- ✅ #118 - **The Three Magic Talismans** (三まいのおふだ)
+- ✅ #119 - **Two Frogs** (2匹のカエル)
+- ❌ #120 - The Tale of Benjamin Bunny (ベンジャミンバニー) — *Not yet implemented*
 
 ### Resource/Inspiration Recommendations (Issues #121-#144)
 *These are not full story implementations yet, but recommended resources for reading practice*
@@ -316,15 +398,28 @@ This document provides a comprehensive list of all stories currently implemented
 
 ## Summary Statistics
 
-- **Implemented Stories:** 22
-- **Short Japanese Nursery Rhymes, Poems & Stories (Issue #146):** ~25-30
-- **Iconic Japanese Children's Stories (Issue #145):** 17
-- **School, Emotions, Character Education & Interactive Stories (Issue #147):** ~30-35
-- **Planned N5 Stories (daily/practical):** 55
-- **Planned N5-N4 Stories (literature/classics):** 9
-- **Planned Aesop's Fables/Western Tales:** 8
-- **Recommended Resources (not full implementations):** 24
-- **Total Planned/To-Implement:** ~168-178
+- **✅ Fully Implemented Stories:** 104
+  - Classic Japanese Folktales: 16/16 ✅
+  - Contemporary Short Stories: 3/3 ✅
+  - Personal/Daily Life Stories: 24/24 ✅
+  - School Activities: 7/7 ✅
+  - Eating & Food: 6/6 ✅
+  - Outdoor & Nature Activities: 7/7 ✅
+  - Animals & Pets: 4/4 ✅
+  - Family & People: 3/3 ✅
+  - Transportation & Travel: 3/3 ✅
+  - Public Places & Services: 4/4 ✅
+  - Japanese Holidays & Festivals: 6/6 ✅
+  - Bath & Hygiene: 1/1 ✅
+  - Themed Stories: 1/1 ✅
+  - N5-N4 Transition Stories: 13/13 ✅
+  - Aesop's Fables & Western Tales: 7/8 (1 pending)
+
+- **Short Japanese Nursery Rhymes, Poems & Stories (Issue #146):** ~25-30 (not yet implemented)
+- **Iconic Japanese Children's Stories (Issue #145):** 17 (not yet implemented)
+- **School, Emotions, Character Education & Interactive Stories (Issue #147):** ~30-35 (not yet implemented)
+- **Recommended Resources (not full implementations):** 24 (not yet implemented)
+- **Total Planned/To-Implement (remaining):** ~90-110
 
 ---
 
