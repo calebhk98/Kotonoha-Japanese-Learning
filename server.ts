@@ -14,7 +14,6 @@ import {
   getWordScoreBreakdown,
   getCachedDictionaryEntries,
   findBestVariant,
-  wordsCache,
   markCacheAsDirty,
   shouldSaveCache,
   clearCacheDirtyFlag,
@@ -24,14 +23,13 @@ import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 import { getMorphemeDefinition } from "./src/lib/morphemeDefinitions.js";
 import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk } from "./src/lib/storyLoader.js";
+import { initDatabase, WordsCache, JishoCache, saveDatabase } from "./src/lib/database.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const CACHE_FILE = path.join(__dirname, '.word-cache.json');
-const JISHO_CACHE_FILE = path.join(__dirname, '.jisho-cache.json');
-let jishoCache = new Map<string, any>();
-let jishoCacheNeedsSave = false;
+let wordsCache: WordsCache;
+let jishoCache: JishoCache;
 
 // Extract jmdict if needed
 async function ensureJmdictExtracted() {
@@ -62,78 +60,7 @@ async function ensureJmdictExtracted() {
 }
 
 
-// Load persisted cache from disk
-function loadCacheFromDisk() {
-  try {
-    if (fs.existsSync(CACHE_FILE)) {
-      const data = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
-      if (data && typeof data === 'object') {
-        let count = 0;
-        for (const [key, value] of Object.entries(data)) {
-          wordsCache.set(key, value as DictionaryEntry[]);
-          count++;
-        }
-        console.log(`[Server] Loaded ${count} words from cache file`);
-        clearCacheDirtyFlag();
-      }
-    }
-  } catch (e) {
-    console.error('[Server] Failed to load cache from disk:', (e as any).message);
-  }
-}
-
-// Load Jisho API cache from disk
-function loadJishoCacheFromDisk() {
-  try {
-    if (fs.existsSync(JISHO_CACHE_FILE)) {
-      const data = JSON.parse(fs.readFileSync(JISHO_CACHE_FILE, 'utf-8'));
-      if (data && typeof data === 'object') {
-        let count = 0;
-        for (const [key, value] of Object.entries(data)) {
-          jishoCache.set(key, value);
-          count++;
-        }
-        console.log(`[Server] Loaded ${count} Jisho API entries from cache file`);
-      }
-    }
-  } catch (e) {
-    console.error('[Server] Failed to load Jisho cache from disk:', (e as any).message);
-  }
-}
-
-// Save cache to disk
-function saveCacheToDisk() {
-  try {
-    if (!shouldSaveCache()) return;
-
-    const obj: Record<string, DictionaryEntry[]> = {};
-    for (const [key, value] of wordsCache.entries()) {
-      obj[key] = value;
-    }
-    fs.writeFileSync(CACHE_FILE, JSON.stringify(obj), 'utf-8');
-    clearCacheDirtyFlag();
-    console.log(`[Server] Saved ${wordsCache.size} words to cache file`);
-  } catch (e) {
-    console.error('[Server] Failed to save cache to disk:', (e as any).message);
-  }
-}
-
-// Save Jisho API cache to disk
-function saveJishoCacheToDisk() {
-  try {
-    if (!jishoCacheNeedsSave) return;
-
-    const obj: Record<string, any> = {};
-    for (const [key, value] of jishoCache.entries()) {
-      obj[key] = value;
-    }
-    fs.writeFileSync(JISHO_CACHE_FILE, JSON.stringify(obj), 'utf-8');
-    jishoCacheNeedsSave = false;
-    console.log(`[Server] Saved ${jishoCache.size} Jisho API entries to cache file`);
-  } catch (e) {
-    console.error('[Server] Failed to save Jisho cache to disk:', (e as any).message);
-  }
-}
+// Database is saved periodically and on shutdown
 
 let tokenizer: Tokenizer | null = null;
 let dictionary: DictionaryManager | null = null;
@@ -177,8 +104,10 @@ const dictionaryReady = (async () => {
   // Ensure jmdict and jmnedict preparation is complete before checking for files
   await jmdictReady;
 
-  // Load Jisho cache before initializing dictionary
-  loadJishoCacheFromDisk();
+  // Initialize database
+  await initDatabase();
+  wordsCache = new WordsCache();
+  jishoCache = new JishoCache();
 
   dictionary = new DictionaryManager();
   const jmdictPath = path.join(__dirname, 'jmdict-db');
@@ -186,18 +115,23 @@ const dictionaryReady = (async () => {
   const jmdictExists = fs.existsSync(jmdictFile);
 
   const onJishoCacheUpdate = (cache: Map<string, any>) => {
-    jishoCache = cache;
-    jishoCacheNeedsSave = true;
+    // Sync updated cache entries from dictionary
+    for (const [key, value] of cache.entries()) {
+      if (!jishoCache.has(key)) {
+        jishoCache.set(key, value);
+      }
+    }
   };
 
   if (jmdictExists) {
     console.log('[Dictionary] jmdict file found, attempting to initialize');
-    await dictionary.initialize('jmdict', jmdictPath, jmdictFile, jmnedictFile as string | undefined, jishoCache, onJishoCacheUpdate);
+    await dictionary.initialize('jmdict', jmdictPath, jmdictFile, jmnedictFile as string | undefined, jishoCache as any, onJishoCacheUpdate);
   } else {
     console.log('[Dictionary] jmdict file not found, using Jisho API');
-    await dictionary.initialize('jisho', undefined, undefined, jmnedictFile as string | undefined, jishoCache, onJishoCacheUpdate);
+    await dictionary.initialize('jisho', undefined, undefined, jmnedictFile as string | undefined, jishoCache as any, onJishoCacheUpdate);
   }
   console.log('[Dictionary] Initialization complete');
+  console.log(`[Server] Loaded ${wordsCache.size} words and ${jishoCache.size} Jisho entries from database`);
 })();
 
 
@@ -556,22 +490,21 @@ async function startServer() {
   await tokenizerReady;
   await dictionaryReady;
 
-  // Load persisted cache from disk
-  loadCacheFromDisk();
-
   const app = express();
   const PORT = 3000;
 
   app.use(express.json({ limit: '50mb' }));
 
-  // Periodically save caches to disk (every 30 seconds if changed)
+  // Periodically save database to disk (every 30 seconds)
   setInterval(() => {
-    saveCacheToDisk();
-    saveJishoCacheToDisk();
+    saveDatabase();
   }, 30000);
 
+  // Log only non-asset requests to reduce noise
   app.use((req, _res, next) => {
-    console.log(`[Server] ${req.method} ${req.path}`);
+    if (!req.path.match(/\.(js|css|map|json|woff|woff2|ttf|svg)$/)) {
+      console.log(`[Server] ${req.method} ${req.path}`);
+    }
     next();
   });
 
@@ -653,22 +586,55 @@ async function startServer() {
       }
     }
 
-    // Look up all kana words concurrently
+    // Look up kana words via API with concurrency limit (KanjiData has wrong defs for pure kana)
     const lookupStart = Date.now();
-    console.log(`[API] /api/batch-extract: Looking up ${uniqueKanaWords.size} unique kana words concurrently`);
+    console.log(`[API] /api/batch-extract: Looking up ${uniqueKanaWords.size} unique kana words with concurrency limit`);
     const kanaLookupCache = new Map<string, any>();
     if (dictionary && uniqueKanaWords.size > 0) {
-      const lookupPromises = Array.from(uniqueKanaWords).map(async (word) => {
-        try {
-          const result = await dictionary.lookup(word);
-          return { word, result };
-        } catch (e) {
-          return { word, result: null };
+      const words = Array.from(uniqueKanaWords);
+      const concurrencyLimit = 5;
+      const results: { word: string; result: any }[] = [];
+
+      let activeCount = 0;
+      let index = 0;
+
+      await new Promise<void>((resolve, reject) => {
+        const processNext = async () => {
+          if (index >= words.length && activeCount === 0) {
+            resolve();
+            return;
+          }
+
+          if (activeCount < concurrencyLimit && index < words.length) {
+            const word = words[index++];
+            activeCount++;
+
+            try {
+              const result = await dictionary.lookup(word);
+              results.push({ word, result });
+            } catch (e) {
+              results.push({ word, result: null });
+            } finally {
+              activeCount--;
+              processNext().catch(reject);
+            }
+          }
+        };
+
+        for (let i = 0; i < concurrencyLimit; i++) {
+          processNext().catch(reject);
         }
       });
-      const lookupResults = await Promise.all(lookupPromises);
-      for (const { word, result } of lookupResults) {
+
+      for (const { word, result } of results) {
         kanaLookupCache.set(word, result);
+        // Save kana lookups to persistent cache so they don't need API calls again
+        if (result) {
+          wordsCache.set(word, [{
+            meanings: [{ glosses: [result.meaning || 'Unknown'] }],
+            variants: [{ pronounced: result.reading || word, written: word }]
+          } as any]);
+        }
       }
     }
     const lookupTime = Date.now() - lookupStart;
@@ -774,23 +740,9 @@ async function startServer() {
 
     wordsCache.clear();
     jishoCache.clear();
-    jishoCacheNeedsSave = true;
-    markCacheAsDirty();
+    saveDatabase();
 
     console.log(`[API] /api/clear-cache: Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`);
-
-    // Delete cache files
-    try {
-      if (fs.existsSync(CACHE_FILE)) {
-        fs.unlinkSync(CACHE_FILE);
-      }
-      if (fs.existsSync(JISHO_CACHE_FILE)) {
-        fs.unlinkSync(JISHO_CACHE_FILE);
-      }
-      console.log(`[API] /api/clear-cache: Deleted cache files`);
-    } catch (e) {
-      console.error('[API] /api/clear-cache: Error deleting files:', (e as any).message);
-    }
 
     res.json({
       cleared: true,
@@ -964,18 +916,16 @@ async function startServer() {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-  // Save caches on shutdown
+  // Save database on shutdown
   process.on('SIGINT', () => {
-    console.log('\n[Server] Shutting down, saving caches...');
-    saveCacheToDisk();
-    saveJishoCacheToDisk();
+    console.log('\n[Server] Shutting down, saving database...');
+    saveDatabase();
     process.exit(0);
   });
 
   process.on('SIGTERM', () => {
-    console.log('[Server] Terminating, saving caches...');
-    saveCacheToDisk();
-    saveJishoCacheToDisk();
+    console.log('[Server] Terminating, saving database...');
+    saveDatabase();
     process.exit(0);
   });
 }

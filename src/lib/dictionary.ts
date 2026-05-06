@@ -153,8 +153,23 @@ export class JishoApiDictionary implements Dictionary {
           let lookupResult: WordLookupResult | null = null;
 
           if (result?.data && result.data.length > 0) {
-            const firstResult = result.data[0];
-            const meanings = firstResult.senses
+            // Pick the best result: prefer particles/grammar (no word field), or entry with most senses
+            let bestResult = result.data[0];
+
+            // Look for entries without a word (these are particles/grammar words)
+            const particleEntry = result.data.find((entry: any) => !entry.japanese?.[0]?.word);
+            if (particleEntry) {
+              bestResult = particleEntry;
+            } else {
+              // Otherwise pick the entry with the most senses (usually the most common/complete)
+              bestResult = result.data.reduce((best: any, current: any) => {
+                const bestSenseCount = best.senses?.length || 0;
+                const currentSenseCount = current.senses?.length || 0;
+                return currentSenseCount > bestSenseCount ? current : best;
+              });
+            }
+
+            const meanings = bestResult.senses
               ?.flatMap((sense: any) => sense.english_definitions || [])
               .filter(Boolean);
 

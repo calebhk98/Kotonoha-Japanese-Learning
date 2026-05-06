@@ -143,20 +143,59 @@ export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
 
   // Try the word as-is first
-  let entries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
+  let allEntries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
 
-  // If no results and word might be a conjugated verb/adjective, try stems
+  // Filter to entries that actually match the word (not just contain it)
+  let entries = allEntries.filter(entry => {
+    return entry.variants?.some(v => v.written === wordStr || v.pronounced === wordStr);
+  });
+
+  // If no exact matches found, try stemming for conjugated verbs
   if (entries.length === 0 && wordStr.length > 2) {
     const stems = stemJapaneseWord(wordStr);
     // Try each stem until we find results
     for (const stem of stems.slice(1)) { // Skip the original word (already tried)
-      entries = kanjiData.searchWords(stem) as DictionaryEntry[];
+      allEntries = kanjiData.searchWords(stem) as DictionaryEntry[];
+      entries = allEntries.filter(entry => {
+        return entry.variants?.some(v => v.written === stem || v.pronounced === stem);
+      });
       if (entries.length > 0) {
         // Found a match with a stem, cache it under the original word
         break;
       }
     }
   }
+
+  // For pure hiragana/katakana words, strongly prefer entries with hiragana-only written form
+  // (particles, grammar words) over kanji entries (e.g., prefer に as particle over に as reading of 荷)
+  const isPureKana = /^[ぁ-ん|ァ-ヴー]+$/.test(wordStr);
+  if (isPureKana && entries.length > 0) {
+    const hiraganaOnly = entries.filter(entry =>
+      entry.variants?.some(v => /^[ぁ-ん]+$/.test(v.written))
+    );
+    if (hiraganaOnly.length > 0) {
+      entries = hiraganaOnly;
+    }
+  }
+
+  // If still no results, fall back to all results but limit to first 10 (best matches are early)
+  if (entries.length === 0) {
+    entries = allEntries.slice(0, 10);
+  }
+
+  // Sort by frequency for better defaults
+  // Entries with "ichi1" or "news1" priorities are most common
+  entries.sort((a, b) => {
+    const aFreq = (a.variants?.[0]?.priorities?.includes('ichi1') ? 2 :
+                   a.variants?.[0]?.priorities?.includes('news1') ? 2 :
+                   a.variants?.[0]?.priorities?.includes('ichi2') ? 1 :
+                   a.variants?.[0]?.priorities?.includes('news2') ? 1 : 0);
+    const bFreq = (b.variants?.[0]?.priorities?.includes('ichi1') ? 2 :
+                   b.variants?.[0]?.priorities?.includes('news1') ? 2 :
+                   b.variants?.[0]?.priorities?.includes('ichi2') ? 1 :
+                   b.variants?.[0]?.priorities?.includes('news2') ? 1 : 0);
+    return bFreq - aFreq;
+  });
 
   // For pure hiragana input, filter to prefer entries where at least one variant
   // has hiragana in the written form or matches the pronunciation

@@ -112,7 +112,7 @@ export default function App() {
   const [batchExtractionAttempted, setBatchExtractionAttempted] = useState(false);
 
   // Background batch processing of all stories to build cache
-  // Re-runs if cache is cleared (when contentVocab becomes significantly smaller)
+  // Re-runs if cache is cleared (when contentVocab becomes empty)
   useEffect(() => {
     const batchExtract = async () => {
       try {
@@ -158,7 +158,6 @@ export default function App() {
           if (Object.keys(newVocab).length > 0) {
             setContentVocab(prev => {
               const updated = { ...prev, ...newVocab };
-              localStorage.setItem('contentVocab', JSON.stringify(updated));
               return updated;
             });
           }
@@ -172,17 +171,15 @@ export default function App() {
     };
 
     // Run batch extract if:
-    // 1. Never attempted yet, OR
-    // 2. Cache was cleared (contentVocab is empty while we have content)
+    // 1. Never attempted yet AND we have content to extract
     const shouldRunExtraction =
-      !batchExtractionAttempted ||
-      (ALL_CONTENT.length > 0 && Object.keys(contentVocab).length === 0);
+      !batchExtractionAttempted && ALL_CONTENT.length > 0;
 
     if (shouldRunExtraction) {
       const timer = setTimeout(batchExtract, 500);
       return () => clearTimeout(timer);
     }
-  }, [contentVocab, ALL_CONTENT.length, batchExtractionAttempted]);
+  }, [ALL_CONTENT.length, batchExtractionAttempted, wkData]);
 
   // Sort and filter content (#11, #12, #13)
   const sortedContent = useMemo(() => {
