@@ -137,6 +137,49 @@ const dictionaryReady = (async () => {
   wordsCache.preload();
   const preloadTime = Date.now() - preloadStart;
   console.log(`[Server] Pre-loaded ${wordsCache.size} words and ${jishoCache.size} Jisho entries from database (${preloadTime}ms)`);
+
+  // Load decompressed cache files in the background (don't block server startup)
+  const loadCachesInBackground = async () => {
+    const wordCacheFile = path.join(__dirname, '.word-cache.json');
+    const jishoCacheFile = path.join(__dirname, '.jisho-cache.json');
+
+    if (fs.existsSync(jishoCacheFile)) {
+      try {
+        const cacheStart = Date.now();
+        const data = JSON.parse(fs.readFileSync(jishoCacheFile, 'utf-8'));
+        for (const [word, result] of Object.entries(data)) {
+          if (!jishoCache.has(word)) {
+            jishoCache.set(word, result);
+          }
+        }
+        console.log(`[Cache] Loaded ${Object.keys(data).length} Jisho entries from .jisho-cache.json (${Date.now() - cacheStart}ms)`);
+      } catch (e: any) {
+        console.warn('[Cache] Failed to load Jisho cache:', e.message);
+      }
+    }
+
+    // Load word cache in background (this is large, ~390MB)
+    if (fs.existsSync(wordCacheFile)) {
+      try {
+        const cacheStart = Date.now();
+        console.log('[Cache] Starting to load word cache (this may take a minute)...');
+        const data = JSON.parse(fs.readFileSync(wordCacheFile, 'utf-8'));
+        let loadedCount = 0;
+        for (const [word, entries] of Object.entries(data)) {
+          if (!wordsCache.has(word)) {
+            wordsCache.set(word, entries as any);
+            loadedCount++;
+          }
+        }
+        console.log(`[Cache] Loaded ${loadedCount} words from .word-cache.json (${Date.now() - cacheStart}ms)`);
+      } catch (e: any) {
+        console.warn('[Cache] Failed to load word cache:', e.message);
+      }
+    }
+  };
+
+  // Load caches in background so server isn't blocked
+  loadCachesInBackground().catch(e => console.error('[Cache] Background loading error:', e));
 })();
 
 
@@ -172,7 +215,9 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   let cacheHits = 0;
   let cacheMisses = 0;
   const results = [];
+  const processedWords: string[] = [];
   for (const [wordStr, baseForm] of validWords) {
+    processedWords.push(wordStr);
     const start = Date.now();
     // Try to look up using baseForm first (for conjugated verbs), then fall back to wordStr
     const cacheHadBase = wordsCache.has(baseForm);
@@ -226,8 +271,30 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
           };
         }
       } else {
-        // Fall back to batch cache or dictionary lookup
-        dictResult = kanaLookupCache?.get(wordStr) ?? await dictionary.lookup(wordStr);
+        // Try batch cache first, then dictionary lookup
+        dictResult = kanaLookupCache?.get(wordStr);
+        if (!dictResult) {
+          dictResult = await dictionary.lookup(wordStr);
+          // Save to batch cache for reuse within this request
+          if (dictResult) {
+            kanaLookupCache?.set(wordStr, dictResult);
+          }
+        }
+
+        // Save dictionary result to persistent cache for future requests
+        if (dictResult) {
+          const entry: DictionaryEntry = {
+            meanings: (dictResult.meanings || [dictResult.meaning])
+              .filter(Boolean)
+              .map((m: string) => ({ glosses: [m] })),
+            variants: [{
+              pronounced: dictResult.reading || wordStr,
+              written: wordStr,
+              priorities: []
+            }]
+          };
+          wordsCache.set(wordStr, [entry]);
+        }
       }
 
       if (dictResult) {
@@ -269,6 +336,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     results.push(morphemeData);
   }
 
+  console.log(`[API] Words processed: [${processedWords.join(', ')}] (${processedWords.length} total)`);
   console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
 
   return results;
@@ -303,7 +371,9 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
   let cacheHits = 0;
   let cacheMisses = 0;
   const results = [];
+  const processedWords: string[] = [];
   for (const [wordStr, baseForm] of validWords) {
+    processedWords.push(wordStr);
     const start = Date.now();
     // Try to look up using baseForm first (for conjugated verbs), then fall back to wordStr
     const cacheHadBase = wordsCache.has(baseForm);
@@ -399,6 +469,7 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     results.push(morphemeData);
   }
 
+  console.log(`[API] Words processed: [${processedWords.join(', ')}] (${processedWords.length} total)`);
   console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
 
   return results;

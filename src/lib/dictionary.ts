@@ -424,12 +424,6 @@ export class JmnedictDictionary implements Dictionary {
     // Cache the result (including null results to avoid repeated lookups)
     this.cache.set(word, result);
 
-    if (result) {
-      console.log(`[Dictionary.JMnedict] Found "${word}": ${result.meaning}`);
-    } else {
-      console.log(`[Dictionary.JMnedict] No entry for "${word}"`);
-    }
-
     return result;
   }
 }
@@ -504,18 +498,19 @@ export class DictionaryManager {
   async lookup(word: string): Promise<WordLookupResult | null> {
     if (!this.primary) return null;
 
-    // For pure hiragana words, try JMnedict first (before other fallbacks)
-    // This gives priority to proper nouns for hiragana-only words
+    // Try primary dictionary first (Jisho API cache is fastest)
+    const result = await this.primary.lookup(word);
+    if (result) return result;
+
+    // For pure hiragana words, try JMnedict next (proper nouns)
+    // This is after primary cache, so frequent hiragana hits the cache
     const isPureHiragana = /^[ぁ-ん]+$/.test(word);
     if (isPureHiragana && this.fallback1) {
       const jmnedictResult = await this.fallback1.lookup(word);
       if (jmnedictResult) return jmnedictResult;
     }
 
-    const result = await this.primary.lookup(word);
-    if (result) return result;
-
-    // Try remaining fallback chain: Jisho API → KanjiData
+    // Try remaining fallback chain: KanjiData
     if (this.fallback2) {
       const result2 = await this.fallback2.lookup(word);
       if (result2) return result2;
