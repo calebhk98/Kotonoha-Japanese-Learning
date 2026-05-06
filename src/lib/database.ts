@@ -57,16 +57,26 @@ export function saveDatabase() {
 }
 
 export class WordsCache {
+  private memoryCache: Map<string, DictionaryEntry[]> = new Map();
+  private isPreloaded = false;
+
   set(key: string, value: DictionaryEntry[]) {
     if (!db) throw new Error('Database not initialized');
     db.run(
       'INSERT OR REPLACE INTO words_cache (word, entries) VALUES (?, ?)',
       [key, JSON.stringify(value)]
     );
+    this.memoryCache.set(key, value);
   }
 
   get(key: string): DictionaryEntry[] | undefined {
     if (!db) throw new Error('Database not initialized');
+    // Check memory cache first (fast path)
+    if (this.memoryCache.has(key)) {
+      return this.memoryCache.get(key);
+    }
+
+    // Fall back to database
     const result = db.exec(
       'SELECT entries FROM words_cache WHERE word = ?',
       [key]
@@ -74,11 +84,19 @@ export class WordsCache {
     if (result.length === 0 || result[0].values.length === 0) {
       return undefined;
     }
-    return JSON.parse(result[0].values[0][0] as string);
+    const entries = JSON.parse(result[0].values[0][0] as string);
+    this.memoryCache.set(key, entries);
+    return entries;
   }
 
   has(key: string): boolean {
     if (!db) throw new Error('Database not initialized');
+    // Check memory cache first
+    if (this.memoryCache.has(key)) {
+      return true;
+    }
+
+    // Fall back to database
     const result = db.exec(
       'SELECT 1 FROM words_cache WHERE word = ?',
       [key]
@@ -89,6 +107,7 @@ export class WordsCache {
   clear() {
     if (!db) throw new Error('Database not initialized');
     db.run('DELETE FROM words_cache');
+    this.memoryCache.clear();
   }
 
   entries(): [string, DictionaryEntry[]][] {
@@ -106,6 +125,22 @@ export class WordsCache {
     const result = db.exec('SELECT COUNT(*) as count FROM words_cache');
     if (result.length === 0) return 0;
     return result[0].values[0][0] as number;
+  }
+
+  preload(): void {
+    if (!db) throw new Error('Database not initialized');
+    if (this.isPreloaded) return;
+
+    const result = db.exec('SELECT word, entries FROM words_cache');
+    if (result.length > 0) {
+      for (const [word, entries] of result[0].values) {
+        this.memoryCache.set(
+          word as string,
+          JSON.parse(entries as string)
+        );
+      }
+    }
+    this.isPreloaded = true;
   }
 }
 

@@ -131,7 +131,12 @@ const dictionaryReady = (async () => {
     await dictionary.initialize('jisho', undefined, undefined, jmnedictFile as string | undefined, jishoCache as any, onJishoCacheUpdate);
   }
   console.log('[Dictionary] Initialization complete');
-  console.log(`[Server] Loaded ${wordsCache.size} words and ${jishoCache.size} Jisho entries from database`);
+
+  // Pre-load all cached words from database into memory for fast lookups
+  const preloadStart = Date.now();
+  wordsCache.preload();
+  const preloadTime = Date.now() - preloadStart;
+  console.log(`[Server] Pre-loaded ${wordsCache.size} words and ${jishoCache.size} Jisho entries from database (${preloadTime}ms)`);
 })();
 
 
@@ -206,8 +211,25 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     const isKanaOnly = isPureHiragana || isPureKatakana;
 
     if (isKanaOnly && dictionary) {
-      // Use pre-looked-up cache if available (from batch concurrent lookup)
-      const dictResult = kanaLookupCache?.get(wordStr) ?? await dictionary.lookup(wordStr);
+      // Try persistent cache first, then batch cache, then dictionary lookup
+      const cachedEntries = wordsCache.get(wordStr);
+      let dictResult: any = null;
+
+      if (cachedEntries && cachedEntries.length > 0) {
+        // Use cached entry
+        const entry = cachedEntries[0];
+        if (entry.meanings && entry.meanings.length > 0) {
+          dictResult = {
+            meaning: entry.meanings[0]?.glosses?.join(", ") || "Unknown",
+            reading: entry.variants?.[0]?.pronounced || wordStr,
+            meanings: entry.meanings.map((m: any) => m.glosses?.join(", ")).filter((m: any) => m)
+          };
+        }
+      } else {
+        // Fall back to batch cache or dictionary lookup
+        dictResult = kanaLookupCache?.get(wordStr) ?? await dictionary.lookup(wordStr);
+      }
+
       if (dictResult) {
         meaning = dictResult.meaning;
         if (dictResult.meanings) {
@@ -319,8 +341,25 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     const isKanaOnly = isPureHiragana || isPureKatakana;
 
     if (isKanaOnly) {
-      // Use pre-looked-up cache (all kana words looked up concurrently before)
-      const dictResult = kanaLookupCache.get(wordStr);
+      // Try persistent cache first, then batch cache
+      const cachedEntries = wordsCache.get(wordStr);
+      let dictResult: any = null;
+
+      if (cachedEntries && cachedEntries.length > 0) {
+        // Use cached entry
+        const entry = cachedEntries[0];
+        if (entry.meanings && entry.meanings.length > 0) {
+          dictResult = {
+            meaning: entry.meanings[0]?.glosses?.join(", ") || "Unknown",
+            reading: entry.variants?.[0]?.pronounced || wordStr,
+            meanings: entry.meanings.map((m: any) => m.glosses?.join(", ")).filter((m: any) => m)
+          };
+        }
+      } else {
+        // Fall back to batch cache
+        dictResult = kanaLookupCache.get(wordStr);
+      }
+
       if (dictResult) {
         meaning = dictResult.meaning;
         if (dictResult.meanings) {
@@ -425,7 +464,25 @@ async function processStoryText(text: string) {
 
     const isPureHiragana = /^[ぁ-ん]+$/.test(token.surface);
     if (isPureHiragana && dictionary) {
-      const dictResult = await dictionary.lookup(token.surface);
+      // Try persistent cache first, then dictionary lookup
+      const cachedEntries = wordsCache.get(token.surface);
+      let dictResult: any = null;
+
+      if (cachedEntries && cachedEntries.length > 0) {
+        // Use cached entry
+        const entry = cachedEntries[0];
+        if (entry.meanings && entry.meanings.length > 0) {
+          dictResult = {
+            meaning: entry.meanings[0]?.glosses?.join(", ") || "Unknown",
+            reading: entry.variants?.[0]?.pronounced || token.surface,
+            meanings: entry.meanings.map((m: any) => m.glosses?.join(", ")).filter((m: any) => m)
+          };
+        }
+      } else {
+        // Fall back to dictionary lookup
+        dictResult = await dictionary.lookup(token.surface);
+      }
+
       if (dictResult) {
         meaning = dictResult.meaning;
         if (dictResult.meanings) {
