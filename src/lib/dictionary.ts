@@ -34,12 +34,10 @@ export class KanjiDataDictionary implements Dictionary {
 
   async lookup(word: string): Promise<WordLookupResult | null> {
     if (!this.searchWords || typeof this.searchWords !== 'function') {
-      console.log(`[Dictionary.KanjiData] searchWords not available`);
       return null;
     }
     const entries = this.searchWords(word) as any[];
     if (!entries || entries.length === 0) {
-      console.log(`[Dictionary.KanjiData] No entries for "${word}"`);
       return null;
     }
 
@@ -58,7 +56,6 @@ export class KanjiDataDictionary implements Dictionary {
     }
 
     const firstMeaning = bestEntry.meanings?.[0]?.glosses?.[0] || "Unknown";
-    console.log(`[Dictionary.KanjiData] Found "${word}": ${firstMeaning}`);
     return {
       meaning: firstMeaning,
       reading: word,
@@ -140,9 +137,7 @@ export class JishoApiDictionary implements Dictionary {
 
     // Check cache first
     if (this.cache.has(word)) {
-      const cached = this.cache.get(word);
-      console.log(`[Dictionary.Jisho] Cache hit for "${word}": ${cached?.meaning || 'null'}`);
-      return cached || null;
+      return this.cache.get(word) || null;
     }
 
     // Queue the request
@@ -423,12 +418,6 @@ export class JmnedictDictionary implements Dictionary {
 
     // Cache the result (including null results to avoid repeated lookups)
     this.cache.set(word, result);
-
-    if (result) {
-      console.log(`[Dictionary.JMnedict] Found "${word}": ${result.meaning}`);
-    } else {
-      console.log(`[Dictionary.JMnedict] No entry for "${word}"`);
-    }
 
     return result;
   }

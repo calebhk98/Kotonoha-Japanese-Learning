@@ -644,11 +644,29 @@ async function startServer() {
     }
 
     // Look up kana words via API with concurrency limit (KanjiData has wrong defs for pure kana)
+    // But check persistent cache first to avoid re-fetching
     const lookupStart = Date.now();
-    console.log(`[API] /api/batch-extract: Looking up ${uniqueKanaWords.size} unique kana words with concurrency limit`);
     const kanaLookupCache = new Map<string, any>();
-    if (dictionary && uniqueKanaWords.size > 0) {
-      const words = Array.from(uniqueKanaWords);
+    const wordsToLookup: string[] = [];
+
+    for (const word of uniqueKanaWords) {
+      const cached = wordsCache.get(word);
+      if (cached && cached.length > 0) {
+        // Already cached, use it
+        const entry = cached[0];
+        kanaLookupCache.set(word, {
+          meaning: entry.meanings?.[0]?.glosses?.join(", ") || "Unknown",
+          reading: entry.variants?.[0]?.pronounced || word,
+          meanings: entry.meanings?.flatMap((m: any) => m.glosses || [])
+        });
+      } else {
+        // Not cached, need to look up
+        wordsToLookup.push(word);
+      }
+    }
+
+    if (dictionary && wordsToLookup.length > 0) {
+      console.log(`[API] /api/batch-extract: Looking up ${wordsToLookup.length} new kana words (${uniqueKanaWords.size - wordsToLookup.length} from cache)`);
       const concurrencyLimit = 5;
       const results: { word: string; result: any }[] = [];
 
@@ -657,13 +675,13 @@ async function startServer() {
 
       await new Promise<void>((resolve, reject) => {
         const processNext = async () => {
-          if (index >= words.length && activeCount === 0) {
+          if (index >= wordsToLookup.length && activeCount === 0) {
             resolve();
             return;
           }
 
-          if (activeCount < concurrencyLimit && index < words.length) {
-            const word = words[index++];
+          if (activeCount < concurrencyLimit && index < wordsToLookup.length) {
+            const word = wordsToLookup[index++];
             activeCount++;
 
             try {
