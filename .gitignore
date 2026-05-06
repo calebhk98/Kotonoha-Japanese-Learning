@@ -9,6 +9,7 @@ coverage/
 # Cache files - ignore uncompressed, track compressed versions for instant setup
 .word-cache.json
 .jisho-cache.json
+.cache.db
 !.word-cache.json.gz
 !.jisho-cache.json.gz
 jmdict-all-3.6.2.json
