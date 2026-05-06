@@ -13,9 +13,11 @@ A smart vocabulary learning tool that analyzes Japanese content (stories, videos
 git clone https://github.com/calebhk98/Kotonoha-Japanese-Learning.git
 cd Kotonoha-Japanese-Learning
 
-# Install dependencies (Node.js 18+ required, Rust will auto-install if needed)
+# Install dependencies (Node.js 18+ required)
 npm install
 ```
+
+The install script automatically builds the **Sudachi WASM tokenizer** (a morphological analyzer that runs in your browser). If Rust isn't installed, it will be auto-installed during setup (~3-5 minutes total). This is needed to accurately break down Japanese text into words.
 
 ### Run the App
 
@@ -26,7 +28,7 @@ npm run dev
 
 Open your browser to **http://localhost:3000**
 
-> **Note**: First-time setup builds the Sudachi WASM tokenizer (~3-5 minutes). See [TOKENIZER_SETUP.md](TOKENIZER_SETUP.md) if you encounter issues.
+> **Troubleshooting**: If the tokenizer build fails, see [TOKENIZER_SETUP.md](TOKENIZER_SETUP.md) for detailed steps.
 
 ---
 
@@ -106,5 +108,7 @@ npm run preview
 ## Documentation
 
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Developer guide and contribution workflow
-- [STORIES_LIST.md](STORIES_LIST.md) - Complete story catalog
+- [STORIES_LIST.md](STORIES_LIST.md) - Complete story catalog (104 implemented stories)
+- [SONGS_LIST.md](SONGS_LIST.md) - Japanese songs for learning
+- [VIDEOS.md](VIDEOS.md) - Japanese videos and content recommendations
 - [TOKENIZER_SETUP.md](TOKENIZER_SETUP.md) - Tokenizer configuration and troubleshooting

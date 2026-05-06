@@ -133,6 +133,59 @@ npm run test
 npm run build
 ```
 
+## Scripts & Tools
+
+### NPM Scripts
+
+```bash
+npm run setup-sudachi       # Build/rebuild Sudachi WASM tokenizer (auto-runs on install)
+npm run setup-cache         # Initialize vocabulary cache from dictionaries
+npm run compress-cache      # Compress vocabulary cache for storage
+npm run dev                 # Start dev server with hot reload
+npm run start               # Start production server
+npm run build               # Build for production
+npm run preview             # Preview production build
+npm run lint                # Check TypeScript compilation
+npm run clean               # Remove build artifacts
+npm run test                # Run tests (if available)
+npm run test:watch          # Run tests in watch mode
+npm run test:stories        # Quick test of story functionality
+npm run test:stories:full   # Full test suite for all stories
+npm run add-story           # CLI: Add a new story interactively
+npm run migrate-stories     # Migrate old story format to new format
+```
+
+### Helper Scripts in `scripts/`
+
+These are utility scripts for development and maintenance:
+
+| Script | Purpose |
+|--------|---------|
+| `setup-sudachi.sh` | Downloads and builds Sudachi WASM tokenizer (runs automatically on `npm install`) |
+| `setup-cache.sh` | Decompresses and initializes vocabulary cache from dictionary files |
+| `compress-cache.sh` | Compresses the vocabulary cache for smaller file size |
+| `add-story.ts` | CLI tool to create a new story with template files |
+| `add-series.ts` | CLI tool to create a story series (for multi-episode content) |
+| `migrate-stories.ts` | Migrates stories to new folder structure/format |
+| `migrate-content-to-disk.ts` | Moves story content from database/memory to disk files |
+| `analyze-story.ts` | Analyzes a story for vocabulary, difficulty, word frequency |
+| `analyze-duplicates.ts` | Finds duplicate stories or content |
+| `analyze-filtering.ts` | Analyzes word filtering and scoring behavior |
+| `deduplicate-content.ts` | Removes duplicate stories/content |
+| `list-filtered-tokens.ts` | Lists tokens that match certain filters |
+| `setup-jmnedict.ts` | Sets up Japanese name dictionary |
+
+### Dictionary Files
+
+The following compressed dictionary files are in the root folder:
+
+| File | Size | Purpose |
+|------|------|---------|
+| `jmdict-all-3.6.2.json.tgz` | 25 MB | Japanese-English dictionary (JMdict format). Decompressed on first setup via `setup-cache.sh` |
+| `jmnedict.json.gz` | 8.8 MB | Japanese names dictionary. Used for proper name lookups |
+
+These files are automatically decompressed and processed into the vocabulary cache when you run `npm run setup-cache`. They provide the word definitions and readings used by the scoring system.
+
 ## Tokenizers
 
 The app supports multiple Japanese tokenizers. The default is **Sudachi WASM**.
