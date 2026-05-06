@@ -140,7 +140,6 @@ const dictionaryReady = (async () => {
 
   // Load decompressed cache files in the background (don't block server startup)
   const loadCachesInBackground = async () => {
-    const wordCacheFile = path.join(__dirname, '.word-cache.json');
     const jishoCacheFile = path.join(__dirname, '.jisho-cache.json');
 
     if (fs.existsSync(jishoCacheFile)) {
@@ -155,25 +154,6 @@ const dictionaryReady = (async () => {
         console.log(`[Cache] Loaded ${Object.keys(data).length} Jisho entries from .jisho-cache.json (${Date.now() - cacheStart}ms)`);
       } catch (e: any) {
         console.warn('[Cache] Failed to load Jisho cache:', e.message);
-      }
-    }
-
-    // Load word cache in background (this is large, ~390MB)
-    if (fs.existsSync(wordCacheFile)) {
-      try {
-        const cacheStart = Date.now();
-        console.log('[Cache] Starting to load word cache (this may take a minute)...');
-        const data = JSON.parse(fs.readFileSync(wordCacheFile, 'utf-8'));
-        let loadedCount = 0;
-        for (const [word, entries] of Object.entries(data)) {
-          if (!wordsCache.has(word)) {
-            wordsCache.set(word, entries as any);
-            loadedCount++;
-          }
-        }
-        console.log(`[Cache] Loaded ${loadedCount} words from .word-cache.json (${Date.now() - cacheStart}ms)`);
-      } catch (e: any) {
-        console.warn('[Cache] Failed to load word cache:', e.message);
       }
     }
   };
