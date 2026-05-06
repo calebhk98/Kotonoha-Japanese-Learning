@@ -119,45 +119,52 @@ export default function App() {
         const texts = ALL_CONTENT.map(c => ({ id: c.id, text: c.text }));
         console.log(`[App] Starting background vocabulary extraction for ${texts.length} stories`);
 
-        const res = await fetch("/api/batch-extract", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texts })
-        });
-
-        if (!res.ok) {
-          console.warn(`[App] Batch extract failed with status ${res.status}`);
-          return;
-        }
-
-        const results = await res.json();
-        const successful = results.filter((r: any) => !r.error);
-        console.log(`[App] Background extraction complete: ${successful.length}/${results.length} stories processed`);
-
-        // Update contentVocab state with extracted vocabulary
+        const CHUNK_SIZE = 20;
         const newVocab: Record<string, any[]> = {};
-        let addedCount = 0;
-        for (const result of results) {
-          if (result.words && Array.isArray(result.words)) {
-            // Apply WaniKani multipliers if available
-            let words = result.words;
-            if (wkData) {
-              words = applyWaniKaniToWords(words, wkData);
+        let totalProcessed = 0;
+
+        // Process in chunks to avoid payload size limits
+        for (let i = 0; i < texts.length; i += CHUNK_SIZE) {
+          const chunk = texts.slice(i, i + CHUNK_SIZE);
+          console.log(`[App] Processing chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(texts.length / CHUNK_SIZE)}`);
+
+          const res = await fetch("/api/batch-extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ texts: chunk })
+          });
+
+          if (!res.ok) {
+            console.warn(`[App] Batch extract chunk failed with status ${res.status}`);
+            continue;
+          }
+
+          const results = await res.json();
+          const successful = results.filter((r: any) => !r.error);
+
+          // Accumulate results
+          for (const result of results) {
+            if (result.words && Array.isArray(result.words)) {
+              let words = result.words;
+              if (wkData) {
+                words = applyWaniKaniToWords(words, wkData);
+              }
+              newVocab[result.id] = words;
+              totalProcessed++;
             }
-            newVocab[result.id] = words;
-            addedCount++;
+          }
+
+          // Update UI incrementally as chunks complete
+          if (Object.keys(newVocab).length > 0) {
+            setContentVocab(prev => {
+              const updated = { ...prev, ...newVocab };
+              localStorage.setItem('contentVocab', JSON.stringify(updated));
+              return updated;
+            });
           }
         }
 
-        if (addedCount > 0) {
-          setContentVocab(prev => {
-            const updated = { ...prev, ...newVocab };
-            localStorage.setItem('contentVocab', JSON.stringify(updated));
-            return updated;
-          });
-          console.log(`[App] Updated UI with vocabulary for ${addedCount} stories`);
-        }
-
+        console.log(`[App] Background extraction complete: ${totalProcessed}/${texts.length} stories processed`);
         setBatchExtractionAttempted(true);
       } catch (e) {
         console.error(`[App] Background extraction error:`, e);
