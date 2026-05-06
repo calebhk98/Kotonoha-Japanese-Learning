@@ -132,45 +132,54 @@ const dictionaryReady = (async () => {
   }
   console.log('[Dictionary] Initialization complete');
 
-  // Load decompressed cache files if they exist
-  const wordCacheFile = path.join(__dirname, '.word-cache.json');
-  const jishoCacheFile = path.join(__dirname, '.jisho-cache.json');
-
-  if (fs.existsSync(wordCacheFile)) {
-    try {
-      const cacheStart = Date.now();
-      const data = JSON.parse(fs.readFileSync(wordCacheFile, 'utf-8'));
-      for (const [word, entries] of Object.entries(data)) {
-        if (!wordsCache.has(word)) {
-          wordsCache.set(word, entries as any);
-        }
-      }
-      console.log(`[Cache] Loaded ${Object.keys(data).length} words from .word-cache.json (${Date.now() - cacheStart}ms)`);
-    } catch (e: any) {
-      console.warn('[Cache] Failed to load word cache:', e.message);
-    }
-  }
-
-  if (fs.existsSync(jishoCacheFile)) {
-    try {
-      const cacheStart = Date.now();
-      const data = JSON.parse(fs.readFileSync(jishoCacheFile, 'utf-8'));
-      for (const [word, result] of Object.entries(data)) {
-        if (!jishoCache.has(word)) {
-          jishoCache.set(word, result);
-        }
-      }
-      console.log(`[Cache] Loaded ${Object.keys(data).length} Jisho entries from .jisho-cache.json (${Date.now() - cacheStart}ms)`);
-    } catch (e: any) {
-      console.warn('[Cache] Failed to load Jisho cache:', e.message);
-    }
-  }
-
   // Pre-load all cached words from database into memory for fast lookups
   const preloadStart = Date.now();
   wordsCache.preload();
   const preloadTime = Date.now() - preloadStart;
   console.log(`[Server] Pre-loaded ${wordsCache.size} words and ${jishoCache.size} Jisho entries from database (${preloadTime}ms)`);
+
+  // Load decompressed cache files in the background (don't block server startup)
+  const loadCachesInBackground = async () => {
+    const wordCacheFile = path.join(__dirname, '.word-cache.json');
+    const jishoCacheFile = path.join(__dirname, '.jisho-cache.json');
+
+    if (fs.existsSync(jishoCacheFile)) {
+      try {
+        const cacheStart = Date.now();
+        const data = JSON.parse(fs.readFileSync(jishoCacheFile, 'utf-8'));
+        for (const [word, result] of Object.entries(data)) {
+          if (!jishoCache.has(word)) {
+            jishoCache.set(word, result);
+          }
+        }
+        console.log(`[Cache] Loaded ${Object.keys(data).length} Jisho entries from .jisho-cache.json (${Date.now() - cacheStart}ms)`);
+      } catch (e: any) {
+        console.warn('[Cache] Failed to load Jisho cache:', e.message);
+      }
+    }
+
+    // Load word cache in background (this is large, ~390MB)
+    if (fs.existsSync(wordCacheFile)) {
+      try {
+        const cacheStart = Date.now();
+        console.log('[Cache] Starting to load word cache (this may take a minute)...');
+        const data = JSON.parse(fs.readFileSync(wordCacheFile, 'utf-8'));
+        let loadedCount = 0;
+        for (const [word, entries] of Object.entries(data)) {
+          if (!wordsCache.has(word)) {
+            wordsCache.set(word, entries as any);
+            loadedCount++;
+          }
+        }
+        console.log(`[Cache] Loaded ${loadedCount} words from .word-cache.json (${Date.now() - cacheStart}ms)`);
+      } catch (e: any) {
+        console.warn('[Cache] Failed to load word cache:', e.message);
+      }
+    }
+  };
+
+  // Load caches in background so server isn't blocked
+  loadCachesInBackground().catch(e => console.error('[Cache] Background loading error:', e));
 })();
 
 
