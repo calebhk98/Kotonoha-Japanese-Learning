@@ -132,6 +132,40 @@ const dictionaryReady = (async () => {
   }
   console.log('[Dictionary] Initialization complete');
 
+  // Load decompressed cache files if they exist
+  const wordCacheFile = path.join(__dirname, '.word-cache.json');
+  const jishoCacheFile = path.join(__dirname, '.jisho-cache.json');
+
+  if (fs.existsSync(wordCacheFile)) {
+    try {
+      const cacheStart = Date.now();
+      const data = JSON.parse(fs.readFileSync(wordCacheFile, 'utf-8'));
+      for (const [word, entries] of Object.entries(data)) {
+        if (!wordsCache.has(word)) {
+          wordsCache.set(word, entries as any);
+        }
+      }
+      console.log(`[Cache] Loaded ${Object.keys(data).length} words from .word-cache.json (${Date.now() - cacheStart}ms)`);
+    } catch (e: any) {
+      console.warn('[Cache] Failed to load word cache:', e.message);
+    }
+  }
+
+  if (fs.existsSync(jishoCacheFile)) {
+    try {
+      const cacheStart = Date.now();
+      const data = JSON.parse(fs.readFileSync(jishoCacheFile, 'utf-8'));
+      for (const [word, result] of Object.entries(data)) {
+        if (!jishoCache.has(word)) {
+          jishoCache.set(word, result);
+        }
+      }
+      console.log(`[Cache] Loaded ${Object.keys(data).length} Jisho entries from .jisho-cache.json (${Date.now() - cacheStart}ms)`);
+    } catch (e: any) {
+      console.warn('[Cache] Failed to load Jisho cache:', e.message);
+    }
+  }
+
   // Pre-load all cached words from database into memory for fast lookups
   const preloadStart = Date.now();
   wordsCache.preload();
@@ -226,8 +260,30 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
           };
         }
       } else {
-        // Fall back to batch cache or dictionary lookup
-        dictResult = kanaLookupCache?.get(wordStr) ?? await dictionary.lookup(wordStr);
+        // Try batch cache first, then dictionary lookup
+        dictResult = kanaLookupCache?.get(wordStr);
+        if (!dictResult) {
+          dictResult = await dictionary.lookup(wordStr);
+          // Save to batch cache for reuse within this request
+          if (dictResult) {
+            kanaLookupCache?.set(wordStr, dictResult);
+          }
+        }
+
+        // Save dictionary result to persistent cache for future requests
+        if (dictResult) {
+          const entry: DictionaryEntry = {
+            meanings: (dictResult.meanings || [dictResult.meaning])
+              .filter(Boolean)
+              .map((m: string) => ({ glosses: [m] })),
+            variants: [{
+              pronounced: dictResult.reading || wordStr,
+              written: wordStr,
+              priorities: []
+            }]
+          };
+          wordsCache.set(wordStr, [entry]);
+        }
       }
 
       if (dictResult) {
