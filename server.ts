@@ -602,6 +602,7 @@ async function startServer() {
     }
 
     const batchStart = Date.now();
+    wordsCache.resetStats();
     console.log(`[API] /api/batch-extract: Processing ${texts.length} items (cache: ${wordsCache.size} words)`);
 
     // Sort by text length (shorter first) for faster initial cache warmup
@@ -721,8 +722,10 @@ async function startServer() {
     );
     const processTime = Date.now() - processStart;
     const totalTime = Date.now() - batchStart;
+    const cacheStats = wordsCache.getStats();
 
     console.log(`[API] /api/batch-extract: Text processing complete (${processTime}ms)`);
+    console.log(`[Cache] Hit rate: ${cacheStats.hits}/${cacheStats.hits + cacheStats.misses} (${cacheStats.hitRate}%)`);
     console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words (total: ${totalTime}ms)`);
     res.json(results);
   });

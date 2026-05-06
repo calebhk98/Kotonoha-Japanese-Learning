@@ -59,6 +59,8 @@ export function saveDatabase() {
 export class WordsCache {
   private memoryCache: Map<string, DictionaryEntry[]> = new Map();
   private isPreloaded = false;
+  private cacheHits = 0;
+  private cacheMisses = 0;
 
   set(key: string, value: DictionaryEntry[]) {
     if (!db) throw new Error('Database not initialized');
@@ -73,6 +75,7 @@ export class WordsCache {
     if (!db) throw new Error('Database not initialized');
     // Check memory cache first (fast path)
     if (this.memoryCache.has(key)) {
+      this.cacheHits++;
       return this.memoryCache.get(key);
     }
 
@@ -82,10 +85,12 @@ export class WordsCache {
       [key]
     );
     if (result.length === 0 || result[0].values.length === 0) {
+      this.cacheMisses++;
       return undefined;
     }
     const entries = JSON.parse(result[0].values[0][0] as string);
     this.memoryCache.set(key, entries);
+    this.cacheHits++;
     return entries;
   }
 
@@ -108,6 +113,8 @@ export class WordsCache {
     if (!db) throw new Error('Database not initialized');
     db.run('DELETE FROM words_cache');
     this.memoryCache.clear();
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
   }
 
   entries(): [string, DictionaryEntry[]][] {
@@ -141,6 +148,17 @@ export class WordsCache {
       }
     }
     this.isPreloaded = true;
+  }
+
+  resetStats(): void {
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
+  }
+
+  getStats(): { hits: number; misses: number; hitRate: number } {
+    const total = this.cacheHits + this.cacheMisses;
+    const hitRate = total > 0 ? Math.round((this.cacheHits / total) * 100) : 0;
+    return { hits: this.cacheHits, misses: this.cacheMisses, hitRate };
   }
 }
 

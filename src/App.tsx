@@ -116,7 +116,7 @@ export default function App() {
   useEffect(() => {
     const batchExtract = async () => {
       // Helper function to fetch with retry logic
-      const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3) => {
+      const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 10) => {
         let lastError: any;
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
@@ -132,10 +132,15 @@ export default function App() {
             lastError = e;
           }
 
-          // Exponential backoff: 1s, 2s, 4s
+          // Exponential backoff: 5s, 15s, 30s, 60s, 120s, 300s, 600s, 900s, 1200s, 1800s
           if (attempt < maxRetries - 1) {
-            const delayMs = Math.pow(2, attempt) * 1000;
-            console.log(`[App] Request failed, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries - 1})`);
+            const backoffMultipliers = [5, 15, 30, 60, 120, 300, 600, 900, 1200, 1800];
+            const delaySeconds = backoffMultipliers[Math.min(attempt, backoffMultipliers.length - 1)];
+            const delayMs = delaySeconds * 1000;
+            const minutes = Math.floor(delaySeconds / 60);
+            const seconds = delaySeconds % 60;
+            const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+            console.log(`[App] 504 error, retrying in ${timeStr} (attempt ${attempt + 1}/${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, delayMs));
           }
         }
