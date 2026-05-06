@@ -115,6 +115,33 @@ export default function App() {
   // Re-runs if cache is cleared (when contentVocab becomes empty)
   useEffect(() => {
     const batchExtract = async () => {
+      // Helper function to fetch with retry logic
+      const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3) => {
+        let lastError: any;
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            const res = await fetch(url, options);
+            if (res.ok) return res;
+
+            // Only retry on 504 Gateway Timeout, not other errors
+            if (res.status !== 504) {
+              return res;
+            }
+            lastError = new Error(`504 Gateway Timeout`);
+          } catch (e) {
+            lastError = e;
+          }
+
+          // Exponential backoff: 1s, 2s, 4s
+          if (attempt < maxRetries - 1) {
+            const delayMs = Math.pow(2, attempt) * 1000;
+            console.log(`[App] Request failed, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries - 1})`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+        }
+        throw lastError || new Error(`Failed after ${maxRetries} attempts`);
+      };
+
       try {
         const texts = ALL_CONTENT.map(c => ({ id: c.id, text: c.text }));
         console.log(`[App] Starting background vocabulary extraction for ${texts.length} stories`);
@@ -124,42 +151,54 @@ export default function App() {
         let totalProcessed = 0;
 
         // Process in chunks to avoid payload size limits
+        // Add delay between chunks to avoid overwhelming server
         for (let i = 0; i < texts.length; i += CHUNK_SIZE) {
           const chunk = texts.slice(i, i + CHUNK_SIZE);
-          console.log(`[App] Processing chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(texts.length / CHUNK_SIZE)}`);
+          const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+          const totalChunks = Math.ceil(texts.length / CHUNK_SIZE);
+          console.log(`[App] Processing chunk ${chunkNum}/${totalChunks}`);
 
-          const res = await fetch("/api/batch-extract", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ texts: chunk })
-          });
-
-          if (!res.ok) {
-            console.warn(`[App] Batch extract chunk failed with status ${res.status}`);
-            continue;
-          }
-
-          const results = await res.json();
-          const successful = results.filter((r: any) => !r.error);
-
-          // Accumulate results
-          for (const result of results) {
-            if (result.words && Array.isArray(result.words)) {
-              let words = result.words;
-              if (wkData) {
-                words = applyWaniKaniToWords(words, wkData);
-              }
-              newVocab[result.id] = words;
-              totalProcessed++;
-            }
-          }
-
-          // Update UI incrementally as chunks complete
-          if (Object.keys(newVocab).length > 0) {
-            setContentVocab(prev => {
-              const updated = { ...prev, ...newVocab };
-              return updated;
+          try {
+            const res = await fetchWithRetry("/api/batch-extract", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ texts: chunk })
             });
+
+            if (!res.ok) {
+              console.warn(`[App] Batch extract chunk ${chunkNum} failed with status ${res.status}`);
+              continue;
+            }
+
+            const results = await res.json();
+
+            // Accumulate results
+            for (const result of results) {
+              if (result.words && Array.isArray(result.words)) {
+                let words = result.words;
+                if (wkData) {
+                  words = applyWaniKaniToWords(words, wkData);
+                }
+                newVocab[result.id] = words;
+                totalProcessed++;
+              }
+            }
+
+            // Update UI incrementally as chunks complete
+            if (Object.keys(newVocab).length > 0) {
+              setContentVocab(prev => {
+                const updated = { ...prev, ...newVocab };
+                return updated;
+              });
+            }
+          } catch (chunkError) {
+            console.error(`[App] Failed to process chunk ${chunkNum}:`, chunkError);
+          }
+
+          // Add delay between chunks (except after the last one) to avoid server overload
+          // Each chunk takes ~2+ minutes to process, so use longer delays
+          if (i + CHUNK_SIZE < texts.length) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
           }
         }
 
@@ -167,6 +206,7 @@ export default function App() {
         setBatchExtractionAttempted(true);
       } catch (e) {
         console.error(`[App] Background extraction error:`, e);
+        setBatchExtractionAttempted(true);
       }
     };
 
