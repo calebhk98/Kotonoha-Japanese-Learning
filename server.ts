@@ -215,7 +215,9 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   let cacheHits = 0;
   let cacheMisses = 0;
   const results = [];
+  const processedWords: string[] = [];
   for (const [wordStr, baseForm] of validWords) {
+    processedWords.push(wordStr);
     const start = Date.now();
     // Try to look up using baseForm first (for conjugated verbs), then fall back to wordStr
     const cacheHadBase = wordsCache.has(baseForm);
@@ -334,6 +336,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     results.push(morphemeData);
   }
 
+  console.log(`[API] Words processed: [${processedWords.join(', ')}] (${processedWords.length} total)`);
   console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
 
   return results;
@@ -368,7 +371,9 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
   let cacheHits = 0;
   let cacheMisses = 0;
   const results = [];
+  const processedWords: string[] = [];
   for (const [wordStr, baseForm] of validWords) {
+    processedWords.push(wordStr);
     const start = Date.now();
     // Try to look up using baseForm first (for conjugated verbs), then fall back to wordStr
     const cacheHadBase = wordsCache.has(baseForm);
@@ -464,6 +469,7 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     results.push(morphemeData);
   }
 
+  console.log(`[API] Words processed: [${processedWords.join(', ')}] (${processedWords.length} total)`);
   console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
 
   return results;
