@@ -158,7 +158,6 @@ export default function App() {
           if (Object.keys(newVocab).length > 0) {
             setContentVocab(prev => {
               const updated = { ...prev, ...newVocab };
-              localStorage.setItem('contentVocab', JSON.stringify(updated));
               return updated;
             });
           }
