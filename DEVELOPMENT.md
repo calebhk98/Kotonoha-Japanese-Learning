@@ -25,6 +25,48 @@ Kotonoha-Japanese-Learning/
 └── README.md                # Main documentation
 ```
 
+## Root Files Reference
+
+### Documentation
+- **README.md** - Main user-facing documentation with getting started instructions
+- **DEVELOPMENT.md** - This file: developer guide and contribution workflow
+- **STORIES_LIST.md** - Catalog of all 104 implemented stories with completion status
+- **SONGS_LIST.md** - Curated list of Japanese songs for learning vocabulary
+- **VIDEOS.md** - Recommended Japanese videos and streaming content
+- **TOKENIZER_SETUP.md** - Installation troubleshooting and configuration guide for tokenizers
+- **TOKENIZER_ANALYSIS.md** - Technical analysis comparing different tokenizer implementations
+
+### Configuration & Build
+- **package.json** - NPM dependencies, project scripts (dev, build, test, etc), project metadata
+- **package-lock.json** - Locked versions of all dependencies for reproducible installs
+- **tsconfig.json** - TypeScript compiler options and settings
+- **vite.config.ts** - Vite bundler configuration (development server, build settings)
+- **sudachi.json** - Sudachi tokenizer configuration and options
+
+### Source Code
+- **server.ts** - Express.js backend server
+  - API endpoints for story retrieval, text analysis, dictionary lookups
+  - Serves the frontend React app
+  - Handles tokenization requests
+- **index.html** - HTML entry point for the web application (loads React)
+- **populate-cache.ts** - Utility to pre-populate the vocabulary cache (run via `npx tsx`)
+
+### Tokenizer & Text Processing
+- **char.def** - Character definition file used by Sudachi for morphological analysis
+- **tokenizer-comparison.ts** - Utility script to test and compare different tokenizers (for development/debugging)
+- **script.cjs** - CommonJS helper script for node operations
+
+### Dictionary Data (Compressed)
+- **jmdict-all-3.6.2.json.tgz** (25 MB) - Japanese-English dictionary (JMdict format)
+  - Automatically decompressed by `setup-cache.sh` on first setup
+  - Used for word lookups and definitions
+- **jmnedict.json.gz** (8.8 MB) - Japanese names dictionary (JMnedict format)
+  - For proper name recognition and reading
+
+### Other
+- **metadata.json** - Project metadata file
+- **sudachi-wasm-built/** - Directory containing compiled Sudachi WASM tokenizer (created during `npm install`)
+
 ## Story Structure
 
 Each story is a folder in `src/stories/` with this structure:
