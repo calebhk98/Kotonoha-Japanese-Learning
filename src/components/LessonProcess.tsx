@@ -1,20 +1,21 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { WordInfo } from '../types';
 import { X, Check } from 'lucide-react';
 
-export function LessonProcess({ 
-  words, 
-  onComplete, 
-  onCancel 
-}: { 
-  words: WordInfo[]; 
-  onComplete: (learned: string[]) => void; 
-  onCancel: () => void; 
+export function LessonProcess({
+  words,
+  onComplete,
+  onCancel
+}: {
+  words: WordInfo[];
+  onComplete: (learned: string[]) => void;
+  onCancel: () => void;
 }) {
   const [queue, setQueue] = useState<WordInfo[]>(() => words.slice(0, 50));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [learnedWords, setLearnedWords] = useState<string[]>([]);
+  const [pendingAction, setPendingAction] = useState<{learned: boolean} | null>(null);
   
   if (queue.length === 0) {
     return (
@@ -36,24 +37,38 @@ export function LessonProcess({
   // Calculate progress on the original size, or the current index relative to the total queue (including repeats)
   const isLast = currentIndex === queue.length - 1;
 
+  useEffect(() => {
+    if (pendingAction !== null && !showAnswer) {
+      // Animation completed, now process the action
+      const timer = setTimeout(() => {
+        let nextQueue = [...queue];
+        const learned = pendingAction.learned;
+        const updatedLearned = learned ? [...learnedWords, currentWord.word] : learnedWords;
+
+        if (learned) {
+          setLearnedWords(updatedLearned);
+        } else {
+          // Put it at the end of the line
+          nextQueue.push(currentWord);
+          setQueue(nextQueue);
+        }
+
+        if (currentIndex + 1 >= nextQueue.length) {
+          onComplete(updatedLearned);
+        } else {
+          setCurrentIndex(prev => prev + 1);
+        }
+
+        setPendingAction(null);
+      }, 500); // Match the CSS transition duration
+
+      return () => clearTimeout(timer);
+    }
+  }, [pendingAction, showAnswer, currentIndex, queue, learnedWords, currentWord, onComplete]);
+
   const handleNext = (learned: boolean) => {
-    let nextQueue = [...queue];
-    const updatedLearned = learned ? [...learnedWords, currentWord.word] : learnedWords;
-    
-    if (learned) {
-      setLearnedWords(updatedLearned);
-    } else {
-      // Put it at the end of the line
-      nextQueue.push(currentWord);
-      setQueue(nextQueue);
-    }
-    
-    if (currentIndex + 1 >= nextQueue.length) {
-      onComplete(updatedLearned);
-    } else {
-      setCurrentIndex(prev => prev + 1);
-      setShowAnswer(false);
-    }
+    setShowAnswer(false);
+    setPendingAction({ learned });
   };
 
   return (
