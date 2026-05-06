@@ -570,8 +570,11 @@ async function startServer() {
     saveJishoCacheToDisk();
   }, 30000);
 
+  // Log only non-asset requests to reduce noise
   app.use((req, _res, next) => {
-    console.log(`[Server] ${req.method} ${req.path}`);
+    if (!req.path.match(/\.(js|css|map|json|woff|woff2|ttf|svg)$/)) {
+      console.log(`[Server] ${req.method} ${req.path}`);
+    }
     next();
   });
 
