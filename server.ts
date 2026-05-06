@@ -628,6 +628,13 @@ async function startServer() {
 
       for (const { word, result } of results) {
         kanaLookupCache.set(word, result);
+        // Save kana lookups to persistent cache so they don't need API calls again
+        if (result) {
+          wordsCache.set(word, [{
+            meanings: [{ glosses: [result.meaning || 'Unknown'] }],
+            variants: [{ pronounced: result.reading || word, written: word }]
+          } as any]);
+        }
       }
     }
     const lookupTime = Date.now() - lookupStart;
