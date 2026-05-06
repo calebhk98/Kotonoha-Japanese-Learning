@@ -27,9 +27,23 @@ The app will be available at `http://localhost:3000`.
 
 > **Note**: First-time setup automatically installs Rust and builds the Sudachi WASM tokenizer (~3-5 minutes). See [TOKENIZER_SETUP.md](TOKENIZER_SETUP.md) for detailed instructions and troubleshooting.
 
+## Content Library
+
+The app includes **104 curated Japanese stories** organized by difficulty level:
+
+- **Classic Folktales** (16): Momotaro, Urashima Taro, Kaguya-hime, and more
+- **N5 Everyday Stories** (57): Daily routines, school, food, nature, holidays, and more
+- **N5-N4 Transition Classics** (13): Literary works from Akutagawa, Natsume Soseki, Miyazawa Kenji
+- **Aesop's Fables** (7): Western classics adapted to Japanese
+- **Themed Stories** (11): Seasonal, personal life, and specialized topics
+
+See [STORIES_LIST.md](STORIES_LIST.md) for the complete catalog.
+
 ## How It Works
 
-1. **Local Processing**: Japanese text is tokenized using **Sudachi WASM** (a WebAssembly tokenizer with 83% accuracy on hiragana words)
+1. **Local Tokenization**: Japanese text is tokenized using **Sudachi WASM** by default (a morphological analyzer running as WebAssembly)
+   - Multiple tokenizers available: Sudachi WASM (default), Sudachi-TS, Lindera, Kuromoji, TinySegmenter
+   - Configure via `TOKENIZER` environment variable
 2. **Word Dictionary**: Words are looked up in the `kanji-data` dictionary to determine meanings and readings
 3. **Scoring System**:
    - **JLPT Points**: N5 (+15) → N1 (+100) based on kanji difficulty
@@ -51,7 +65,9 @@ npm preview
 
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
 - **Backend**: Express.js
-- **Libraries**: kuromoji (tokenizer), kanji-data (dictionary), lucide-react (icons)
+- **Tokenization**: Sudachi WASM (default), Sudachi-TS, Lindera, Kuromoji, TinySegmenter
+- **Dictionary**: kanji-data
+- **UI**: lucide-react (icons)
 
 ## Development Scripts
 
