@@ -180,7 +180,7 @@ export default function App() {
       const timer = setTimeout(batchExtract, 500);
       return () => clearTimeout(timer);
     }
-  }, [ALL_CONTENT.length, batchExtractionAttempted, wkData];
+  }, [ALL_CONTENT.length, batchExtractionAttempted, wkData]);
 
   // Sort and filter content (#11, #12, #13)
   const sortedContent = useMemo(() => {
