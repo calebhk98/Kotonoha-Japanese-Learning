@@ -196,8 +196,9 @@ export default function App() {
           }
 
           // Add delay between chunks (except after the last one) to avoid server overload
+          // Each chunk takes ~2+ minutes to process, so use longer delays
           if (i + CHUNK_SIZE < texts.length) {
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 5000));
           }
         }
 
