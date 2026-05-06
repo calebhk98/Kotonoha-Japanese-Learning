@@ -23,6 +23,7 @@ import { DictionaryManager } from "./src/lib/dictionary.js";
 import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 import { getMorphemeDefinition } from "./src/lib/morphemeDefinitions.js";
+import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk } from "./src/lib/storyLoader.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -928,6 +929,19 @@ async function startServer() {
       res.json({ data: result, kanjiCount: Object.keys(result).length });
     } catch (e: any) {
       console.error('[WaniKani] sync error:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/content", (req, res) => {
+    try {
+      const stories = loadStoriesFromDisk();
+      const music = loadMusicFromDisk();
+      const videos = loadVideosFromDisk();
+      const allContent = [...stories, ...music, ...videos];
+      res.json(allContent);
+    } catch (e: any) {
+      console.error('[API Error] /api/content failed:', e.message);
       res.status(500).json({ error: e.message });
     }
   });

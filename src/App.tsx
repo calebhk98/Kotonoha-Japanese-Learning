@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BookOpen, Video, Music, CheckCircle, ChevronRight, PlayCircle, Loader2, Library, Plus, Settings, Search, X } from 'lucide-react';
-import { INITIAL_CONTENT, GENERATED_CONTENT, Content } from './data/content';
+import { Content } from './data/content';
 import { useContentData, applyWaniKaniToWords } from './hooks/useContentData';
 import { ContentDetail } from './components/ContentDetail';
 import { ImportModal } from './components/ImportModal';
@@ -35,6 +35,7 @@ export default function App() {
       return [];
     }
   });
+  const [diskContent, setDiskContent] = useState<Content[]>([]);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [displayCount, setDisplayCount] = useState(12);
@@ -42,6 +43,25 @@ export default function App() {
   const [showImportOpts, setShowImportOpts] = useState(false);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
   const [editingWord, setEditingWord] = useState<WordInfo | null>(null);
+
+  // Fetch content from disk-based system
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const response = await fetch('/api/content');
+        if (!response.ok) {
+          console.error(`Failed to fetch content: ${response.status}`);
+          return;
+        }
+        const data = await response.json();
+        setDiskContent(Array.isArray(data) ? data : []);
+        console.log(`[App] Loaded ${data.length} content items from server`);
+      } catch (error) {
+        console.error('Failed to fetch content from server:', error);
+      }
+    };
+    fetchContent();
+  }, []);
 
   // Filter state for home view (#12, #13)
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,10 +99,10 @@ export default function App() {
 
   const ALL_CONTENT = useMemo(() => {
     const map = new Map<string, Content>();
-    for (const c of INITIAL_CONTENT) map.set(c.id, c);
+    for (const c of diskContent) map.set(c.id, c);
     for (const c of customContent) map.set(c.id, c);
     return Array.from(map.values());
-  }, [customContent]);
+  }, [diskContent, customContent]);
 
   useEffect(() => {
     localStorage.setItem('customContent', JSON.stringify(customContent));
@@ -225,7 +245,7 @@ export default function App() {
              updatedVocab = true;
           }
 
-          if (!INITIAL_CONTENT.find(c => c.id === updatedContent.id)) {
+          if (!diskContent.find(c => c.id === updatedContent.id)) {
              setCustomContent(prev => prev.map(c => c.id === updatedContent.id ? updatedContent : c));
           } else {
              // Let's copy the Initial content to custom if edited? Or forbid?
@@ -615,7 +635,7 @@ export default function App() {
                             localStorage.setItem('contentVocab', JSON.stringify(newVocab));
 
                             // Also save the custom content if it's not a pre-installed one
-                            if (!INITIAL_CONTENT.find(c => c.id === storyId)) {
+                            if (!diskContent.find(c => c.id === storyId)) {
                                const savedCustom = localStorage.getItem('customContent');
                                let customArr = savedCustom ? JSON.parse(savedCustom) : [];
                                const existIdx = customArr.findIndex((c: any) => c.id === storyId);
