@@ -158,22 +158,95 @@ const dictionaryReady = (async () => {
       }
     }
 
-    // Load word cache in background (this is large, ~390MB)
+    // Load word cache using streaming to avoid memory issues
     if (fs.existsSync(wordCacheFile)) {
       try {
         const cacheStart = Date.now();
-        console.log('[Cache] Starting to load word cache (this may take a minute)...');
-        const data = JSON.parse(fs.readFileSync(wordCacheFile, 'utf-8'));
-        let loadedCount = 0;
-        for (const [word, entries] of Object.entries(data)) {
-          if (!wordsCache.has(word)) {
-            wordsCache.set(word, entries as any);
-            loadedCount++;
-          }
-        }
-        console.log(`[Cache] Loaded ${loadedCount} words from .word-cache.json (${Date.now() - cacheStart}ms)`);
+        console.log('[Cache] Starting to load word cache using streaming...');
+
+        await new Promise<void>((resolve, reject) => {
+          let buffer = '';
+          let loadedCount = 0;
+          let depth = 0;
+          let inString = false;
+          let escaped = false;
+          let entryStart = 0;
+
+          const stream = fs.createReadStream(wordCacheFile, {
+            encoding: 'utf8',
+            highWaterMark: 64 * 1024 // 64KB chunks
+          });
+
+          stream.on('data', (chunk: string) => {
+            buffer += chunk;
+
+            // Process complete entries from buffer
+            let i = 0;
+            while (i < buffer.length) {
+              const char = buffer[i];
+
+              if (escaped) {
+                escaped = false;
+                i++;
+                continue;
+              }
+
+              if (char === '\\') {
+                escaped = true;
+                i++;
+                continue;
+              }
+
+              if (char === '"' && depth > 0) {
+                inString = !inString;
+              }
+
+              if (!inString) {
+                if (char === '{') {
+                  if (depth === 1) entryStart = i; // Mark start of entry
+                  depth++;
+                } else if (char === '}') {
+                  depth--;
+
+                  // Complete entry found
+                  if (depth === 1) {
+                    try {
+                      const entryText = buffer.substring(entryStart, i + 1);
+                      const parsed = JSON.parse(`{${entryText}}`);
+                      for (const [word, entries] of Object.entries(parsed)) {
+                        if (!wordsCache.has(word)) {
+                          wordsCache.set(word, entries as any);
+                          loadedCount++;
+                        }
+                      }
+                    } catch (e) {
+                      // Skip malformed entries
+                    }
+
+                    // Remove processed entry from buffer
+                    buffer = buffer.substring(i + 1);
+                    i = 0;
+                    continue;
+                  }
+                }
+              }
+
+              i++;
+            }
+          });
+
+          stream.on('end', () => {
+            console.log(`[Cache] Loaded ${loadedCount} words from .word-cache.json (${Date.now() - cacheStart}ms)`);
+            resolve();
+          });
+
+          stream.on('error', (e: any) => {
+            console.warn('[Cache] Failed to load word cache:', e.message);
+            reject(e);
+          });
+        });
       } catch (e: any) {
-        console.warn('[Cache] Failed to load word cache:', e.message);
+        console.warn('[Cache] Failed to initialize word cache streaming:', e.message);
       }
     }
   };
