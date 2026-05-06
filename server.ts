@@ -586,89 +586,60 @@ async function startServer() {
       }
     }
 
-    // Look up kana words - check local dictionary first, only API for missing ones
+    // Look up kana words via API with concurrency limit (KanjiData has wrong defs for pure kana)
     const lookupStart = Date.now();
+    console.log(`[API] /api/batch-extract: Looking up ${uniqueKanaWords.size} unique kana words with concurrency limit`);
     const kanaLookupCache = new Map<string, any>();
-    let apiWordsNeeded = 0;
-
-    if (uniqueKanaWords.size > 0) {
+    if (dictionary && uniqueKanaWords.size > 0) {
       const words = Array.from(uniqueKanaWords);
+      const concurrencyLimit = 5;
+      const results: { word: string; result: any }[] = [];
 
-      // First pass: check local dictionary
-      const needsAPI: string[] = [];
-      for (const word of words) {
-        // Check local cache first
-        if (wordsCache.has(word)) {
-          const entries = wordsCache.get(word)!;
-          kanaLookupCache.set(word, { meaning: entries[0]?.meanings[0]?.glosses[0], reading: entries[0]?.variants[0]?.pronounced });
-        } else {
-          // Check KanjiData (already loaded in getCachedDictionaryEntries)
-          const entries = getCachedDictionaryEntries(word);
-          if (entries.length > 0) {
-            const meaning = entries[0].meanings[0]?.glosses?.join(", ");
-            const reading = entries[0].variants?.[0]?.pronounced || word;
-            kanaLookupCache.set(word, { meaning, reading });
-          } else {
-            // Not in local dictionary, will need API
-            needsAPI.push(word);
+      let activeCount = 0;
+      let index = 0;
+
+      await new Promise<void>((resolve, reject) => {
+        const processNext = async () => {
+          if (index >= words.length && activeCount === 0) {
+            resolve();
+            return;
           }
+
+          if (activeCount < concurrencyLimit && index < words.length) {
+            const word = words[index++];
+            activeCount++;
+
+            try {
+              const result = await dictionary.lookup(word);
+              results.push({ word, result });
+            } catch (e) {
+              results.push({ word, result: null });
+            } finally {
+              activeCount--;
+              processNext().catch(reject);
+            }
+          }
+        };
+
+        for (let i = 0; i < concurrencyLimit; i++) {
+          processNext().catch(reject);
         }
-      }
+      });
 
-      apiWordsNeeded = needsAPI.length;
-
-      // Second pass: look up only words not found locally
-      if (dictionary && needsAPI.length > 0) {
-        console.log(`[API] /api/batch-extract: Looking up ${needsAPI.length} kana words via API (${uniqueKanaWords.size - needsAPI.length} found locally)`);
-        const concurrencyLimit = 5;
-        const results: { word: string; result: any }[] = [];
-
-        let activeCount = 0;
-        let index = 0;
-
-        await new Promise<void>((resolve, reject) => {
-          const processNext = async () => {
-            if (index >= needsAPI.length && activeCount === 0) {
-              resolve();
-              return;
-            }
-
-            if (activeCount < concurrencyLimit && index < needsAPI.length) {
-              const word = needsAPI[index++];
-              activeCount++;
-
-              try {
-                const result = await dictionary.lookup(word);
-                results.push({ word, result });
-              } catch (e) {
-                results.push({ word, result: null });
-              } finally {
-                activeCount--;
-                processNext().catch(reject);
-              }
-            }
-          };
-
-          for (let i = 0; i < concurrencyLimit; i++) {
-            processNext().catch(reject);
-          }
-        });
-
-        for (const { word, result } of results) {
-          if (result) {
-            kanaLookupCache.set(word, result);
-            // Save to persistent cache
-            wordsCache.set(word, [{
-              meanings: [{ glosses: [result.meaning || 'Unknown'] }],
-              variants: [{ pronounced: result.reading || word, written: word }]
-            } as any]);
-          }
+      for (const { word, result } of results) {
+        kanaLookupCache.set(word, result);
+        // Save kana lookups to persistent cache so they don't need API calls again
+        if (result) {
+          wordsCache.set(word, [{
+            meanings: [{ glosses: [result.meaning || 'Unknown'] }],
+            variants: [{ pronounced: result.reading || word, written: word }]
+          } as any]);
         }
       }
     }
     const lookupTime = Date.now() - lookupStart;
     const foundCount = Array.from(kanaLookupCache.values()).filter(v => v !== null).length;
-    console.log(`[API] /api/batch-extract: Kana lookup complete (${lookupTime}ms, ${foundCount}/${uniqueKanaWords.size} found, ${apiWordsNeeded} needed API)`);
+    console.log(`[API] /api/batch-extract: Kana lookup complete (${lookupTime}ms, ${foundCount}/${uniqueKanaWords.size} found)`);
 
     // Process texts with pre-looked-up kana cache
     const processStart = Date.now();
