@@ -158,27 +158,30 @@ const dictionaryReady = (async () => {
       }
     }
 
-    // Load word cache using streaming to avoid memory issues
-    if (fs.existsSync(wordCacheFile)) {
+    // Load word cache from compressed file with streaming decompression
+    const wordCacheGzFile = path.join(__dirname, '.word-cache.json.gz');
+    if (fs.existsSync(wordCacheGzFile)) {
       try {
+        const zlib = await import('zlib');
         const cacheStart = Date.now();
-        console.log('[Cache] Starting to load word cache using streaming...');
+        console.log('[Cache] Starting to load word cache from compressed file...');
 
         await new Promise<void>((resolve, reject) => {
           let buffer = '';
           let loadedCount = 0;
-          let depth = 0;
+          let braceCount = 0;
           let inString = false;
           let escaped = false;
-          let entryStart = 0;
+          let objectStart = 0;
 
-          const stream = fs.createReadStream(wordCacheFile, {
-            encoding: 'utf8',
-            highWaterMark: 64 * 1024 // 64KB chunks
-          });
+          const gunzip = zlib.createGunzip();
+          const stream = fs.createReadStream(wordCacheGzFile);
 
-          stream.on('data', (chunk: string) => {
-            buffer += chunk;
+          stream.on('error', reject);
+          gunzip.on('error', reject);
+
+          gunzip.on('data', (chunk: Buffer) => {
+            buffer += chunk.toString('utf-8');
 
             // Process complete entries from buffer
             let i = 0;
@@ -197,23 +200,23 @@ const dictionaryReady = (async () => {
                 continue;
               }
 
-              if (char === '"' && depth > 0) {
+              if (char === '"' && braceCount > 0) {
                 inString = !inString;
               }
 
               if (!inString) {
                 if (char === '{') {
-                  if (depth === 1) entryStart = i; // Mark start of entry
-                  depth++;
+                  if (braceCount === 0) objectStart = i;
+                  braceCount++;
                 } else if (char === '}') {
-                  depth--;
+                  braceCount--;
 
-                  // Complete entry found
-                  if (depth === 1) {
+                  // Complete top-level object found
+                  if (braceCount === 0) {
                     try {
-                      const entryText = buffer.substring(entryStart, i + 1);
-                      const parsed = JSON.parse(`{${entryText}}`);
-                      for (const [word, entries] of Object.entries(parsed)) {
+                      const objStr = buffer.substring(objectStart, i + 1);
+                      const obj = JSON.parse(objStr);
+                      for (const [word, entries] of Object.entries(obj)) {
                         if (!wordsCache.has(word)) {
                           wordsCache.set(word, entries as any);
                           loadedCount++;
@@ -224,7 +227,7 @@ const dictionaryReady = (async () => {
                     }
 
                     // Remove processed entry from buffer
-                    buffer = buffer.substring(i + 1);
+                    buffer = buffer.substring(i + 1).trimStart();
                     i = 0;
                     continue;
                   }
@@ -235,18 +238,30 @@ const dictionaryReady = (async () => {
             }
           });
 
-          stream.on('end', () => {
-            console.log(`[Cache] Loaded ${loadedCount} words from .word-cache.json (${Date.now() - cacheStart}ms)`);
+          gunzip.on('end', () => {
+            // Try to parse any remaining buffer
+            if (buffer.trim().length > 0) {
+              try {
+                const obj = JSON.parse(buffer);
+                for (const [word, entries] of Object.entries(obj)) {
+                  if (!wordsCache.has(word)) {
+                    wordsCache.set(word, entries as any);
+                    loadedCount++;
+                  }
+                }
+              } catch (e) {
+                // Ignore parse errors on final buffer
+              }
+            }
+
+            console.log(`[Cache] Loaded ${loadedCount} words from compressed cache (${Date.now() - cacheStart}ms)`);
             resolve();
           });
 
-          stream.on('error', (e: any) => {
-            console.warn('[Cache] Failed to load word cache:', e.message);
-            reject(e);
-          });
+          stream.pipe(gunzip);
         });
       } catch (e: any) {
-        console.warn('[Cache] Failed to initialize word cache streaming:', e.message);
+        console.warn('[Cache] Failed to load word cache from compressed file:', e.message);
       }
     }
   };
