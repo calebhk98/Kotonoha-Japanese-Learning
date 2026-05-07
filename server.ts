@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import * as tar from "tar";
+import zlib from "zlib";
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -158,111 +159,46 @@ const dictionaryReady = (async () => {
       }
     }
 
-    // Load word cache from compressed file with streaming decompression
+    // Load word cache from compressed file asynchronously
+    // Using util.promisify to make zlib.gunzip async-friendly
     const wordCacheGzFile = path.join(__dirname, '.word-cache.json.gz');
     if (fs.existsSync(wordCacheGzFile)) {
-      try {
-        const zlib = await import('zlib');
-        const cacheStart = Date.now();
-        console.log('[Cache] Starting to load word cache from compressed file...');
+      const { promisify } = await import('util');
+      const gunzip = promisify(zlib.gunzip);
 
-        await new Promise<void>((resolve, reject) => {
-          let buffer = '';
+      const loadCompressedCache = async () => {
+        try {
+          const cacheStart = Date.now();
+          console.log('[Cache] Starting to load word cache from compressed file...');
+
+          // Read compressed file
+          const compressed = fs.readFileSync(wordCacheGzFile);
+          console.log(`[Cache] Read ${compressed.length} bytes from compressed file`);
+
+          // Decompress asynchronously
+          const decompressed = await gunzip(compressed);
+          const json = decompressed.toString('utf-8');
+
+          console.log(`[Cache] Decompressed to ${json.length} bytes`);
+
+          const obj = JSON.parse(json);
           let loadedCount = 0;
-          let braceCount = 0;
-          let inString = false;
-          let escaped = false;
-          let objectStart = 0;
 
-          const gunzip = zlib.createGunzip();
-          const stream = fs.createReadStream(wordCacheGzFile);
-
-          stream.on('error', reject);
-          gunzip.on('error', reject);
-
-          gunzip.on('data', (chunk: Buffer) => {
-            buffer += chunk.toString('utf-8');
-
-            // Process complete entries from buffer
-            let i = 0;
-            while (i < buffer.length) {
-              const char = buffer[i];
-
-              if (escaped) {
-                escaped = false;
-                i++;
-                continue;
-              }
-
-              if (char === '\\') {
-                escaped = true;
-                i++;
-                continue;
-              }
-
-              if (char === '"' && braceCount > 0) {
-                inString = !inString;
-              }
-
-              if (!inString) {
-                if (char === '{') {
-                  if (braceCount === 0) objectStart = i;
-                  braceCount++;
-                } else if (char === '}') {
-                  braceCount--;
-
-                  // Complete top-level object found
-                  if (braceCount === 0) {
-                    try {
-                      const objStr = buffer.substring(objectStart, i + 1);
-                      const obj = JSON.parse(objStr);
-                      for (const [word, entries] of Object.entries(obj)) {
-                        if (!wordsCache.has(word)) {
-                          wordsCache.set(word, entries as any);
-                          loadedCount++;
-                        }
-                      }
-                    } catch (e) {
-                      // Skip malformed entries
-                    }
-
-                    // Remove processed entry from buffer
-                    buffer = buffer.substring(i + 1).trimStart();
-                    i = 0;
-                    continue;
-                  }
-                }
-              }
-
-              i++;
+          for (const [word, entries] of Object.entries(obj)) {
+            if (!wordsCache.has(word)) {
+              wordsCache.set(word, entries as any);
+              loadedCount++;
             }
-          });
+          }
 
-          gunzip.on('end', () => {
-            // Try to parse any remaining buffer
-            if (buffer.trim().length > 0) {
-              try {
-                const obj = JSON.parse(buffer);
-                for (const [word, entries] of Object.entries(obj)) {
-                  if (!wordsCache.has(word)) {
-                    wordsCache.set(word, entries as any);
-                    loadedCount++;
-                  }
-                }
-              } catch (e) {
-                // Ignore parse errors on final buffer
-              }
-            }
+          console.log(`[Cache] Loaded ${loadedCount} words from cache (${Date.now() - cacheStart}ms)`);
+        } catch (e: any) {
+          console.warn('[Cache] Failed to load word cache from compressed file:', e.message);
+        }
+      };
 
-            console.log(`[Cache] Loaded ${loadedCount} words from compressed cache (${Date.now() - cacheStart}ms)`);
-            resolve();
-          });
-
-          stream.pipe(gunzip);
-        });
-      } catch (e: any) {
-        console.warn('[Cache] Failed to load word cache from compressed file:', e.message);
-      }
+      // Start loading asynchronously (don't await - runs in background)
+      loadCompressedCache().catch(e => console.error('[Cache] Background loading error:', e));
     }
   };
 
