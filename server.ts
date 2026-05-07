@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import * as tar from "tar";
 import zlib from "zlib";
+import JSONStream from "JSONStream";
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -160,7 +161,7 @@ const dictionaryReady = (async () => {
     }
 
     // Load word cache from compressed file asynchronously
-    // Using util.promisify to make zlib.gunzip async-friendly
+    // Requires 4GB heap limit due to 340MB decompressed JSON size
     const wordCacheGzFile = path.join(__dirname, '.word-cache.json.gz');
     if (fs.existsSync(wordCacheGzFile)) {
       const { promisify } = await import('util');
@@ -171,15 +172,9 @@ const dictionaryReady = (async () => {
           const cacheStart = Date.now();
           console.log('[Cache] Starting to load word cache from compressed file...');
 
-          // Read compressed file
           const compressed = fs.readFileSync(wordCacheGzFile);
-          console.log(`[Cache] Read ${compressed.length} bytes from compressed file`);
-
-          // Decompress asynchronously
           const decompressed = await gunzip(compressed);
           const json = decompressed.toString('utf-8');
-
-          console.log(`[Cache] Decompressed to ${json.length} bytes`);
 
           const obj = JSON.parse(json);
           let loadedCount = 0;
@@ -193,7 +188,7 @@ const dictionaryReady = (async () => {
 
           console.log(`[Cache] Loaded ${loadedCount} words from cache (${Date.now() - cacheStart}ms)`);
         } catch (e: any) {
-          console.warn('[Cache] Failed to load word cache from compressed file:', e.message);
+          console.warn('[Cache] Failed to load word cache:', e.message);
         }
       };
 
