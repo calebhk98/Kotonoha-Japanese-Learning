@@ -17,6 +17,7 @@ export async function initDatabase() {
   if (fs.existsSync(DB_PATH)) {
     const buffer = fs.readFileSync(DB_PATH);
     db = new SQL.Database(buffer);
+    createTables(); // ensure any new tables added after initial creation exist
     console.log('[Database] Loaded existing database');
   } else {
     db = new SQL.Database();
