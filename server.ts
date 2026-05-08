@@ -784,6 +784,40 @@ async function startServer() {
       const foundCount = Array.from(kanaLookupCache.values()).filter(v => v !== null).length;
       console.log(`[API] /api/batch-extract: Step 3 - Kana lookup completed in ${lookupTime}ms (${foundCount}/${uniqueKanaWords.size} found)`);
 
+      // Pre-populate wordsCache with kanji/mixed word lookups, deduplicated across all items
+      const kanjiPreloadStart = Date.now();
+      const uniqueKanjiWords = new Map<string, string>(); // surface -> baseForm
+      for (const item of tokenizedBatch) {
+        if (!item.tokens) continue;
+        for (const token of item.tokens) {
+          const surface = token.surface;
+          if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
+          const isPureHiragana = /^[ぁ-ん]+$/.test(surface);
+          const isPureKatakana = /^[ァ-ヴー]+$/.test(surface);
+          if (!isPureHiragana && !isPureKatakana && !uniqueKanjiWords.has(surface)) {
+            uniqueKanjiWords.set(surface, token.baseForm);
+          }
+        }
+      }
+      let kanjiPreloaded = 0;
+      for (const [surface, baseForm] of uniqueKanjiWords) {
+        if (!wordsCache.has(baseForm)) {
+          const entries = getCachedDictionaryEntries(baseForm);
+          if (entries.length > 0) {
+            wordsCache.set(baseForm, entries);
+            kanjiPreloaded++;
+          }
+        }
+        if (surface !== baseForm && !wordsCache.has(surface)) {
+          const entries = getCachedDictionaryEntries(surface);
+          if (entries.length > 0) {
+            wordsCache.set(surface, entries);
+          }
+        }
+      }
+      const kanjiPreloadTime = Date.now() - kanjiPreloadStart;
+      console.log(`[API] /api/batch-extract: Step 3.5 - Pre-loaded ${kanjiPreloaded}/${uniqueKanjiWords.size} kanji words in ${kanjiPreloadTime}ms`);
+
       // Process texts with pre-looked-up kana cache
       const processStart = Date.now();
       const results = await Promise.all(
