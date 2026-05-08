@@ -24,13 +24,14 @@ import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 import { getMorphemeDefinition } from "./src/lib/morphemeDefinitions.js";
 import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk } from "./src/lib/storyLoader.js";
-import { initDatabase, WordsCache, JishoCache, saveDatabase } from "./src/lib/database.js";
+import { initDatabase, WordsCache, JishoCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let wordsCache: WordsCache;
 let jishoCache: JishoCache;
+let contentWordsStore: ContentWordsStore;
 
 // Extract jmdict if needed
 async function ensureJmdictExtracted() {
@@ -109,6 +110,7 @@ const dictionaryReady = (async () => {
   await initDatabase();
   wordsCache = new WordsCache();
   jishoCache = new JishoCache();
+  contentWordsStore = new ContentWordsStore();
 
   dictionary = new DictionaryManager();
   const jmdictPath = path.join(__dirname, 'jmdict-db');
@@ -616,6 +618,157 @@ async function processStoryText(text: string) {
   return enrichedTokens;
 }
 
+type BatchResult = { id: string; words?: any[]; elapsed?: number; error?: string };
+
+async function runBatchExtract(texts: { id: string; text: string }[]): Promise<BatchResult[]> {
+  const batchStart = Date.now();
+  console.log(`[API] /api/batch-extract: Processing ${texts.length} items (cache: ${wordsCache.size} words)`);
+
+  // Sort by text length (shorter first) for faster initial cache warmup
+  const sortedTexts = [...texts].sort((a, b) => (a.text?.length ?? 0) - (b.text?.length ?? 0));
+
+  // Step 1: Tokenize all texts concurrently
+  const tokenStart = Date.now();
+  const tokenizedBatch = await Promise.all(
+    sortedTexts.map(async (item) => {
+      if (!item.text || typeof item.text !== "string") return { ...item, tokens: null };
+      try {
+        const tokens = await tokenizer!.segment(item.text);
+        return { ...item, tokens };
+      } catch (e) {
+        console.error(`[API] Tokenization error for item ${item.id}:`, e instanceof Error ? e.message : String(e));
+        return { ...item, tokens: null };
+      }
+    })
+  );
+  console.log(`[API] /api/batch-extract: Step 1 - Tokenization completed in ${Date.now() - tokenStart}ms`);
+
+  // Collect unique kana-only words from all texts
+  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
+  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
+  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
+
+  const collectStart = Date.now();
+  const uniqueKanaWords = new Set<string>();
+  for (const item of tokenizedBatch) {
+    if (!item.tokens) continue;
+    for (const token of item.tokens) {
+      const surface = token.surface;
+      if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
+      if (/^[ぁ-ん]+$/.test(surface) || /^[ァ-ヴー]+$/.test(surface)) {
+        uniqueKanaWords.add(surface);
+      }
+    }
+  }
+  console.log(`[API] /api/batch-extract: Step 2 - Found ${uniqueKanaWords.size} unique kana words in ${Date.now() - collectStart}ms`);
+
+  // Step 3: Look up kana words with concurrency limit
+  const lookupStart = Date.now();
+  const kanaLookupCache = new Map<string, any>();
+  if (dictionary && uniqueKanaWords.size > 0) {
+    const words = Array.from(uniqueKanaWords);
+    const concurrencyLimit = 5;
+    const kanaResults: { word: string; result: any }[] = [];
+    let activeCount = 0;
+    let index = 0;
+
+    await new Promise<void>((resolve, reject) => {
+      const processNext = async () => {
+        try {
+          if (index >= words.length && activeCount === 0) { resolve(); return; }
+          if (activeCount < concurrencyLimit && index < words.length) {
+            const word = words[index++];
+            activeCount++;
+            try {
+              const result = await dictionary!.lookup(word);
+              kanaResults.push({ word, result });
+            } catch (e) {
+              console.error(`[API] Kana lookup error for "${word}":`, e instanceof Error ? e.message : String(e));
+              kanaResults.push({ word, result: null });
+            } finally {
+              activeCount--;
+              await processNext();
+            }
+          } else if (index < words.length) {
+            setTimeout(() => processNext().catch(reject), 10);
+          }
+        } catch (err) { reject(err); }
+      };
+      for (let i = 0; i < concurrencyLimit; i++) processNext().catch(reject);
+    });
+
+    for (const { word, result } of kanaResults) {
+      kanaLookupCache.set(word, result);
+      if (result) {
+        wordsCache.set(word, [{
+          meanings: [{ glosses: [result.meaning || 'Unknown'] }],
+          variants: [{ pronounced: result.reading || word, written: word }]
+        } as any]);
+      }
+    }
+  }
+  const foundCount = Array.from(kanaLookupCache.values()).filter(v => v !== null).length;
+  console.log(`[API] /api/batch-extract: Step 3 - Kana lookup completed in ${Date.now() - lookupStart}ms (${foundCount}/${uniqueKanaWords.size} found)`);
+
+  // Step 3.5: Pre-populate wordsCache with kanji/mixed words, deduplicated across all items
+  const kanjiPreloadStart = Date.now();
+  const uniqueKanjiWords = new Map<string, string>(); // surface -> baseForm
+  for (const item of tokenizedBatch) {
+    if (!item.tokens) continue;
+    for (const token of item.tokens) {
+      const surface = token.surface;
+      if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
+      if (!/^[ぁ-ん]+$/.test(surface) && !/^[ァ-ヴー]+$/.test(surface) && !uniqueKanjiWords.has(surface)) {
+        uniqueKanjiWords.set(surface, token.baseForm);
+      }
+    }
+  }
+  let kanjiPreloaded = 0;
+  for (const [surface, baseForm] of uniqueKanjiWords) {
+    if (!wordsCache.has(baseForm)) {
+      const entries = getCachedDictionaryEntries(baseForm);
+      if (entries.length > 0) { wordsCache.set(baseForm, entries); kanjiPreloaded++; }
+    }
+    if (surface !== baseForm && !wordsCache.has(surface)) {
+      const entries = getCachedDictionaryEntries(surface);
+      if (entries.length > 0) wordsCache.set(surface, entries);
+    }
+  }
+  console.log(`[API] /api/batch-extract: Step 3.5 - Pre-loaded ${kanjiPreloaded}/${uniqueKanjiWords.size} kanji words in ${Date.now() - kanjiPreloadStart}ms`);
+
+  // Step 4: Process each text using the pre-built caches
+  const processStart = Date.now();
+  const results: BatchResult[] = await Promise.all(
+    tokenizedBatch.map(async (item) => {
+      const { id, text, tokens } = item;
+      if (!text || typeof text !== "string") return { id, error: "No text" };
+      if (!tokens) return { id, error: "Tokenization failed" };
+      const start = Date.now();
+      try {
+        const words = await processTextWithTokens(text, tokens, kanaLookupCache);
+        const elapsed = Date.now() - start;
+        console.log(`[API] batch-extract[${id}]: ${words.length} words in ${elapsed}ms`);
+        return { id, words, elapsed };
+      } catch (e: any) {
+        console.error(`[API] batch-extract[${id}]: Error:`, e instanceof Error ? e.message : String(e));
+        return { id, error: e instanceof Error ? e.message : String(e) };
+      }
+    })
+  );
+  console.log(`[API] /api/batch-extract: Step 4 - Text processing completed in ${Date.now() - processStart}ms`);
+
+  // Persist content-word associations
+  for (const result of results) {
+    if (result.words && Array.isArray(result.words)) {
+      contentWordsStore.setContentWords(result.id, result.words);
+    }
+  }
+  saveDatabase();
+
+  console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words (total: ${Date.now() - batchStart}ms)`);
+  return results;
+}
+
 async function startServer() {
   // Wait for tokenizer and dictionary to be ready before starting server
   await tokenizerReady;
@@ -625,11 +778,6 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json({ limit: '50mb' }));
-
-  // Periodically save database to disk (every 30 seconds)
-  setInterval(() => {
-    saveDatabase();
-  }, 30000);
 
   // Log only non-asset requests to reduce noise
   app.use((req, _res, next) => {
@@ -670,150 +818,15 @@ async function startServer() {
   });
 
   app.post("/api/batch-extract", async (req, res) => {
-    const batchStart = Date.now();
     try {
       const { texts } = req.body;
       if (!Array.isArray(texts)) {
         return res.status(400).json({ error: "texts must be an array" });
       }
-
-      console.log(`[API] /api/batch-extract: Processing ${texts.length} items (cache: ${wordsCache.size} words)`);
-
-      // Sort by text length (shorter first) for faster initial cache warmup
-      const sortedTexts = [...texts].sort((a, b) => (a.text?.length ?? 0) - (b.text?.length ?? 0));
-
-      // Tokenize all texts concurrently upfront
-      const tokenStart = Date.now();
-      const tokenizedBatch = await Promise.all(
-        sortedTexts.map(async (item: any) => {
-          if (!item.text || typeof item.text !== "string") return { ...item, tokens: null };
-          try {
-            const tokens = await tokenizer!.segment(item.text);
-            return { ...item, tokens };
-          } catch (e) {
-            console.error(`[API] Tokenization error for item ${item.id}:`, e instanceof Error ? e.message : String(e));
-            return { ...item, tokens: null };
-          }
-        })
-      );
-      const tokenTime = Date.now() - tokenStart;
-      console.log(`[API] /api/batch-extract: Step 1 - Tokenization completed in ${tokenTime}ms`);
-
-      // Collect unique kana-only words from all texts
-      const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
-      const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-      const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
-
-      const collectStart = Date.now();
-      const uniqueKanaWords = new Set<string>();
-      for (const item of tokenizedBatch) {
-        if (!item.tokens) continue;
-        for (const token of item.tokens) {
-          const surface = token.surface;
-          if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
-
-          const isPureHiragana = /^[ぁ-ん]+$/.test(surface);
-          const isPureKatakana = /^[ァ-ヴー]+$/.test(surface);
-          if (isPureHiragana || isPureKatakana) {
-            uniqueKanaWords.add(surface);
-          }
-        }
-      }
-      const collectTime = Date.now() - collectStart;
-      console.log(`[API] /api/batch-extract: Step 2 - Found ${uniqueKanaWords.size} unique kana words in ${collectTime}ms`);
-
-      // Look up kana words via API with concurrency limit (KanjiData has wrong defs for pure kana)
-      const lookupStart = Date.now();
-      const kanaLookupCache = new Map<string, any>();
-      if (dictionary && uniqueKanaWords.size > 0) {
-        const words = Array.from(uniqueKanaWords);
-        const concurrencyLimit = 5;
-        const results: { word: string; result: any }[] = [];
-
-        let activeCount = 0;
-        let index = 0;
-
-        await new Promise<void>((resolve, reject) => {
-          const processNext = async () => {
-            try {
-              if (index >= words.length && activeCount === 0) {
-                resolve();
-                return;
-              }
-
-              if (activeCount < concurrencyLimit && index < words.length) {
-                const word = words[index++];
-                activeCount++;
-
-                try {
-                  const result = await dictionary!.lookup(word);
-                  results.push({ word, result });
-                } catch (e) {
-                  console.error(`[API] Kana lookup error for "${word}":`, e instanceof Error ? e.message : String(e));
-                  results.push({ word, result: null });
-                } finally {
-                  activeCount--;
-                  await processNext();
-                }
-              } else if (index < words.length) {
-                // Wait a bit before retrying
-                setTimeout(() => processNext().catch(reject), 10);
-              }
-            } catch (err) {
-              reject(err);
-            }
-          };
-
-          for (let i = 0; i < concurrencyLimit; i++) {
-            processNext().catch(reject);
-          }
-        });
-
-        for (const { word, result } of results) {
-          kanaLookupCache.set(word, result);
-          // Save kana lookups to persistent cache so they don't need API calls again
-          if (result) {
-            wordsCache.set(word, [{
-              meanings: [{ glosses: [result.meaning || 'Unknown'] }],
-              variants: [{ pronounced: result.reading || word, written: word }]
-            } as any]);
-          }
-        }
-      }
-      const lookupTime = Date.now() - lookupStart;
-      const foundCount = Array.from(kanaLookupCache.values()).filter(v => v !== null).length;
-      console.log(`[API] /api/batch-extract: Step 3 - Kana lookup completed in ${lookupTime}ms (${foundCount}/${uniqueKanaWords.size} found)`);
-
-      // Process texts with pre-looked-up kana cache
-      const processStart = Date.now();
-      const results = await Promise.all(
-        tokenizedBatch.map(async (item: any) => {
-          const { id, text, tokens } = item;
-          if (!text || typeof text !== "string") return { id, error: "No text" };
-          if (!tokens) return { id, error: "Tokenization failed" };
-
-          const start = Date.now();
-          try {
-            // Re-inject tokens to avoid re-tokenizing
-            const words = await processTextWithTokens(text, tokens, kanaLookupCache);
-            const elapsed = Date.now() - start;
-            console.log(`[API] batch-extract[${id}]: ${words.length} words in ${elapsed}ms`);
-            return { id, words, elapsed };
-          } catch (e: any) {
-            console.error(`[API] batch-extract[${id}]: Error:`, e instanceof Error ? e.message : String(e));
-            return { id, error: e instanceof Error ? e.message : String(e) };
-          }
-        })
-      );
-      const processTime = Date.now() - processStart;
-      const totalTime = Date.now() - batchStart;
-
-      console.log(`[API] /api/batch-extract: Step 4 - Text processing completed in ${processTime}ms`);
-      console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words (total: ${totalTime}ms)`);
+      const results = await runBatchExtract(texts);
       res.json(results);
     } catch (err: any) {
-      const elapsed = Date.now() - batchStart;
-      console.error(`[API] batch-extract failed after ${elapsed}ms:`, err instanceof Error ? err.message : String(err));
+      console.error(`[API] batch-extract failed:`, err instanceof Error ? err.message : String(err));
       res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
@@ -888,6 +901,7 @@ async function startServer() {
 
     wordsCache.clear();
     jishoCache.clear();
+    contentWordsStore.clear();
     saveDatabase();
 
     console.log(`[API] /api/clear-cache: Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`);
@@ -896,6 +910,25 @@ async function startServer() {
       cleared: true,
       message: `Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`
     });
+  });
+
+  app.get("/api/content/words", (req, res) => {
+    try {
+      res.json(contentWordsStore.getAllContentWords());
+    } catch (e: any) {
+      console.error('[API Error] /api/content/words failed:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/content/:contentId/words", (req, res) => {
+    try {
+      const { contentId } = req.params;
+      res.json(contentWordsStore.getContentWords(contentId));
+    } catch (e: any) {
+      console.error(`[API Error] /api/content/${req.params.contentId}/words failed:`, e.message);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.post("/api/wanikani/validate", async (req, res) => {
@@ -1063,6 +1096,31 @@ async function startServer() {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  // Kick off background extraction for any content not yet in content_words
+  (async () => {
+    try {
+      const allContent = [
+        ...loadStoriesFromDisk(),
+        ...loadMusicFromDisk(),
+        ...loadVideosFromDisk(),
+      ];
+      const missing = allContent.filter(c => !contentWordsStore.hasContent(c.id));
+      if (missing.length === 0) {
+        console.log('[Server] All content already extracted — skipping startup extraction');
+        return;
+      }
+      console.log(`[Server] Starting background extraction for ${missing.length}/${allContent.length} content items`);
+      const CHUNK_SIZE = 20;
+      for (let i = 0; i < missing.length; i += CHUNK_SIZE) {
+        const chunk = missing.slice(i, i + CHUNK_SIZE).map(c => ({ id: c.id, text: c.text }));
+        await runBatchExtract(chunk);
+      }
+      console.log(`[Server] Startup extraction complete`);
+    } catch (e) {
+      console.error('[Server] Startup extraction error:', e instanceof Error ? e.message : String(e));
+    }
+  })();
 
   // Keep server alive even if parent process tries to shut down
   let shutdownRequested = false;

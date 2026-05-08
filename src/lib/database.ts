@@ -3,12 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { DictionaryEntry } from './scoring.js';
+import { WordInfo } from '../types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, '../../.cache.db');
 
 let db: SqlDatabase | null = null;
 let SQL: any = null;
+let isDirty = false;
 
 export async function initDatabase() {
   SQL = await initSqlJs();
@@ -21,15 +23,15 @@ export async function initDatabase() {
     console.log('[Database] Loaded existing database');
   } else {
     db = new SQL.Database();
-    createTables();
     console.log('[Database] Created new database');
   }
+  // Always run createTables — IF NOT EXISTS makes this safe for existing DBs
+  createTables();
 }
 
 function createTables() {
   if (!db) throw new Error('Database not initialized');
 
-  // Words cache table
   db.run(`
     CREATE TABLE IF NOT EXISTS words_cache (
       word TEXT PRIMARY KEY,
@@ -37,7 +39,6 @@ function createTables() {
     )
   `);
 
-  // Jisho cache table
   db.run(`
     CREATE TABLE IF NOT EXISTS jisho_cache (
       word TEXT PRIMARY KEY,
@@ -45,15 +46,32 @@ function createTables() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS content_words (
+      content_id TEXT NOT NULL,
+      word TEXT NOT NULL,
+      reading TEXT NOT NULL,
+      meaning TEXT NOT NULL,
+      meanings TEXT,
+      jlpt INTEGER NOT NULL DEFAULT 0,
+      joyo INTEGER NOT NULL DEFAULT 0,
+      score REAL NOT NULL DEFAULT 0,
+      breakdown TEXT NOT NULL,
+      frequency INTEGER NOT NULL DEFAULT 1,
+      is_morpheme INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (content_id, word)
+    )
+  `);
+
   console.log('[Database] Tables created');
 }
 
 export function saveDatabase() {
-  if (!db) return;
-
+  if (!db || !isDirty) return;
   const data = db.export();
   const buffer = Buffer.from(data);
   fs.writeFileSync(DB_PATH, buffer);
+  isDirty = false;
   console.log('[Database] Saved to disk');
 }
 
@@ -68,6 +86,7 @@ export class WordsCache {
       [key, JSON.stringify(value)]
     );
     this.memoryCache.set(key, value);
+    isDirty = true;
   }
 
   get(key: string): DictionaryEntry[] | undefined {
@@ -109,6 +128,7 @@ export class WordsCache {
     if (!db) throw new Error('Database not initialized');
     db.run('DELETE FROM words_cache');
     this.memoryCache.clear();
+    isDirty = true;
   }
 
   entries(): [string, DictionaryEntry[]][] {
@@ -152,6 +172,7 @@ export class JishoCache {
       'INSERT OR REPLACE INTO jisho_cache (word, result) VALUES (?, ?)',
       [key, JSON.stringify(value)]
     );
+    isDirty = true;
   }
 
   get(key: string): any | undefined {
@@ -178,6 +199,7 @@ export class JishoCache {
   clear() {
     if (!db) throw new Error('Database not initialized');
     db.run('DELETE FROM jisho_cache');
+    isDirty = true;
   }
 
   entries(): [string, any][] {
@@ -195,5 +217,104 @@ export class JishoCache {
     const result = db.exec('SELECT COUNT(*) as count FROM jisho_cache');
     if (result.length === 0) return 0;
     return result[0].values[0][0] as number;
+  }
+}
+
+export class ContentWordsStore {
+  setContentWords(contentId: string, words: WordInfo[]): void {
+    if (!db) throw new Error('Database not initialized');
+    db.run('DELETE FROM content_words WHERE content_id = ?', [contentId]);
+    isDirty = true;
+    for (const w of words) {
+      db.run(
+        `INSERT INTO content_words
+           (content_id, word, reading, meaning, meanings, jlpt, joyo, score, breakdown, frequency, is_morpheme)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          contentId,
+          w.word,
+          w.reading,
+          w.meaning,
+          w.meanings ? JSON.stringify(w.meanings) : null,
+          w.jlpt,
+          w.joyo ? 1 : 0,
+          w.score,
+          JSON.stringify(w.breakdown ?? {}),
+          w.frequencyInContent ?? 1,
+          w.isMorpheme ? 1 : 0,
+        ]
+      );
+    }
+  }
+
+  getContentWords(contentId: string): WordInfo[] {
+    if (!db) throw new Error('Database not initialized');
+    const result = db.exec(
+      `SELECT word, reading, meaning, meanings, jlpt, joyo, score, breakdown, frequency, is_morpheme
+       FROM content_words WHERE content_id = ?
+       ORDER BY rowid`,
+      [contentId]
+    );
+    if (result.length === 0) return [];
+    return result[0].values.map(([word, reading, meaning, meanings, jlpt, joyo, score, breakdown, frequency, is_morpheme]) => ({
+      word: word as string,
+      reading: reading as string,
+      meaning: meaning as string,
+      ...(meanings ? { meanings: JSON.parse(meanings as string) } : {}),
+      jlpt: jlpt as number,
+      joyo: (joyo as number) === 1,
+      score: score as number,
+      breakdown: JSON.parse(breakdown as string),
+      frequencyInContent: frequency as number,
+      ...(is_morpheme ? { isMorpheme: true } : {}),
+    }));
+  }
+
+  getAllContentWords(): Record<string, WordInfo[]> {
+    if (!db) throw new Error('Database not initialized');
+    const result = db.exec(
+      `SELECT content_id, word, reading, meaning, meanings, jlpt, joyo, score, breakdown, frequency, is_morpheme
+       FROM content_words ORDER BY content_id, rowid`
+    );
+    if (result.length === 0) return {};
+    const out: Record<string, WordInfo[]> = {};
+    for (const [content_id, word, reading, meaning, meanings, jlpt, joyo, score, breakdown, frequency, is_morpheme] of result[0].values) {
+      const id = content_id as string;
+      if (!out[id]) out[id] = [];
+      out[id].push({
+        word: word as string,
+        reading: reading as string,
+        meaning: meaning as string,
+        ...(meanings ? { meanings: JSON.parse(meanings as string) } : {}),
+        jlpt: jlpt as number,
+        joyo: (joyo as number) === 1,
+        score: score as number,
+        breakdown: JSON.parse(breakdown as string),
+        frequencyInContent: frequency as number,
+        ...(is_morpheme ? { isMorpheme: true } : {}),
+      });
+    }
+    return out;
+  }
+
+  hasContent(contentId: string): boolean {
+    if (!db) throw new Error('Database not initialized');
+    const result = db.exec(
+      'SELECT 1 FROM content_words WHERE content_id = ? LIMIT 1',
+      [contentId]
+    );
+    return result.length > 0 && result[0].values.length > 0;
+  }
+
+  deleteContentWords(contentId: string): void {
+    if (!db) throw new Error('Database not initialized');
+    db.run('DELETE FROM content_words WHERE content_id = ?', [contentId]);
+    isDirty = true;
+  }
+
+  clear(): void {
+    if (!db) throw new Error('Database not initialized');
+    db.run('DELETE FROM content_words');
+    isDirty = true;
   }
 }
