@@ -17,6 +17,25 @@ compress_cache() {
     return 1
   fi
 
+  echo "🎨 Formatting $file with newlines..."
+  # Format JSON with indentation for readability
+  node -e "
+    const fs = require('fs');
+    const data = JSON.parse(fs.readFileSync('$file', 'utf-8'));
+    // For large objects, format as newline-delimited entries instead of full pretty-print
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      const lines = ['{'];
+      const entries = Object.entries(data);
+      for (let i = 0; i < entries.length; i++) {
+        const [key, value] = entries[i];
+        const line = '  ' + JSON.stringify(key) + ': ' + JSON.stringify(value) + (i < entries.length - 1 ? ',' : '');
+        lines.push(line);
+      }
+      lines.push('}');
+      fs.writeFileSync('$file', lines.join('\n'));
+    }
+  " || true
+
   echo "📦 Compressing $file..."
   # -k keeps the original file, -9 uses maximum compression
   gzip -k -9 "$file"
