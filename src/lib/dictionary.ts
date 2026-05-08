@@ -39,7 +39,6 @@ export class KanjiDataDictionary implements Dictionary {
     }
     const entries = this.searchWords(word) as any[];
     if (!entries || entries.length === 0) {
-      console.log(`[Dictionary.KanjiData] No entries for "${word}"`);
       return null;
     }
 
@@ -141,7 +140,6 @@ export class JishoApiDictionary implements Dictionary {
     // Check cache first
     if (this.cache.has(word)) {
       const cached = this.cache.get(word);
-      console.log(`[Dictionary.Jisho] Cache hit for "${word}": ${cached?.meaning || 'null'}`);
       return cached || null;
     }
 
