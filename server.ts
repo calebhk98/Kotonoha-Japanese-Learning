@@ -435,12 +435,8 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     results.push(morphemeData);
   }
 
-  console.log(`[API] Words processed: [${processedWords.join(', ')}] (${processedWords.length} total)`);
-  console.log(`[API] Cache hits: [${hitWords.join(', ')}] (${cacheHits} total)`);
-  console.log(`[API] Cache misses: [${missWords.join(', ')}] (${cacheMisses} total)`);
-  if (cacheHits + cacheMisses > 0) {
-    console.log(`[API] Hit rate: ${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}%`);
-  }
+  const hitRate = cacheHits + cacheMisses > 0 ? Math.round(cacheHits / (cacheHits + cacheMisses) * 100) : 100;
+  console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${hitRate}% hit rate) | Words (${processedWords.length}): hits=[${hitWords.join(', ')}], misses=[${missWords.join(', ')}]`);
 
   return results;
 }
@@ -579,12 +575,8 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     results.push(morphemeData);
   }
 
-  console.log(`[API] Words processed: [${processedWords.join(', ')}] (${processedWords.length} total)`);
-  console.log(`[API] Cache hits: [${hitWords.join(', ')}] (${cacheHits} total)`);
-  console.log(`[API] Cache misses: [${missWords.join(', ')}] (${cacheMisses} total)`);
-  if (cacheHits + cacheMisses > 0) {
-    console.log(`[API] Hit rate: ${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}%`);
-  }
+  const hitRate = cacheHits + cacheMisses > 0 ? Math.round(cacheHits / (cacheHits + cacheMisses) * 100) : 100;
+  console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${hitRate}% hit rate) | Words (${processedWords.length}): hits=[${hitWords.join(', ')}], misses=[${missWords.join(', ')}]`);
 
   return results;
 }
