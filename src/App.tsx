@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { getAllContentWords } from './lib/api';
 import { BookOpen, Video, Music, CheckCircle, ChevronRight, PlayCircle, Loader2, Library, Plus, Settings, Search, X } from 'lucide-react';
 import { Content } from './data/content';
 import { useContentData, applyWaniKaniToWords } from './hooks/useContentData';
@@ -111,28 +112,51 @@ export default function App() {
   // Track whether we've attempted batch extraction
   const [batchExtractionAttempted, setBatchExtractionAttempted] = useState(false);
 
-  // Background batch processing of all stories to build cache
-  // Re-runs if cache is cleared (when contentVocab becomes empty)
+  // Background startup: load known vocab from server, then batch-extract only what's missing
   useEffect(() => {
-    const batchExtract = async () => {
-      // Helper function to fetch with retry logic
+    const startup = async () => {
+      if (!ALL_CONTENT.length) return;
+
+      // Step 1: Load all already-processed content words from server
+      let serverVocab: Record<string, WordInfo[]> = {};
+      try {
+        serverVocab = await getAllContentWords();
+        const count = Object.keys(serverVocab).length;
+        if (count > 0) {
+          console.log(`[App] Loaded vocab for ${count} content items from server`);
+          // Apply WaniKani multipliers if available
+          if (wkData) {
+            for (const id of Object.keys(serverVocab)) {
+              serverVocab[id] = applyWaniKaniToWords(serverVocab[id], wkData);
+            }
+          }
+          setContentVocab(prev => ({ ...prev, ...serverVocab }));
+        }
+      } catch (e) {
+        console.warn('[App] Could not load server vocab, will extract fresh:', e);
+      }
+
+      // Step 2: Identify content that has no server-side data yet
+      const missing = ALL_CONTENT.filter(c => !serverVocab[c.id]);
+      if (missing.length === 0) {
+        console.log('[App] All content already processed — skipping batch-extract');
+        setBatchExtractionAttempted(true);
+        return;
+      }
+
+      console.log(`[App] ${missing.length} content items need extraction`);
+
       const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3) => {
         let lastError: any;
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
             const res = await fetch(url, options);
             if (res.ok) return res;
-
-            // Only retry on 504 Gateway Timeout, not other errors
-            if (res.status !== 504) {
-              return res;
-            }
+            if (res.status !== 504) return res;
             lastError = new Error(`504 Gateway Timeout`);
           } catch (e) {
             lastError = e;
           }
-
-          // Exponential backoff: 1s, 2s, 4s
           if (attempt < maxRetries - 1) {
             const delayMs = Math.pow(2, attempt) * 1000;
             console.log(`[App] Request failed, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries - 1})`);
@@ -142,81 +166,59 @@ export default function App() {
         throw lastError || new Error(`Failed after ${maxRetries} attempts`);
       };
 
-      try {
-        const texts = ALL_CONTENT.map(c => ({ id: c.id, text: c.text }));
-        console.log(`[App] Starting background vocabulary extraction for ${texts.length} stories`);
+      // Step 3: Batch-extract only the missing content
+      const texts = missing.map(c => ({ id: c.id, text: c.text }));
+      const CHUNK_SIZE = 20;
+      let totalProcessed = 0;
 
-        const CHUNK_SIZE = 20;
-        const newVocab: Record<string, any[]> = {};
-        let totalProcessed = 0;
+      for (let i = 0; i < texts.length; i += CHUNK_SIZE) {
+        const chunk = texts.slice(i, i + CHUNK_SIZE);
+        const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+        const totalChunks = Math.ceil(texts.length / CHUNK_SIZE);
+        console.log(`[App] Extracting chunk ${chunkNum}/${totalChunks}`);
 
-        // Process in chunks to avoid payload size limits
-        // Add delay between chunks to avoid overwhelming server
-        for (let i = 0; i < texts.length; i += CHUNK_SIZE) {
-          const chunk = texts.slice(i, i + CHUNK_SIZE);
-          const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
-          const totalChunks = Math.ceil(texts.length / CHUNK_SIZE);
-          console.log(`[App] Processing chunk ${chunkNum}/${totalChunks}`);
+        try {
+          const res = await fetchWithRetry("/api/batch-extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ texts: chunk })
+          });
 
-          try {
-            const res = await fetchWithRetry("/api/batch-extract", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ texts: chunk })
-            });
-
-            if (!res.ok) {
-              console.warn(`[App] Batch extract chunk ${chunkNum} failed with status ${res.status}`);
-              continue;
-            }
-
-            const results = await res.json();
-
-            // Accumulate results
-            for (const result of results) {
-              if (result.words && Array.isArray(result.words)) {
-                let words = result.words;
-                if (wkData) {
-                  words = applyWaniKaniToWords(words, wkData);
-                }
-                newVocab[result.id] = words;
-                totalProcessed++;
-              }
-            }
-
-            // Update UI incrementally as chunks complete
-            if (Object.keys(newVocab).length > 0) {
-              setContentVocab(prev => {
-                const updated = { ...prev, ...newVocab };
-                return updated;
-              });
-            }
-          } catch (chunkError) {
-            console.error(`[App] Failed to process chunk ${chunkNum}:`, chunkError);
+          if (!res.ok) {
+            console.warn(`[App] Batch extract chunk ${chunkNum} failed with status ${res.status}`);
+            continue;
           }
 
-          // Add delay between chunks (except after the last one) to avoid server overload
-          // Each chunk takes ~2+ minutes to process, so use longer delays
-          if (i + CHUNK_SIZE < texts.length) {
-            await new Promise(resolve => setTimeout(resolve, 5000));
+          const results = await res.json();
+          const newVocab: Record<string, WordInfo[]> = {};
+          for (const result of results) {
+            if (result.words && Array.isArray(result.words)) {
+              let words: WordInfo[] = result.words;
+              if (wkData) words = applyWaniKaniToWords(words, wkData);
+              newVocab[result.id] = words;
+              totalProcessed++;
+            }
           }
+
+          if (Object.keys(newVocab).length > 0) {
+            setContentVocab(prev => ({ ...prev, ...newVocab }));
+          }
+        } catch (chunkError) {
+          console.error(`[App] Failed to process chunk ${chunkNum}:`, chunkError);
         }
 
-        console.log(`[App] Background extraction complete: ${totalProcessed}/${texts.length} stories processed`);
-        setBatchExtractionAttempted(true);
-      } catch (e) {
-        console.error(`[App] Background extraction error:`, e);
-        setBatchExtractionAttempted(true);
+        if (i + CHUNK_SIZE < texts.length) {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
       }
+
+      console.log(`[App] Background extraction complete: ${totalProcessed}/${missing.length} new items processed`);
+      setBatchExtractionAttempted(true);
     };
 
-    // Run batch extract if:
-    // 1. Never attempted yet AND we have content to extract
-    const shouldRunExtraction =
-      !batchExtractionAttempted && ALL_CONTENT.length > 0;
-
-    if (shouldRunExtraction) {
-      const timer = setTimeout(batchExtract, 500);
+    const shouldRun = !batchExtractionAttempted && ALL_CONTENT.length > 0;
+    if (shouldRun) {
+      const timer = setTimeout(startup, 500);
       return () => clearTimeout(timer);
     }
   }, [ALL_CONTENT.length, batchExtractionAttempted, wkData]);
