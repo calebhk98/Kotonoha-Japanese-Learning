@@ -5,6 +5,9 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import * as tar from "tar";
 import zlib from "zlib";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const JSONStream = require('JSONStream');
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -168,19 +171,17 @@ const dictionaryReady = (async () => {
           const cacheStart = Date.now();
           console.log('[Cache] Word cache: loading from compressed file...');
 
-          const JSONStream = (await import('JSONStream')).default;
-          const { createReadStream } = await import('fs');
-          const { createGunzip } = await import('zlib');
-
           let loadedCount = 0;
           let processedCount = 0;
 
           // Stream: gzip file -> decompress -> JSON parser -> process each entry
-          const stream = createReadStream(wordCacheGzFile)
-            .pipe(createGunzip())
-            .pipe(JSONStream.parse('*'));
+          const parseStream = JSONStream.parse('*');
+          const gunzipStream = zlib.createGunzip();
+          const fileStream = fs.createReadStream(wordCacheGzFile);
 
-          stream.on('data', (data: any) => {
+          fileStream.pipe(gunzipStream).pipe(parseStream);
+
+          parseStream.on('data', (data: any) => {
             processedCount++;
             try {
               const [key, value] = data;
@@ -194,12 +195,12 @@ const dictionaryReady = (async () => {
           });
 
           await new Promise<void>((resolve, reject) => {
-            stream.on('end', () => {
+            parseStream.on('end', () => {
               const elapsed = Date.now() - cacheStart;
               console.log(`[Cache] Word cache: streamed ${processedCount} entries, loaded ${loadedCount} new entries in ${elapsed}ms`);
               resolve();
             });
-            stream.on('error', reject);
+            parseStream.on('error', reject);
           });
         } catch (e: any) {
           console.warn('[Cache] Failed to load word cache:', e.message);
