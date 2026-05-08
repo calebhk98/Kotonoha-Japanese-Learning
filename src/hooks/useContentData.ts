@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WordInfo } from '../types';
-import { extractVocabulary } from '../lib/api';
+import { extractVocabulary, getContentWords } from '../lib/api';
 import { Content } from '../data/content';
 import { WaniKaniData, getWaniKaniMultiplier, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
 
@@ -135,10 +135,25 @@ export function useContentData() {
     setLoadingContent(prev => ({ ...prev, [content.id]: true }));
     console.log(`[Vocab] Loading vocabulary for "${content.id}"`);
     try {
-      let words = await extractVocabulary(content.text, (status) => {
-        console.log(`[Vocab] ${status}`);
-      });
-      console.log(`[Vocab] Loaded ${words.length} words for "${content.id}"`);
+      // Try server-side store first — avoids re-extraction if already processed
+      let words: WordInfo[] = [];
+      if (!forceReload) {
+        try {
+          words = await getContentWords(content.id);
+          if (words.length > 0) {
+            console.log(`[Vocab] Loaded ${words.length} words for "${content.id}" from server`);
+          }
+        } catch (e) {
+          console.warn(`[Vocab] Server fetch failed for "${content.id}", falling back to extraction`);
+        }
+      }
+
+      if (words.length === 0) {
+        words = await extractVocabulary(content.text, (status) => {
+          console.log(`[Vocab] ${status}`);
+        });
+        console.log(`[Vocab] Extracted ${words.length} words for "${content.id}"`);
+      }
 
       if (wkDataRef.current) {
         words = applyWaniKaniToWords(words, wkDataRef.current);

@@ -1,5 +1,17 @@
 import { WordInfo } from "../types";
 
+export async function getAllContentWords(): Promise<Record<string, WordInfo[]>> {
+  const res = await fetch("/api/content/words");
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function getContentWords(contentId: string): Promise<WordInfo[]> {
+  const res = await fetch(`/api/content/${encodeURIComponent(contentId)}/words`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 export async function clearServerCache(): Promise<void> {
   const res = await fetch("/api/clear-cache", {
     method: "POST",
