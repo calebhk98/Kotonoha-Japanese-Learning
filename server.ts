@@ -5,9 +5,6 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import * as tar from "tar";
 import zlib from "zlib";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const JSONStream = require('JSONStream');
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -163,52 +160,10 @@ const dictionaryReady = (async () => {
       }
     }
 
-    // Load word cache from compressed file using streaming to avoid memory issues
+    // Compressed cache loading disabled - database provides words via lazy load
     const wordCacheGzFile = path.join(__dirname, '.word-cache.json.gz');
     if (fs.existsSync(wordCacheGzFile)) {
-      const loadCompressedCache = async () => {
-        try {
-          const cacheStart = Date.now();
-          console.log('[Cache] Word cache: loading from compressed file...');
-
-          let loadedCount = 0;
-          let processedCount = 0;
-
-          // Stream: gzip file -> decompress -> JSON parser -> process each entry
-          const parseStream = JSONStream.parse('*');
-          const gunzipStream = zlib.createGunzip();
-          const fileStream = fs.createReadStream(wordCacheGzFile);
-
-          fileStream.pipe(gunzipStream).pipe(parseStream);
-
-          parseStream.on('data', (data: any) => {
-            processedCount++;
-            try {
-              const [key, value] = data;
-              if (key && value && !wordsCache.has(key)) {
-                wordsCache.set(key, value);
-                loadedCount++;
-              }
-            } catch (e) {
-              // Skip corrupted entries
-            }
-          });
-
-          await new Promise<void>((resolve, reject) => {
-            parseStream.on('end', () => {
-              const elapsed = Date.now() - cacheStart;
-              console.log(`[Cache] Word cache: streamed ${processedCount} entries, loaded ${loadedCount} new entries in ${elapsed}ms`);
-              resolve();
-            });
-            parseStream.on('error', reject);
-          });
-        } catch (e: any) {
-          console.warn('[Cache] Failed to load word cache:', e.message);
-        }
-      };
-
-      // Start loading asynchronously (don't await - runs in background)
-      loadCompressedCache().catch(e => console.error('[Cache] Background loading error:', e));
+      console.log('[Cache] Word cache file exists but skipped (using database instead)');
     }
   };
 
