@@ -236,7 +236,6 @@ const dictionaryReady = (async () => {
             let depth = 0;
             let inString = false;
             let valueStart = pos;
-            let valueParseError = false;
 
             while (pos < decompressedStr.length) {
               const char = decompressedStr[pos];
@@ -270,7 +269,6 @@ const dictionaryReady = (async () => {
             } catch (e) {
               skippedCount++;
               console.warn(`[Cache] Skipping corrupted entry for "${key}": ${e instanceof Error ? e.message : String(e)}`);
-              valueParseError = true;
 
               // If JSON parse failed, try to recover by finding the next comma or closing brace
               // This helps skip malformed entries and continue parsing
@@ -296,13 +294,11 @@ const dictionaryReady = (async () => {
                       if (recoveryDepth < 0) {
                         // Found end of object
                         pos = recoveryPos;
-                        valueParseError = false;
                         break;
                       }
                     } else if (char === ',' && recoveryDepth === 0) {
                       // Found next entry
                       pos = recoveryPos;
-                      valueParseError = false;
                       break;
                     }
                   }
