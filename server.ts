@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import * as tar from "tar";
+import zlib from "zlib";
 import {
   DictionaryVariant,
   DictionaryEntry,
@@ -158,96 +159,106 @@ const dictionaryReady = (async () => {
       }
     }
 
-    // Load word cache using streaming to avoid memory issues
-    if (fs.existsSync(wordCacheFile)) {
-      try {
-        const cacheStart = Date.now();
-        console.log('[Cache] Starting to load word cache using streaming...');
+    // Load word cache from compressed file using streaming JSON parser
+    // Decompress first, then stream the JSON
+    const wordCacheGzFile = path.join(__dirname, '.word-cache.json.gz');
+    if (fs.existsSync(wordCacheGzFile)) {
+      const { Readable } = await import('stream');
 
-        await new Promise<void>((resolve, reject) => {
-          let buffer = '';
+      const loadCompressedCache = async () => {
+        try {
+          const cacheStart = Date.now();
+          console.log('[Cache] Starting to load word cache from compressed file...');
+
+          // Decompress the file
+          const { promisify } = await import('util');
+          const gunzip = promisify(zlib.gunzip);
+          const compressed = fs.readFileSync(wordCacheGzFile);
+          const decompressed = await gunzip(compressed);
+          const decompressedStr = decompressed.toString('utf-8');
+
+          // Parse JSON object manually to avoid loading entire structure into memory
+          // Split on key-value boundaries to process one entry at a time
           let loadedCount = 0;
-          let depth = 0;
-          let inString = false;
-          let escaped = false;
-          let entryStart = 0;
+          let pos = 0;
 
-          const stream = fs.createReadStream(wordCacheFile, {
-            encoding: 'utf8',
-            highWaterMark: 64 * 1024 // 64KB chunks
-          });
+          // Skip opening brace
+          while (pos < decompressedStr.length && decompressedStr[pos] !== '{') pos++;
+          pos++;
 
-          stream.on('data', (chunk: string) => {
-            buffer += chunk;
+          while (pos < decompressedStr.length) {
+            // Skip whitespace and commas
+            while (pos < decompressedStr.length && /[\s,}]/.test(decompressedStr[pos])) {
+              if (decompressedStr[pos] === '}') {
+                // End of object
+                console.log(`[Cache] Loaded ${loadedCount} words from cache (${Date.now() - cacheStart}ms)`);
+                return;
+              }
+              pos++;
+            }
 
-            // Process complete entries from buffer
-            let i = 0;
-            while (i < buffer.length) {
-              const char = buffer[i];
+            // Parse key: find quoted string
+            if (decompressedStr[pos] !== '"') break;
 
-              if (escaped) {
-                escaped = false;
-                i++;
+            let keyStart = pos + 1;
+            let keyEnd = keyStart;
+            while (keyEnd < decompressedStr.length && decompressedStr[keyEnd] !== '"') {
+              if (decompressedStr[keyEnd] === '\\') keyEnd++;
+              keyEnd++;
+            }
+            const key = decompressedStr.slice(keyStart, keyEnd);
+            pos = keyEnd + 1;
+
+            // Skip to colon
+            while (pos < decompressedStr.length && decompressedStr[pos] !== ':') pos++;
+            pos++;
+
+            // Parse value: find the complete JSON value
+            let depth = 0;
+            let inString = false;
+            let valueStart = pos;
+            while (pos < decompressedStr.length) {
+              const char = decompressedStr[pos];
+
+              if (char === '\\' && inString) {
+                pos += 2;
                 continue;
               }
 
-              if (char === '\\') {
-                escaped = true;
-                i++;
-                continue;
-              }
-
-              if (char === '"' && depth > 0) {
+              if (char === '"') {
                 inString = !inString;
-              }
-
-              if (!inString) {
-                if (char === '{') {
-                  if (depth === 1) entryStart = i; // Mark start of entry
-                  depth++;
-                } else if (char === '}') {
-                  depth--;
-
-                  // Complete entry found
-                  if (depth === 1) {
-                    try {
-                      const entryText = buffer.substring(entryStart, i + 1);
-                      const parsed = JSON.parse(`{${entryText}}`);
-                      for (const [word, entries] of Object.entries(parsed)) {
-                        if (!wordsCache.has(word)) {
-                          wordsCache.set(word, entries as any);
-                          loadedCount++;
-                        }
-                      }
-                    } catch (e) {
-                      // Skip malformed entries
-                    }
-
-                    // Remove processed entry from buffer
-                    buffer = buffer.substring(i + 1);
-                    i = 0;
-                    continue;
-                  }
+              } else if (!inString) {
+                if (char === '{' || char === '[') depth++;
+                else if (char === '}' || char === ']') depth--;
+                else if ((char === ',' || char === '}') && depth === 0) {
+                  // End of this value
+                  break;
                 }
               }
-
-              i++;
+              pos++;
             }
-          });
 
-          stream.on('end', () => {
-            console.log(`[Cache] Loaded ${loadedCount} words from .word-cache.json (${Date.now() - cacheStart}ms)`);
-            resolve();
-          });
+            const valueStr = decompressedStr.slice(valueStart, pos).trim();
 
-          stream.on('error', (e: any) => {
-            console.warn('[Cache] Failed to load word cache:', e.message);
-            reject(e);
-          });
-        });
-      } catch (e: any) {
-        console.warn('[Cache] Failed to initialize word cache streaming:', e.message);
-      }
+            try {
+              const value = JSON.parse(valueStr);
+              if (!wordsCache.has(key)) {
+                wordsCache.set(key, value);
+                loadedCount++;
+              }
+            } catch (e) {
+              console.warn(`[Cache] Failed to parse value for key "${key}":`, e instanceof Error ? e.message : String(e));
+            }
+          }
+
+          console.log(`[Cache] Loaded ${loadedCount} words from cache (${Date.now() - cacheStart}ms)`);
+        } catch (e: any) {
+          console.warn('[Cache] Failed to load word cache:', e.message);
+        }
+      };
+
+      // Start loading asynchronously (don't await - runs in background)
+      loadCompressedCache().catch(e => console.error('[Cache] Background loading error:', e));
     }
   };
 
