@@ -31,6 +31,7 @@
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "jmdict-wrapper": "^1.1.2",
+    "JSONStream": "^1.3.5",
     "kanji-data": "^1.1.0",
     "kuromoji": "^0.1.2",
     "lindera-nodejs": "^3.0.7",
