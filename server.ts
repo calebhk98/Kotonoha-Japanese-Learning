@@ -153,7 +153,8 @@ const dictionaryReady = (async () => {
             jishoCache.set(word, result);
           }
         }
-        console.log(`[Cache] Loaded ${Object.keys(data).length} Jisho entries from .jisho-cache.json (${Date.now() - cacheStart}ms)`);
+        const elapsed = Date.now() - cacheStart;
+        console.log(`[Cache] Jisho cache: loaded ${Object.keys(data).length} entries in ${elapsed}ms`);
       } catch (e: any) {
         console.warn('[Cache] Failed to load Jisho cache:', e.message);
       }
@@ -168,18 +169,22 @@ const dictionaryReady = (async () => {
       const loadCompressedCache = async () => {
         try {
           const cacheStart = Date.now();
-          console.log('[Cache] Starting to load word cache from compressed file...');
+          console.log('[Cache] Word cache: starting decompression...');
 
           // Decompress the file
           const { promisify } = await import('util');
           const gunzip = promisify(zlib.gunzip);
           const compressed = fs.readFileSync(wordCacheGzFile);
+          const decompressedStart = Date.now();
           const decompressed = await gunzip(compressed);
           const decompressedStr = decompressed.toString('utf-8');
+          const decompressedTime = Date.now() - decompressedStart;
+          console.log(`[Cache] Word cache: decompressed in ${decompressedTime}ms`);
 
           // Parse JSON object manually to avoid loading entire structure into memory
           // Split on key-value boundaries to process one entry at a time
           let loadedCount = 0;
+          let skippedCount = 0;
           let pos = 0;
 
           // Skip opening brace
@@ -191,7 +196,8 @@ const dictionaryReady = (async () => {
             while (pos < decompressedStr.length && /[\s,}]/.test(decompressedStr[pos])) {
               if (decompressedStr[pos] === '}') {
                 // End of object
-                console.log(`[Cache] Loaded ${loadedCount} words from cache (${Date.now() - cacheStart}ms)`);
+                const elapsed = Date.now() - cacheStart;
+                console.log(`[Cache] Word cache: loaded ${loadedCount} entries, skipped ${skippedCount} corrupted entries in ${elapsed}ms`);
                 return;
               }
               pos++;
@@ -247,11 +253,13 @@ const dictionaryReady = (async () => {
                 loadedCount++;
               }
             } catch (e) {
-              console.warn(`[Cache] Failed to parse value for key "${key}":`, e instanceof Error ? e.message : String(e));
+              skippedCount++;
+              console.warn(`[Cache] Skipping corrupted entry for "${key}": ${e instanceof Error ? e.message : String(e)}`);
             }
           }
 
-          console.log(`[Cache] Loaded ${loadedCount} words from cache (${Date.now() - cacheStart}ms)`);
+          const elapsed = Date.now() - cacheStart;
+          console.log(`[Cache] Word cache: loaded ${loadedCount} entries, skipped ${skippedCount} corrupted entries in ${elapsed}ms`);
         } catch (e: any) {
           console.warn('[Cache] Failed to load word cache:', e.message);
         }
@@ -298,6 +306,8 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
 
   let cacheHits = 0;
   let cacheMisses = 0;
+  const hitWords: string[] = [];
+  const missWords: string[] = [];
   const results = [];
   const processedWords: string[] = [];
   for (const [wordStr, baseForm] of validWords) {
@@ -315,8 +325,13 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
 
     const lookupTime = Date.now() - start;
 
-    if (cacheHadBase || cacheHadSurface) cacheHits++;
-    else cacheMisses++;
+    if (cacheHadBase || cacheHadSurface) {
+      cacheHits++;
+      hitWords.push(wordStr);
+    } else {
+      cacheMisses++;
+      missWords.push(wordStr);
+    }
 
     if (lookupTime > 250) {
       console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
@@ -421,7 +436,11 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   }
 
   console.log(`[API] Words processed: [${processedWords.join(', ')}] (${processedWords.length} total)`);
-  console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
+  console.log(`[API] Cache hits: [${hitWords.join(', ')}] (${cacheHits} total)`);
+  console.log(`[API] Cache misses: [${missWords.join(', ')}] (${cacheMisses} total)`);
+  if (cacheHits + cacheMisses > 0) {
+    console.log(`[API] Hit rate: ${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}%`);
+  }
 
   return results;
 }
@@ -454,6 +473,8 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
 
   let cacheHits = 0;
   let cacheMisses = 0;
+  const hitWords: string[] = [];
+  const missWords: string[] = [];
   const results = [];
   const processedWords: string[] = [];
   for (const [wordStr, baseForm] of validWords) {
@@ -471,8 +492,13 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
 
     const lookupTime = Date.now() - start;
 
-    if (cacheHadBase || cacheHadSurface) cacheHits++;
-    else cacheMisses++;
+    if (cacheHadBase || cacheHadSurface) {
+      cacheHits++;
+      hitWords.push(wordStr);
+    } else {
+      cacheMisses++;
+      missWords.push(wordStr);
+    }
 
     if (lookupTime > 250) {
       console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
@@ -554,7 +580,11 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
   }
 
   console.log(`[API] Words processed: [${processedWords.join(', ')}] (${processedWords.length} total)`);
-  console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}% hit rate)`);
+  console.log(`[API] Cache hits: [${hitWords.join(', ')}] (${cacheHits} total)`);
+  console.log(`[API] Cache misses: [${missWords.join(', ')}] (${cacheMisses} total)`);
+  if (cacheHits + cacheMisses > 0) {
+    console.log(`[API] Hit rate: ${Math.round(cacheHits / (cacheHits + cacheMisses) * 100)}%`);
+  }
 
   return results;
 }
@@ -776,13 +806,14 @@ async function startServer() {
       })
     );
     const tokenTime = Date.now() - tokenStart;
-    console.log(`[API] /api/batch-extract: Tokenization complete (${tokenTime}ms)`);
+    console.log(`[API] /api/batch-extract: Step 1 - Tokenization completed in ${tokenTime}ms`);
 
     // Collect unique kana-only words from all texts
     const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
     const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
     const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
+    const collectStart = Date.now();
     const uniqueKanaWords = new Set<string>();
     for (const item of tokenizedBatch) {
       if (!item.tokens) continue;
@@ -797,10 +828,11 @@ async function startServer() {
         }
       }
     }
+    const collectTime = Date.now() - collectStart;
+    console.log(`[API] /api/batch-extract: Step 2 - Found ${uniqueKanaWords.size} unique kana words in ${collectTime}ms`);
 
     // Look up kana words via API with concurrency limit (KanjiData has wrong defs for pure kana)
     const lookupStart = Date.now();
-    console.log(`[API] /api/batch-extract: Looking up ${uniqueKanaWords.size} unique kana words with concurrency limit`);
     const kanaLookupCache = new Map<string, any>();
     if (dictionary && uniqueKanaWords.size > 0) {
       const words = Array.from(uniqueKanaWords);
@@ -851,7 +883,7 @@ async function startServer() {
     }
     const lookupTime = Date.now() - lookupStart;
     const foundCount = Array.from(kanaLookupCache.values()).filter(v => v !== null).length;
-    console.log(`[API] /api/batch-extract: Kana lookup complete (${lookupTime}ms, ${foundCount}/${uniqueKanaWords.size} found)`);
+    console.log(`[API] /api/batch-extract: Step 3 - Kana lookup completed in ${lookupTime}ms (${foundCount}/${uniqueKanaWords.size} found)`);
 
     // Process texts with pre-looked-up kana cache
     const processStart = Date.now();
@@ -877,7 +909,7 @@ async function startServer() {
     const processTime = Date.now() - processStart;
     const totalTime = Date.now() - batchStart;
 
-    console.log(`[API] /api/batch-extract: Text processing complete (${processTime}ms)`);
+    console.log(`[API] /api/batch-extract: Step 4 - Text processing completed in ${processTime}ms`);
     console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words (total: ${totalTime}ms)`);
     res.json(results);
   });
