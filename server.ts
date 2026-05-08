@@ -193,18 +193,31 @@ const dictionaryReady = (async () => {
 
           while (pos < decompressedStr.length) {
             // Skip whitespace and commas
+            let foundClosingBrace = false;
             while (pos < decompressedStr.length && /[\s,}]/.test(decompressedStr[pos])) {
               if (decompressedStr[pos] === '}') {
                 // End of object
-                const elapsed = Date.now() - cacheStart;
-                console.log(`[Cache] Word cache: loaded ${loadedCount} entries, skipped ${skippedCount} corrupted entries in ${elapsed}ms`);
-                return;
+                foundClosingBrace = true;
+                break;
               }
               pos++;
             }
 
+            if (foundClosingBrace) {
+              const elapsed = Date.now() - cacheStart;
+              console.log(`[Cache] Word cache: loaded ${loadedCount} entries, skipped ${skippedCount} corrupted entries in ${elapsed}ms`);
+              return;
+            }
+
             // Parse key: find quoted string
-            if (decompressedStr[pos] !== '"') break;
+            if (decompressedStr[pos] !== '"') {
+              // If we don't find a quote, we're in an unexpected position - try to recover
+              // Skip to next quote or closing brace
+              while (pos < decompressedStr.length && decompressedStr[pos] !== '"' && decompressedStr[pos] !== '}') {
+                pos++;
+              }
+              if (pos >= decompressedStr.length || decompressedStr[pos] === '}') break;
+            }
 
             let keyStart = pos + 1;
             let keyEnd = keyStart;
@@ -223,6 +236,8 @@ const dictionaryReady = (async () => {
             let depth = 0;
             let inString = false;
             let valueStart = pos;
+            let valueParseError = false;
+
             while (pos < decompressedStr.length) {
               const char = decompressedStr[pos];
 
@@ -255,6 +270,45 @@ const dictionaryReady = (async () => {
             } catch (e) {
               skippedCount++;
               console.warn(`[Cache] Skipping corrupted entry for "${key}": ${e instanceof Error ? e.message : String(e)}`);
+              valueParseError = true;
+
+              // If JSON parse failed, try to recover by finding the next comma or closing brace
+              // This helps skip malformed entries and continue parsing
+              if (pos < decompressedStr.length && decompressedStr[pos] !== ',' && decompressedStr[pos] !== '}') {
+                let recoveryPos = pos;
+                let recoveryDepth = 0;
+                let recoveryInString = false;
+
+                while (recoveryPos < decompressedStr.length) {
+                  const char = decompressedStr[recoveryPos];
+
+                  if (char === '\\' && recoveryInString) {
+                    recoveryPos += 2;
+                    continue;
+                  }
+
+                  if (char === '"') {
+                    recoveryInString = !recoveryInString;
+                  } else if (!recoveryInString) {
+                    if (char === '{' || char === '[') recoveryDepth++;
+                    else if (char === '}' || char === ']') {
+                      recoveryDepth--;
+                      if (recoveryDepth < 0) {
+                        // Found end of object
+                        pos = recoveryPos;
+                        valueParseError = false;
+                        break;
+                      }
+                    } else if (char === ',' && recoveryDepth === 0) {
+                      // Found next entry
+                      pos = recoveryPos;
+                      valueParseError = false;
+                      break;
+                    }
+                  }
+                  recoveryPos++;
+                }
+              }
             }
           }
 
