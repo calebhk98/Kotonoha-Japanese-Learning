@@ -267,7 +267,9 @@ export default function App() {
       <WordDetailPage
         word={selectedWord}
         onBack={navigateBack}
-        allWords={Object.values(contentVocab).flat()}
+        allWords={Object.values(contentVocab).flat() as WordInfo[]}
+        onNavigateWord={navigateToWord}
+        onEdit={(wordInfo) => setEditingWord(wordInfo)}
       />
     );
   }
@@ -742,17 +744,27 @@ export default function App() {
                 <p className="text-gray-500 italic pb-4">You haven't learned any words yet. Start a lesson!</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {Array.from(knownWords).map(w => {
+                  {Array.from(knownWords).map((w: string) => {
                     // Try to find the WordInfo to show on click
                     const info = (Object.values(contentVocab).flat() as WordInfo[]).find(x => x.word === w);
                     return (
-                      <button 
-                        key={w} 
-                        onClick={() => info && setEditingWord(info)}
-                        className={`px-3 py-1.5 bg-green-50 border border-green-100 text-green-800 rounded-lg text-sm font-medium transition-colors ${info ? 'hover:bg-green-100 cursor-pointer' : ''}`}
-                      >
-                        {w}
-                      </button>
+                      <div key={w} className="flex items-center gap-1">
+                        <button
+                          onClick={() => navigateToWord(w)}
+                          className={`px-3 py-1.5 bg-green-50 border border-green-100 text-green-800 rounded-lg text-sm font-medium transition-colors hover:bg-green-100 cursor-pointer`}
+                        >
+                          {w}
+                        </button>
+                        {info && (
+                          <button
+                            onClick={() => setEditingWord(info)}
+                            className="px-2 py-1.5 text-gray-400 hover:text-gray-600 transition-colors text-xs font-medium"
+                            title="Edit"
+                          >
+                            ✏️
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -770,22 +782,32 @@ export default function App() {
                   (Object.values(contentVocab).flat() as WordInfo[])
                     .map(w => w.word)
                     .filter(w => !knownWords.has(w))
-                )).slice(0, 100).map(w => {
+                )).slice(0, 100).map((w: string) => {
                   const info = (Object.values(contentVocab).flat() as WordInfo[]).find(x => x.word === w);
                   return (
-                    <button 
-                      key={`unknown-${w}`} 
-                      onClick={() => info && setEditingWord(info)}
-                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium flex items-center gap-1 group relative hover:bg-gray-100 transition-colors"
-                    >
-                      <span className="opacity-0 group-hover:opacity-100 absolute z-10 bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap transition-opacity">
-                        {info?.meaning || w}
-                      </span>
-                      {w}
-                    </button>
+                    <div key={`unknown-${w}`} className="flex items-center gap-1">
+                      <button
+                        onClick={() => navigateToWord(w)}
+                        className="px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium group relative hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="opacity-0 group-hover:opacity-100 absolute z-10 bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap transition-opacity">
+                          {info?.meaning || w}
+                        </span>
+                        {w}
+                      </button>
+                      {info && (
+                        <button
+                          onClick={() => setEditingWord(info)}
+                          className="px-1.5 py-1.5 text-gray-300 hover:text-gray-600 transition-colors text-xs font-medium"
+                          title="Edit"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
-                
+
                 {(Object.values(contentVocab).flat() as WordInfo[]).length > 100 && (
                   <span className="px-3 py-1.5 text-gray-400 text-sm font-medium italic">
                     + thousands more
@@ -815,13 +837,13 @@ export default function App() {
                   }
                   
                   return unknownMeaningWords.map((w, i) => (
-                    <div 
-                      key={i} 
-                      onClick={() => setEditingWord(w)}
-                      className="border border-red-100 bg-red-50/30 rounded-xl p-4 flex flex-col gap-2 hover:border-red-300 transition-colors cursor-pointer group relative"
+                    <button
+                      key={i}
+                      onClick={() => navigateToWord(w.word)}
+                      className="border border-red-100 bg-red-50/30 hover:bg-red-50/60 hover:border-red-200 rounded-xl p-4 flex flex-col gap-2 transition-colors cursor-pointer group relative text-left w-full"
                     >
                       <div className="absolute top-4 right-4 text-red-300 group-hover:text-red-500 transition-colors">
-                        <span className="text-xs font-semibold uppercase tracking-widest">Edit</span>
+                        <span className="text-xs font-semibold uppercase tracking-widest">View</span>
                       </div>
                       <div>
                         <div className="text-xs text-gray-500">{w.reading}</div>
@@ -838,7 +860,7 @@ export default function App() {
                            <span>{w.breakdown?.jlptScore || '?'} pts</span>
                          </div>
                       </div>
-                    </div>
+                    </button>
                   ));
                 })()}
               </div>

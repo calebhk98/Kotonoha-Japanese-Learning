@@ -211,7 +211,11 @@ export function ContentDetail({
                     ? [...status.unknownWords].sort((a, b) => (b.frequencyInContent ?? 0) - (a.frequencyInContent ?? 0))
                     : [...status.unknownWords].sort((a, b) => (b.frequencyInContent ?? 0) - (a.frequencyInContent ?? 0)).slice(0, 10)
                   ).map((w, i) => (
-                    <div key={i} className="border border-gray-100 bg-gray-50 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <button
+                      key={i}
+                      onClick={() => onWordClick?.(w.word)}
+                      className="border border-gray-100 bg-gray-50 hover:bg-gray-100 hover:border-indigo-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 transition-colors text-left w-full cursor-pointer"
+                    >
                       <div>
                         <div className="text-xs text-gray-500 flex items-center gap-2">
                           <span>{w.reading}</span>
@@ -253,7 +257,7 @@ export function ContentDetail({
                           </div>
                         )}
                       </div>
-                    </div>
+                    </button>
                   ))}
                   {status.unknownWords.length > 10 && !showAllWords && (
                     <button 
@@ -284,7 +288,11 @@ export function ContentDetail({
                 </h3>
                 <div className="grid grid-cols-1 gap-4">
                   {(showAllWords ? status.knownWords : status.knownWords.slice(0, 10)).map((w, i) => (
-                    <div key={i} className="border border-green-100 bg-white/50 rounded-xl p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <button
+                      key={i}
+                      onClick={() => onWordClick?.(w.word)}
+                      className="border border-green-100 bg-white/50 hover:bg-green-50/50 hover:border-green-200 rounded-xl p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 transition-colors text-left w-full cursor-pointer"
+                    >
                       <div>
                         <div className="flex items-baseline gap-2">
                           <span className="font-bold text-lg text-gray-900">{w.word}</span>
@@ -308,7 +316,7 @@ export function ContentDetail({
                           <span className="font-medium text-green-700">{w.score}</span>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   ))}
                   {status.knownWords.length > 10 && !showAllWords && (
                     <button 
