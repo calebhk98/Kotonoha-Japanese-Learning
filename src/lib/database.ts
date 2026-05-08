@@ -10,6 +10,7 @@ const DB_PATH = path.join(__dirname, '../../.cache.db');
 
 let db: SqlDatabase | null = null;
 let SQL: any = null;
+let isDirty = false;
 
 export async function initDatabase() {
   SQL = await initSqlJs();
@@ -66,11 +67,11 @@ function createTables() {
 }
 
 export function saveDatabase() {
-  if (!db) return;
-
+  if (!db || !isDirty) return;
   const data = db.export();
   const buffer = Buffer.from(data);
   fs.writeFileSync(DB_PATH, buffer);
+  isDirty = false;
   console.log('[Database] Saved to disk');
 }
 
@@ -85,6 +86,7 @@ export class WordsCache {
       [key, JSON.stringify(value)]
     );
     this.memoryCache.set(key, value);
+    isDirty = true;
   }
 
   get(key: string): DictionaryEntry[] | undefined {
@@ -126,6 +128,7 @@ export class WordsCache {
     if (!db) throw new Error('Database not initialized');
     db.run('DELETE FROM words_cache');
     this.memoryCache.clear();
+    isDirty = true;
   }
 
   entries(): [string, DictionaryEntry[]][] {
@@ -169,6 +172,7 @@ export class JishoCache {
       'INSERT OR REPLACE INTO jisho_cache (word, result) VALUES (?, ?)',
       [key, JSON.stringify(value)]
     );
+    isDirty = true;
   }
 
   get(key: string): any | undefined {
@@ -195,6 +199,7 @@ export class JishoCache {
   clear() {
     if (!db) throw new Error('Database not initialized');
     db.run('DELETE FROM jisho_cache');
+    isDirty = true;
   }
 
   entries(): [string, any][] {
@@ -219,6 +224,7 @@ export class ContentWordsStore {
   setContentWords(contentId: string, words: WordInfo[]): void {
     if (!db) throw new Error('Database not initialized');
     db.run('DELETE FROM content_words WHERE content_id = ?', [contentId]);
+    isDirty = true;
     for (const w of words) {
       db.run(
         `INSERT INTO content_words
@@ -303,10 +309,12 @@ export class ContentWordsStore {
   deleteContentWords(contentId: string): void {
     if (!db) throw new Error('Database not initialized');
     db.run('DELETE FROM content_words WHERE content_id = ?', [contentId]);
+    isDirty = true;
   }
 
   clear(): void {
     if (!db) throw new Error('Database not initialized');
     db.run('DELETE FROM content_words');
+    isDirty = true;
   }
 }
