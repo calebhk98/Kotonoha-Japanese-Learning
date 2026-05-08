@@ -1231,18 +1231,18 @@ async function startServer() {
 }
 
 startServer().catch((err) => {
-  console.error('[Server] Fatal error:', err);
-  process.exit(1);
+  console.error('[Server] Fatal error during startup:', err);
+  // Don't exit - server should continue running
 });
 
 // Handle unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('[Server] Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+  console.error('[Server] Unhandled Rejection:', reason instanceof Error ? reason.message : String(reason));
+  // Don't exit - server should continue running
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('[Server] Uncaught Exception:', error);
-  process.exit(1);
+  console.error('[Server] Uncaught Exception:', error instanceof Error ? error.message : String(error));
+  // Don't exit - server should continue running
 });
