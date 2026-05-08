@@ -160,163 +160,10 @@ const dictionaryReady = (async () => {
       }
     }
 
-    // Load word cache from compressed file using streaming JSON parser
-    // Decompress first, then stream the JSON
+    // Compressed cache loading disabled - database provides words via lazy load
     const wordCacheGzFile = path.join(__dirname, '.word-cache.json.gz');
     if (fs.existsSync(wordCacheGzFile)) {
-      const { Readable } = await import('stream');
-
-      const loadCompressedCache = async () => {
-        try {
-          const cacheStart = Date.now();
-          console.log('[Cache] Word cache: starting decompression...');
-
-          // Decompress the file
-          const { promisify } = await import('util');
-          const gunzip = promisify(zlib.gunzip);
-          const compressed = fs.readFileSync(wordCacheGzFile);
-          const decompressedStart = Date.now();
-          const decompressed = await gunzip(compressed);
-          const decompressedStr = decompressed.toString('utf-8');
-          const decompressedTime = Date.now() - decompressedStart;
-          console.log(`[Cache] Word cache: decompressed in ${decompressedTime}ms`);
-
-          // Parse JSON object manually to avoid loading entire structure into memory
-          // Split on key-value boundaries to process one entry at a time
-          let loadedCount = 0;
-          let skippedCount = 0;
-          let pos = 0;
-
-          // Skip opening brace
-          while (pos < decompressedStr.length && decompressedStr[pos] !== '{') pos++;
-          pos++;
-
-          while (pos < decompressedStr.length) {
-            // Skip whitespace and commas
-            let foundClosingBrace = false;
-            while (pos < decompressedStr.length && /[\s,}]/.test(decompressedStr[pos])) {
-              if (decompressedStr[pos] === '}') {
-                // End of object
-                foundClosingBrace = true;
-                break;
-              }
-              pos++;
-            }
-
-            if (foundClosingBrace) {
-              const elapsed = Date.now() - cacheStart;
-              console.log(`[Cache] Word cache: loaded ${loadedCount} entries, skipped ${skippedCount} corrupted entries in ${elapsed}ms`);
-              return;
-            }
-
-            // Parse key: find quoted string
-            if (decompressedStr[pos] !== '"') {
-              // If we don't find a quote, we're in an unexpected position - try to recover
-              // Skip to next quote or closing brace
-              while (pos < decompressedStr.length && decompressedStr[pos] !== '"' && decompressedStr[pos] !== '}') {
-                pos++;
-              }
-              if (pos >= decompressedStr.length || decompressedStr[pos] === '}') break;
-            }
-
-            let keyStart = pos + 1;
-            let keyEnd = keyStart;
-            while (keyEnd < decompressedStr.length && decompressedStr[keyEnd] !== '"') {
-              if (decompressedStr[keyEnd] === '\\') keyEnd++;
-              keyEnd++;
-            }
-            const key = decompressedStr.slice(keyStart, keyEnd);
-            pos = keyEnd + 1;
-
-            // Skip to colon
-            while (pos < decompressedStr.length && decompressedStr[pos] !== ':') pos++;
-            pos++;
-
-            // Parse value: find the complete JSON value
-            let depth = 0;
-            let inString = false;
-            let valueStart = pos;
-
-            while (pos < decompressedStr.length) {
-              const char = decompressedStr[pos];
-
-              if (char === '\\' && inString) {
-                pos += 2;
-                continue;
-              }
-
-              if (char === '"') {
-                inString = !inString;
-              } else if (!inString) {
-                if (char === '{' || char === '[') depth++;
-                else if (char === '}' || char === ']') depth--;
-                else if ((char === ',' || char === '}') && depth === 0) {
-                  // End of this value
-                  break;
-                }
-              }
-              pos++;
-            }
-
-            const valueStr = decompressedStr.slice(valueStart, pos).trim();
-
-            try {
-              const value = JSON.parse(valueStr);
-              if (!wordsCache.has(key)) {
-                wordsCache.set(key, value);
-                loadedCount++;
-              }
-            } catch (e) {
-              skippedCount++;
-              console.warn(`[Cache] Skipping corrupted entry for "${key}": ${e instanceof Error ? e.message : String(e)}`);
-
-              // If JSON parse failed, try to recover by finding the next comma or closing brace
-              // This helps skip malformed entries and continue parsing
-              if (pos < decompressedStr.length && decompressedStr[pos] !== ',' && decompressedStr[pos] !== '}') {
-                let recoveryPos = pos;
-                let recoveryDepth = 0;
-                let recoveryInString = false;
-
-                while (recoveryPos < decompressedStr.length) {
-                  const char = decompressedStr[recoveryPos];
-
-                  if (char === '\\' && recoveryInString) {
-                    recoveryPos += 2;
-                    continue;
-                  }
-
-                  if (char === '"') {
-                    recoveryInString = !recoveryInString;
-                  } else if (!recoveryInString) {
-                    if (char === '{' || char === '[') recoveryDepth++;
-                    else if (char === '}' || char === ']') {
-                      recoveryDepth--;
-                      if (recoveryDepth < 0) {
-                        // Found end of object
-                        pos = recoveryPos;
-                        break;
-                      }
-                    } else if (char === ',' && recoveryDepth === 0) {
-                      // Found next entry
-                      pos = recoveryPos;
-                      break;
-                    }
-                  }
-                  recoveryPos++;
-                }
-              }
-            }
-          }
-
-          const elapsed = Date.now() - cacheStart;
-          console.log(`[Cache] Word cache: loaded ${loadedCount} entries, skipped ${skippedCount} corrupted entries in ${elapsed}ms`);
-        } catch (e: any) {
-          console.warn('[Cache] Failed to load word cache:', e.message);
-        }
-      };
-
-      // Start loading asynchronously (don't await - runs in background)
-      loadCompressedCache().catch(e => console.error('[Cache] Background loading error:', e));
+      console.log('[Cache] Word cache file exists but skipped (using database instead)');
     }
   };
 
@@ -1248,6 +1095,7 @@ async function startServer() {
 startServer().catch((err) => {
   console.error('[Server] Fatal error during startup:', err);
   // Don't exit - server should continue even if there's an error
+  // Don't exit - server should continue running
 });
 
 // Handle unhandled rejections
@@ -1258,6 +1106,8 @@ process.on('unhandledRejection', (reason, promise) => {
     promise: String(promise)
   });
   // Don't exit - log and continue running
+  console.error('[Server] Unhandled Rejection:', reason instanceof Error ? reason.message : String(reason));
+  // Don't exit - server should continue running
 });
 
 // Handle uncaught exceptions
@@ -1268,4 +1118,6 @@ process.on('uncaughtException', (error) => {
     name: error.name
   });
   // Don't exit - log and continue running
+  console.error('[Server] Uncaught Exception:', error instanceof Error ? error.message : String(error));
+  // Don't exit - server should continue running
 });
