@@ -379,6 +379,12 @@ export class JmdictDictionary implements Dictionary {
     if (entry.kanji && entry.kanji.length > 0) score += 10;
     if (entry.kanji && entry.kanji.length > 1) score += 5;
     if (entry.sense && entry.sense.length > 1) score += 3;
+    // The jmdict-simplified schema marks common entries with common:true on kana/kanji
+    // forms. Using this strongly differentiates the canonical entry (e.g. 良い with
+    // common:true) from edge-case entries (e.g. a kana-only いい idiom with common:false)
+    // so the right entry is selected when multiple exact-form matches exist (#187 いい).
+    if (entry.kanji && entry.kanji.some((k: any) => k.common === true)) score += 8;
+    if (entry.kana && entry.kana.some((k: any) => k.common === true)) score += 4;
     return score;
   }
 

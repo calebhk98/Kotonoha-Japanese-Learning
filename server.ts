@@ -191,6 +191,17 @@ async function resolveWordMeaning(
   baseForm: string,
   lookupCache?: Map<string, any>
 ): Promise<{ reading: string; meaning: string; meanings: string[] | undefined }> {
+  // Early-return for known grammatical morphemes (fix for #188).
+  //
+  // For pure-kana words like ます/ない, the dictionary waterfall reaches JMnedict
+  // which stores them as Japanese proper nouns ("Masu", "Nai"). Those are truthy
+  // non-"Unknown" strings so they would overwrite the correct grammatical definition.
+  // Checking morphemeDefinitions first prevents that path from ever running.
+  if (/^[ぁ-んー]+$/.test(wordStr)) {
+    const morphemeDef = getMorphemeDefinition(wordStr);
+    if (morphemeDef) return { reading: wordStr, meaning: morphemeDef, meanings: undefined };
+  }
+
   // Step 1: kanji-data (fast, synchronous) — used for reading and as fallback meaning
   let entries = getCachedDictionaryEntries(baseForm);
   if (entries.length === 0 && baseForm !== wordStr) {
