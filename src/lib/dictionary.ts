@@ -206,50 +206,57 @@ export class JishoApiDictionary implements Dictionary {
 // ==================== JMDict Helpers (exported for testing) ====================
 
 // ==================== JMDict Helpers (exported for testing) ====================
-// NOTE: These functions are exported so they can be unit-tested in dictionary.test.ts.
-// The tests below currently FAIL — they document the correct behaviour that the
-// existing implementation does not yet satisfy (TDD red state).
 
 /**
- * Returns the English-language gloss strings from a JMDict sense.
+ * Returns only the English-language gloss strings from a JMDict sense.
  *
- * BUG (#186 — not yet fixed): the fallback below returns the first gloss
- * regardless of language. If a sense has only German or Spanish glosses this
- * will return non-English text as a definition.
+ * Fix for #186: the original code had an `else if (sense.gloss[0]?.text)` fallback
+ * that pushed the first gloss without a language check. JMDict entries include
+ * German (ger), Spanish (spa), and other language glosses, so that fallback could
+ * return non-English text as a word's primary definition.
  */
 export function getEnglishGlosses(sense: any): string[] {
-  const filtered = ((sense.gloss as any[]) || [])
+  return ((sense.gloss as any[]) || [])
     .filter((g) => g.lang === "en")
     .map((g) => g.text)
     .filter(Boolean);
-  if (filtered.length > 0) return filtered;
-  // BUG: falls back to first gloss without checking language (original behaviour)
-  return sense.gloss?.[0]?.text ? [sense.gloss[0].text] : [];
 }
 
 /**
  * Scores a JMDict sense by how "common" / everyday it is.
  *
- * BUG (#187 — not yet fixed): this only scans the gloss *text* for words like
- * "rare" or "archaic". JMDict encodes register in a structured `misc` array
- * (e.g. misc:['sl'] for slang, misc:['arch'] for archaic) which this function
- * never reads, so slang/archaic senses score identically to common senses.
+ * Fix for #187: the original implementation only scanned gloss *text* for strings
+ * like "rare" or "archaic", completely missing JMDict's structured `misc` array.
+ * JMDict editors mark register in misc[], e.g.:
+ *   sl=slang, arch=archaic, obs=obsolete, rare=rare, vulg=vulgar,
+ *   derog=derogatory, X=rude/X-rated, id=idiomatic
+ * Because misc[] was never read, senses like 猫→"submissive partner" (sl) and
+ * 桜→"hired applauder" (arch) scored identically to plain everyday meanings and
+ * could sort to the top as the primary definition.
  */
 export function getSenseCommonness(sense: any): number {
   let score = 0;
+  const misc: string[] = sense.misc || [];
 
-  // BUG: checks gloss text, not sense.misc[] — misses the structured JMDict markers
-  if (sense.gloss && Array.isArray(sense.gloss) && sense.gloss.length > 1) {
-    score += 5;
+  // Heavy penalty for any explicit register/usage marker. -50 is intentionally
+  // large so that even a slang sense with multiple glosses (which earns a +5/+10
+  // bonus below) still ranks well below a single-gloss plain sense.
+  const uncommonMarkers = ['sl', 'arch', 'obs', 'rare', 'vulg', 'derog', 'X', 'id'];
+  if (misc.some((m) => uncommonMarkers.includes(m))) {
+    score -= 50;
   }
-  const gloss = sense.gloss?.[0]?.text || '';
-  const specializedTerms = ['esp.', 'rare', 'archaic', 'obsolete', 'old', 'dated', 'specialized'];
-  if (specializedTerms.some(term => gloss.toLowerCase().includes(term))) {
+
+  // Mild penalty for domain-restricted senses (e.g. computing, music). These
+  // are legitimate meanings but rarely what a beginner is looking for.
+  if (sense.field && Array.isArray(sense.field) && sense.field.length > 0) {
     score -= 10;
   }
-  if (gloss.toLowerCase().includes('copula') || gloss.toLowerCase().includes('auxiliary')) {
-    score += 3;
-  }
+
+  // Bonus for senses with multiple English synonyms: JMDict editors add more
+  // glosses for well-established, high-frequency meanings.
+  const enGlosses = getEnglishGlosses(sense);
+  if (enGlosses.length > 1) score += 5;
+  if (enGlosses.length > 2) score += 5;
 
   return score;
 }
@@ -320,16 +327,12 @@ export class JmdictDictionary implements Dictionary {
       sensesWithScores.sort((a, b) => b.commonness - a.commonness);
 
       for (const { sense } of sensesWithScores) {
-        if (sense.gloss && sense.gloss.length > 0) {
-          const glossTexts = (sense.gloss as any[])
-            .filter((g) => g.lang === "en")
-            .map((g) => g.text);
-          if (glossTexts.length > 0) {
-            meanings.push(...glossTexts);
-          } else if (sense.gloss[0]?.text) {
-            // BUG (#186): pushes first gloss without language check — can be German/Spanish
-            meanings.push(sense.gloss[0].text);
-          }
+        // getEnglishGlosses() only returns lang:"en" entries, so non-English
+        // JMDict senses are silently skipped rather than leaking German/Spanish
+        // text as definitions (fix for #186).
+        const glossTexts = getEnglishGlosses(sense);
+        if (glossTexts.length > 0) {
+          meanings.push(...glossTexts);
         }
       }
 
@@ -353,8 +356,8 @@ export class JmdictDictionary implements Dictionary {
     return score;
   }
 
-  // Delegates to the top-level exported getSenseCommonness so the logic is
-  // unit-testable without instantiating the class or touching the database.
+  // Delegates to the module-level getSenseCommonness so the logic can be
+  // unit-tested without instantiating the class or touching the database.
   private getSenseCommonness(sense: any): number {
     return getSenseCommonness(sense);
   }

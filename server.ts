@@ -174,6 +174,93 @@ const dictionaryReady = (async () => {
 })();
 
 
+/**
+ * Single source of truth for resolving a Japanese word's reading + meaning.
+ *
+ * Fix for #188: three separate code paths (processText, processStoryText, and
+ * /api/word/:word) previously had slightly different lookup logic. The word
+ * detail page only used getCachedDictionaryEntries (kanji-data) and never called
+ * the dictionary for kana-only words like です/ます, so the word detail page
+ * returned "Unknown meaning" while the vocab card showed the correct definition.
+ *
+ * All paths now call this function so reading/meaning/meanings are always derived
+ * the same way regardless of which view renders the word.
+ */
+async function resolveWordMeaning(
+  wordStr: string,
+  baseForm: string,
+  kanaCache?: Map<string, any>
+): Promise<{ reading: string; meaning: string; meanings: string[] | undefined }> {
+  // Step 1: kanji-data (fast, synchronous, covers kanji words)
+  let entries = getCachedDictionaryEntries(baseForm);
+  if (entries.length === 0 && baseForm !== wordStr) {
+    entries = getCachedDictionaryEntries(wordStr);
+  }
+  const { variant, entry } = findBestVariant(baseForm, entries);
+
+  let reading  = wordStr;
+  let meaning  = "Unknown meaning";
+  let meanings: string[] | undefined = undefined;
+
+  if (entry && variant) {
+    reading = variant.pronounced || wordStr;
+    meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
+    // Collect all meanings in insertion order — no Set, which loses ordering
+    const allMeanings: string[] = [];
+    const seen = new Set<string>();
+    for (const m of entry.meanings) {
+      for (const g of (m.glosses || [])) {
+        if (!seen.has(g)) { seen.add(g); allMeanings.push(g); }
+      }
+    }
+    if (allMeanings.length > 1) meanings = allMeanings;
+  }
+
+  // Step 2: for kana-only words (です, ます, katakana loanwords, etc.) kanji-data
+  // has no data. Fall through to JMDict / Jisho when the dictionary is available.
+  const isKanaOnly = /^[ぁ-ん]+$/.test(wordStr) || /^[ァ-ヴー]+$/.test(wordStr);
+  if (isKanaOnly && dictionary) {
+    const cachedEntries = wordsCache.get(wordStr);
+    let dictResult: any = null;
+
+    if (cachedEntries && cachedEntries.length > 0 && cachedEntries[0].meanings?.length > 0) {
+      const ce = cachedEntries[0];
+      dictResult = {
+        meaning:  ce.meanings[0]?.glosses?.join(", ") || "Unknown",
+        reading:  ce.variants?.[0]?.pronounced || wordStr,
+        meanings: ce.meanings.map((m: any) => m.glosses?.join(", ")).filter(Boolean),
+      };
+    } else {
+      dictResult = kanaCache?.get(wordStr);
+      if (!dictResult) {
+        dictResult = await dictionary.lookup(wordStr);
+        kanaCache?.set(wordStr, dictResult ?? null);
+      }
+      if (dictResult) {
+        const cacheEntry: DictionaryEntry = {
+          meanings: (dictResult.meanings || [dictResult.meaning])
+            .filter(Boolean)
+            .map((m: string) => ({ glosses: [m] })),
+          variants: [{ pronounced: dictResult.reading || wordStr, written: wordStr, priorities: [] }],
+        };
+        wordsCache.set(wordStr, [cacheEntry]);
+      }
+    }
+
+    if (dictResult) {
+      meaning  = dictResult.meaning;
+      meanings = dictResult.meanings;
+      reading  = dictResult.reading || wordStr;
+    }
+  }
+
+  if (meaning === "Unknown meaning" && /^[ぁ-ん]+$/.test(wordStr)) {
+    meaning = "Kana particle / expression";
+  }
+
+  return { reading, meaning, meanings };
+}
+
 async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
   const tokens = await tokenizer.segment(text);
@@ -236,84 +323,14 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
       console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
     }
 
-    const { variant, entry } = findBestVariant(baseForm, entries);
+    const { reading, meaning, meanings } = await resolveWordMeaning(wordStr, baseForm, kanaLookupCache);
 
-    let meaning = "Unknown meaning";
-    let meanings: string[] | undefined = undefined;
-    let reading = wordStr;
-
-    if (entry && variant) {
-      reading = variant.pronounced || wordStr;
-      meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
-    }
-
-    // Use dictionary (Jisho API or jmdict) for pure hiragana or katakana words
-    // These are particles, auxiliaries, and other kana-only words where kanji-data is unreliable
-    const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
-    const isPureKatakana = /^[ァ-ヴー]+$/.test(wordStr);
-    const isKanaOnly = isPureHiragana || isPureKatakana;
-
-    if (isKanaOnly && dictionary) {
-      // Try persistent cache first, then batch cache, then dictionary lookup
-      const cachedEntries = wordsCache.get(wordStr);
-      let dictResult: any = null;
-
-      if (cachedEntries && cachedEntries.length > 0) {
-        // Use cached entry
-        const entry = cachedEntries[0];
-        if (entry.meanings && entry.meanings.length > 0) {
-          dictResult = {
-            meaning: entry.meanings[0]?.glosses?.join(", ") || "Unknown",
-            reading: entry.variants?.[0]?.pronounced || wordStr,
-            meanings: entry.meanings.map((m: any) => m.glosses?.join(", ")).filter((m: any) => m)
-          };
-        }
-      } else {
-        // Try batch cache first, then dictionary lookup
-        dictResult = kanaLookupCache?.get(wordStr);
-        if (!dictResult) {
-          dictResult = await dictionary.lookup(wordStr);
-          // Save to batch cache for reuse within this request
-          if (dictResult) {
-            kanaLookupCache?.set(wordStr, dictResult);
-          }
-        }
-
-        // Save dictionary result to persistent cache for future requests
-        if (dictResult) {
-          const entry: DictionaryEntry = {
-            meanings: (dictResult.meanings || [dictResult.meaning])
-              .filter(Boolean)
-              .map((m: string) => ({ glosses: [m] })),
-            variants: [{
-              pronounced: dictResult.reading || wordStr,
-              written: wordStr,
-              priorities: []
-            }]
-          };
-          wordsCache.set(wordStr, [entry]);
-        }
-      }
-
-      if (dictResult) {
-        meaning = dictResult.meaning;
-        if (dictResult.meanings) {
-          meanings = dictResult.meanings;
-        }
-      }
-    }
-
-    // Fallback for pure hiragana particles if still no result from dictionary
-    if (meaning === "Unknown meaning" && isPureHiragana) {
-      meaning = "Kana particle / expression";
-    }
-
+    // Still need variant for score calculation; resolveWordMeaning handles meaning lookup
+    const { variant } = findBestVariant(baseForm, entries);
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
     const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
-    if (meanings) {
-      wordData.meanings = meanings;
-    }
+    if (meanings) wordData.meanings = meanings;
     results.push(wordData);
   }
 
@@ -399,61 +416,13 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
       console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
     }
 
-    const { variant, entry } = findBestVariant(baseForm, entries);
+    const { reading, meaning, meanings } = await resolveWordMeaning(wordStr, baseForm, kanaLookupCache);
 
-    let meaning = "Unknown meaning";
-    let meanings: string[] | undefined = undefined;
-    let reading = wordStr;
-
-    if (entry && variant) {
-      reading = variant.pronounced || wordStr;
-      meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
-    }
-
-    // Use dictionary (Jisho API or jmdict) for pure hiragana or katakana words
-    const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
-    const isPureKatakana = /^[ァ-ヴー]+$/.test(wordStr);
-    const isKanaOnly = isPureHiragana || isPureKatakana;
-
-    if (isKanaOnly) {
-      // Try persistent cache first, then batch cache
-      const cachedEntries = wordsCache.get(wordStr);
-      let dictResult: any = null;
-
-      if (cachedEntries && cachedEntries.length > 0) {
-        // Use cached entry
-        const entry = cachedEntries[0];
-        if (entry.meanings && entry.meanings.length > 0) {
-          dictResult = {
-            meaning: entry.meanings[0]?.glosses?.join(", ") || "Unknown",
-            reading: entry.variants?.[0]?.pronounced || wordStr,
-            meanings: entry.meanings.map((m: any) => m.glosses?.join(", ")).filter((m: any) => m)
-          };
-        }
-      } else {
-        // Fall back to batch cache
-        dictResult = kanaLookupCache.get(wordStr);
-      }
-
-      if (dictResult) {
-        meaning = dictResult.meaning;
-        if (dictResult.meanings) {
-          meanings = dictResult.meanings;
-        }
-      }
-    }
-
-    // Fallback for pure hiragana particles if still no result from dictionary
-    if (meaning === "Unknown meaning" && isPureHiragana) {
-      meaning = "Kana particle / expression";
-    }
-
+    const { variant } = findBestVariant(baseForm, entries);
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
     const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
-    if (meanings) {
-      wordData.meanings = meanings;
-    }
+    if (meanings) wordData.meanings = meanings;
     results.push(wordData);
   }
 
@@ -522,67 +491,16 @@ async function processStoryText(text: string) {
   for (const token of vocabTokens) {
     if (tokenMap.has(token.surface)) continue;
 
-    // Try baseForm first for dictionary lookup
+    const { reading, meaning, meanings } = await resolveWordMeaning(token.surface, token.baseForm);
+
     let entries = getCachedDictionaryEntries(token.baseForm);
     if (entries.length === 0 && token.baseForm !== token.surface) {
       entries = getCachedDictionaryEntries(token.surface);
     }
-    const { variant, entry } = findBestVariant(token.baseForm, entries);
-
-    let meaning = "Unknown meaning";
-    let meanings: string[] | undefined = undefined;
-    let reading = token.surface;
-
-    if (entry && variant) {
-      reading = variant.pronounced || token.surface;
-      meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
-    }
-
-    const isPureHiragana = /^[ぁ-ん]+$/.test(token.surface);
-    if (isPureHiragana && dictionary) {
-      // Try persistent cache first, then dictionary lookup
-      const cachedEntries = wordsCache.get(token.surface);
-      let dictResult: any = null;
-
-      if (cachedEntries && cachedEntries.length > 0) {
-        // Use cached entry
-        const entry = cachedEntries[0];
-        if (entry.meanings && entry.meanings.length > 0) {
-          dictResult = {
-            meaning: entry.meanings[0]?.glosses?.join(", ") || "Unknown",
-            reading: entry.variants?.[0]?.pronounced || token.surface,
-            meanings: entry.meanings.map((m: any) => m.glosses?.join(", ")).filter((m: any) => m)
-          };
-        }
-      } else {
-        // Fall back to dictionary lookup
-        dictResult = await dictionary.lookup(token.surface);
-      }
-
-      if (dictResult) {
-        meaning = dictResult.meaning;
-        if (dictResult.meanings) {
-          meanings = dictResult.meanings;
-        }
-      }
-    }
-
-    if (meaning === "Unknown meaning" && isPureHiragana) {
-      meaning = "Kana particle / expression";
-    }
-
+    const { variant } = findBestVariant(token.baseForm, entries);
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(token.surface, variant);
 
-    tokenMap.set(token.surface, {
-      word: token.surface,
-      reading,
-      meaning,
-      jlpt,
-      joyo,
-      score,
-      breakdown,
-      meanings,
-    });
+    tokenMap.set(token.surface, { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown, meanings });
   }
 
   // Add morpheme definitions to tokenMap
@@ -955,46 +873,20 @@ async function startServer() {
         return res.status(400).json({ error: 'No word provided' });
       }
 
+      // Use resolveWordMeaning so this endpoint uses the same pipeline as the
+      // extract/batch-extract paths. Previously this handler only used kanji-data
+      // and never called the dictionary, so kana-only words (です, ます, etc.)
+      // returned "Unknown meaning" here even though the vocab card showed the
+      // correct definition. Also fixes the Set-based meanings collection that
+      // lost the original sense ordering (#188).
+      const { reading, meaning, meanings } = await resolveWordMeaning(word, word);
+
       const entries = getCachedDictionaryEntries(word);
       const { variant, entry } = findBestVariant(word, entries);
-
-      let reading = word;
-      let meaning = "Unknown meaning";
-      let meanings: string[] | undefined = undefined;
-
-      if (entry && variant) {
-        reading = variant.pronounced || word;
-        if (entry.meanings && entry.meanings.length > 0) {
-          meaning = entry.meanings[0].glosses?.join(", ") || meaning;
-          // Collect all unique meanings
-          const allMeanings = new Set<string>();
-          for (const m of entry.meanings) {
-            if (m.glosses) {
-              for (const gloss of m.glosses) {
-                allMeanings.add(gloss);
-              }
-            }
-          }
-          meanings = Array.from(allMeanings);
-        }
-      }
-
       const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(word, variant);
 
-      const wordData: any = {
-        word,
-        reading,
-        meaning,
-        jlpt,
-        joyo,
-        score,
-        breakdown,
-        entry
-      };
-
-      if (meanings) {
-        wordData.meanings = meanings;
-      }
+      const wordData: any = { word, reading, meaning, jlpt, joyo, score, breakdown, entry };
+      if (meanings) wordData.meanings = meanings;
 
       const elapsed = Date.now() - start;
       console.log(`[API] /api/word/${word}: completed in ${elapsed}ms`);
