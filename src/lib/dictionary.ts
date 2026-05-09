@@ -217,7 +217,7 @@ export class JishoApiDictionary implements Dictionary {
  */
 export function getEnglishGlosses(sense: any): string[] {
   return ((sense.gloss as any[]) || [])
-    .filter((g) => g.lang === "en")
+    .filter((g) => g.lang === "en" || g.lang === "eng")
     .map((g) => g.text)
     .filter(Boolean);
 }
