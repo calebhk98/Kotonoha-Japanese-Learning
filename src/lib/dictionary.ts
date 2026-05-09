@@ -375,16 +375,25 @@ export class JmdictDictionary implements Dictionary {
   }
 
   private getEntryCommonness(entry: any): number {
+    // Use the jmdict-simplified `common` flag as the primary signal: an entry
+    // marked common is the canonical, everyday form that a learner expects to see.
+    // Raw kanji presence is only a weak tiebreaker because many obscure/rare entries
+    // also have kanji forms — e.g. いい matches 怡々/謂/飯 (all non-common kanji
+    // compounds) as well as the plain kana-only いい entry (common:true). Without
+    // heavily weighting the common flag, those obscure entries win on kanji count
+    // alone and the canonical meaning ("good") is lost.
+    const hasKanji = entry.kanji && entry.kanji.length > 0;
+    const hasCommonKanji = hasKanji && entry.kanji.some((k: any) => k.common === true);
+    const hasCommonKana = entry.kana && entry.kana.some((k: any) => k.common === true);
+
     let score = 0;
-    if (entry.kanji && entry.kanji.length > 0) score += 10;
-    if (entry.kanji && entry.kanji.length > 1) score += 5;
-    if (entry.sense && entry.sense.length > 1) score += 3;
-    // The jmdict-simplified schema marks common entries with common:true on kana/kanji
-    // forms. Using this strongly differentiates the canonical entry (e.g. 良い with
-    // common:true) from edge-case entries (e.g. a kana-only いい idiom with common:false)
-    // so the right entry is selected when multiple exact-form matches exist (#187 いい).
-    if (entry.kanji && entry.kanji.some((k: any) => k.common === true)) score += 8;
-    if (entry.kana && entry.kana.some((k: any) => k.common === true)) score += 4;
+    if (hasCommonKanji) score += 20;           // canonical kanji form (e.g. 猫, 良い)
+    else if (hasKanji) score += 3;             // obscure/non-common kanji form
+
+    if (hasCommonKana && !hasKanji) score += 20;  // canonical kana-only word (e.g. いい)
+    else if (hasCommonKana) score += 5;            // common reading of a kanji word
+
+    if (entry.sense && entry.sense.length > 1) score += 2;
     return score;
   }
 
