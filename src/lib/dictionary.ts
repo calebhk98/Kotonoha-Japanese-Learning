@@ -252,11 +252,16 @@ export function getSenseCommonness(sense: any): number {
     score -= 10;
   }
 
-  // Bonus for senses with multiple English synonyms: JMDict editors add more
-  // glosses for well-established, high-frequency meanings.
+  // Small flat bonus when a sense has more than one English synonym. JMDict
+  // editors tend to add glosses for well-established meanings (e.g. 可愛い
+  // "cute/adorable/charming" beats the sparse "dainty" sense). The bonus is
+  // deliberately small (+2) so it only acts as a tiebreaker between senses
+  // that are otherwise indistinguishable — not a primary ordering signal.
+  // A progressive bonus (+5 / +10 for more glosses) caused regression: 春
+  // "prime (of life)" (3 glosses, +10) outranked "spring (season)" (2 glosses,
+  // +5), and 買う "to value (highly)" (3 glosses) outranked "to buy" (1 gloss).
   const enGlosses = getEnglishGlosses(sense);
-  if (enGlosses.length > 1) score += 5;
-  if (enGlosses.length > 2) score += 5;
+  if (enGlosses.length > 1) score += 2;
 
   return score;
 }
