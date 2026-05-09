@@ -16,7 +16,7 @@ export interface Tokenizer {
 // TinySegmenter implementation
 export class TinySegmenterImpl implements Tokenizer {
   name = 'TinySegmenter';
-  private segmenter: TinySegmenter | null = null;
+  private segmenter: InstanceType<typeof TinySegmenter> | null = null;
 
   async ready(): Promise<void> {
     this.segmenter = new TinySegmenter();
@@ -42,7 +42,7 @@ export class SudachiTSImpl implements Tokenizer {
       const path = await import('path');
       const systemSmallPath = path.join(process.cwd(), 'sudachi-dictionary-20250129', 'system_small.dic');
 
-      this.dict = await DictionaryFactory.create({
+      this.dict = await (DictionaryFactory as any).create({
         configPath: path.join(process.cwd(), 'sudachi.json'),
         userDict: undefined,
       });
@@ -70,6 +70,7 @@ export class LinderaImpl implements Tokenizer {
 
   async ready(): Promise<void> {
     try {
+      // @ts-expect-error no type declarations for lindera-nodejs
       const lindera = await import('lindera-nodejs');
       this.tokenizer = lindera.tokenizer();
       console.log(`[Tokenizer] ${this.name} ready`);

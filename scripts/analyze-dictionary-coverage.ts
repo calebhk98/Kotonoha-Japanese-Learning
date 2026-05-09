@@ -30,8 +30,8 @@ async function main() {
       totalWords++;
 
       // Check if word is in dictionary
-      const dictionaryResult = dict.lookup(surface);
-      if (dictionaryResult && dictionaryResult.length > 0) {
+      const dictionaryResult = await dict.lookup(surface);
+      if (dictionaryResult) {
         dictionaryWords++;
         storyDictWords++;
         uniqueDictionaryWords.add(surface);
