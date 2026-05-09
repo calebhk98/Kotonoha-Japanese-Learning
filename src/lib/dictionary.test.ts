@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getEnglishGlosses, getSenseCommonness } from './dictionary';
+import { getMorphemeDefinition } from './morphemeDefinitions';
 
 // ---------------------------------------------------------------------------
 // #186 – Language filtering: getEnglishGlosses
@@ -181,5 +182,147 @@ describe('getSenseCommonness – #187 slang / archaic detection', () => {
       misc: [],
     };
     expect(getSenseCommonness(slangWithManyGlosses)).toBeLessThan(getSenseCommonness(plainOneSense));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #191 – Mixed kanji+kana sense ordering
+//
+// Issue #191 identified that tests only covered hiragana-only text and had
+// no assertions. These tests use realistic JMDict-shaped sense data for the
+// specific mixed kanji+kana words called out in the issue (猫, 桜, 可愛い,
+// プレゼント, 寝る) and verify that the sense-ranking pipeline correctly
+// surfaces everyday meanings as the primary definition.
+//
+// They also verify the helper that simulates what JmdictDictionary.lookup()
+// does internally: sort senses by getSenseCommonness() descending, break
+// ties by original JMDict position.
+// ---------------------------------------------------------------------------
+
+/** Applies the same stable sort that JmdictDictionary.lookup() uses internally. */
+function rankSenses(senses: any[]): any[] {
+  return senses
+    .map((sense, order) => ({ sense, order, score: getSenseCommonness(sense) }))
+    .sort((a, b) => b.score !== a.score ? b.score - a.score : a.order - b.order)
+    .map(({ sense }) => sense);
+}
+
+describe('mixed kanji+kana sense ordering – real-world cases (#191)', () => {
+  // ── 猫 (neko) ──────────────────────────────────────────────────────────────
+
+  it('猫: primary "cat" sense is found (sense was found at all)', () => {
+    const catSense = { gloss: [{ text: 'cat', lang: 'en' }], misc: [] };
+    const glosses = getEnglishGlosses(catSense);
+    expect(glosses.length).toBeGreaterThan(0);
+    expect(glosses[0]).toBe('cat');
+  });
+
+  it('猫: "cat" ranks above "submissive partner" even when slang appears first in JMDict', () => {
+    // JMDict lists the slang sense before the cat sense in some builds.
+    const slangFirst = { gloss: [{ text: 'submissive partner', lang: 'en' }], misc: ['sl'] };
+    const catSense   = { gloss: [{ text: 'cat', lang: 'en' }], misc: [] };
+    const ranked = rankSenses([slangFirst, catSense]);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('cat');
+  });
+
+  // ── 桜 (sakura) ────────────────────────────────────────────────────────────
+
+  it('桜: "cherry blossom" ranks above "hired applauder" (archaic)', () => {
+    const archFirst   = { gloss: [{ text: 'hired applauder', lang: 'en' }], misc: ['arch'] };
+    const cherrySense = {
+      gloss: [{ text: 'cherry blossom', lang: 'en' }, { text: 'cherry tree', lang: 'en' }],
+      misc: [],
+    };
+    const ranked = rankSenses([archFirst, cherrySense]);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('cherry blossom');
+  });
+
+  // ── 可愛い (kawaii) ────────────────────────────────────────────────────────
+
+  it('可愛い: "cute/adorable" (multi-gloss) ranks above "dainty" (sparse) even when dainty appears first', () => {
+    const daintyFirst = { gloss: [{ text: 'dainty', lang: 'en' }], misc: [] };
+    const cuteSense = {
+      gloss: [
+        { text: 'cute', lang: 'en' },
+        { text: 'adorable', lang: 'en' },
+        { text: 'charming', lang: 'en' },
+        { text: 'pretty', lang: 'en' },
+      ],
+      misc: [],
+    };
+    const ranked = rankSenses([daintyFirst, cuteSense]);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('cute');
+  });
+
+  it('可愛い: primary definition contains "cute" or "adorable" — not a slang/archaic term', () => {
+    const senses = [
+      { gloss: [{ text: 'dainty', lang: 'en' }], misc: [] },
+      { gloss: [{ text: 'cute', lang: 'en' }, { text: 'adorable', lang: 'en' }], misc: [] },
+      { gloss: [{ text: 'spoiled child (slang)', lang: 'en' }], misc: ['sl'] },
+    ];
+    const ranked = rankSenses(senses);
+    const primary = getEnglishGlosses(ranked[0])[0];
+    expect(['cute', 'adorable']).toContain(primary);
+  });
+
+  // ── 寝る (neru) — conjugated verb base form ─────────────────────────────
+
+  it('寝る: "to sleep" sense is found and has no unusual misc markers', () => {
+    const sleepSense = {
+      gloss: [{ text: 'to sleep (lying down)', lang: 'en' }, { text: 'to go to sleep', lang: 'en' }],
+      misc: [],
+    };
+    expect(getSenseCommonness(sleepSense)).toBeGreaterThanOrEqual(0);
+    expect(getEnglishGlosses(sleepSense)).toContain('to sleep (lying down)');
+  });
+
+  it('寝る: plain "to sleep" outranks a hypothetical archaic sense', () => {
+    const archSense   = { gloss: [{ text: 'to lie in state (archaic)', lang: 'en' }], misc: ['arch'] };
+    const sleepSense  = { gloss: [{ text: 'to sleep', lang: 'en' }], misc: [] };
+    const ranked = rankSenses([archSense, sleepSense]);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('to sleep');
+  });
+
+  // ── プレゼント (katakana loan word) ────────────────────────────────────────
+
+  it('プレゼント: "present/gift" sense has no slang or archaic markers and scores >= 0', () => {
+    const giftSense = {
+      gloss: [{ text: 'present', lang: 'en' }, { text: 'gift', lang: 'en' }],
+      misc: [],
+    };
+    expect(getSenseCommonness(giftSense)).toBeGreaterThanOrEqual(0);
+    expect(getEnglishGlosses(giftSense)).toContain('present');
+  });
+
+  // ── Ordering stability: equal-score senses keep original JMDict order ─────
+
+  it('senses with identical scores preserve the original JMDict position order', () => {
+    const s1 = { gloss: [{ text: 'first meaning', lang: 'en' }], misc: [] };
+    const s2 = { gloss: [{ text: 'second meaning', lang: 'en' }], misc: [] };
+    const s3 = { gloss: [{ text: 'third meaning', lang: 'en' }], misc: [] };
+    // All three score identically; original order must be preserved.
+    const ranked = rankSenses([s1, s2, s3]);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('first meaning');
+    expect(getEnglishGlosses(ranked[1])[0]).toBe('second meaning');
+    expect(getEnglishGlosses(ranked[2])[0]).toBe('third meaning');
+  });
+
+  // ── Grammar words: morpheme definitions must be accessible ─────────────────
+
+  it('です has a morpheme definition (not undefined)', () => {
+    // morphemeDefinitions covers common grammar words so the word detail page
+    // can return a grammatical explanation instead of a JMnedict proper noun.
+    expect(getMorphemeDefinition('です')).toBeDefined();
+    expect(getMorphemeDefinition('です')).toMatch(/copula|to be|polite/i);
+  });
+
+  it('ます has a morpheme definition (not undefined)', () => {
+    expect(getMorphemeDefinition('ます')).toBeDefined();
+    expect(getMorphemeDefinition('ます')).toMatch(/polite/i);
+  });
+
+  it('ない has a morpheme definition (not undefined)', () => {
+    expect(getMorphemeDefinition('ない')).toBeDefined();
+    expect(getMorphemeDefinition('ない')).toMatch(/negat/i);
   });
 });

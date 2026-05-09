@@ -217,7 +217,7 @@ export class JishoApiDictionary implements Dictionary {
  */
 export function getEnglishGlosses(sense: any): string[] {
   return ((sense.gloss as any[]) || [])
-    .filter((g) => g.lang === "en")
+    .filter((g) => g.lang === "en" || g.lang === "eng")
     .map((g) => g.text)
     .filter(Boolean);
 }
@@ -252,11 +252,16 @@ export function getSenseCommonness(sense: any): number {
     score -= 10;
   }
 
-  // Bonus for senses with multiple English synonyms: JMDict editors add more
-  // glosses for well-established, high-frequency meanings.
+  // Small flat bonus when a sense has more than one English synonym. JMDict
+  // editors tend to add glosses for well-established meanings (e.g. 可愛い
+  // "cute/adorable/charming" beats the sparse "dainty" sense). The bonus is
+  // deliberately small (+2) so it only acts as a tiebreaker between senses
+  // that are otherwise indistinguishable — not a primary ordering signal.
+  // A progressive bonus (+5 / +10 for more glosses) caused regression: 春
+  // "prime (of life)" (3 glosses, +10) outranked "spring (season)" (2 glosses,
+  // +5), and 買う "to value (highly)" (3 glosses) outranked "to buy" (1 gloss).
   const enGlosses = getEnglishGlosses(sense);
-  if (enGlosses.length > 1) score += 5;
-  if (enGlosses.length > 2) score += 5;
+  if (enGlosses.length > 1) score += 2;
 
   return score;
 }
@@ -375,10 +380,25 @@ export class JmdictDictionary implements Dictionary {
   }
 
   private getEntryCommonness(entry: any): number {
+    // Use the jmdict-simplified `common` flag as the primary signal: an entry
+    // marked common is the canonical, everyday form that a learner expects to see.
+    // Raw kanji presence is only a weak tiebreaker because many obscure/rare entries
+    // also have kanji forms — e.g. いい matches 怡々/謂/飯 (all non-common kanji
+    // compounds) as well as the plain kana-only いい entry (common:true). Without
+    // heavily weighting the common flag, those obscure entries win on kanji count
+    // alone and the canonical meaning ("good") is lost.
+    const hasKanji = entry.kanji && entry.kanji.length > 0;
+    const hasCommonKanji = hasKanji && entry.kanji.some((k: any) => k.common === true);
+    const hasCommonKana = entry.kana && entry.kana.some((k: any) => k.common === true);
+
     let score = 0;
-    if (entry.kanji && entry.kanji.length > 0) score += 10;
-    if (entry.kanji && entry.kanji.length > 1) score += 5;
-    if (entry.sense && entry.sense.length > 1) score += 3;
+    if (hasCommonKanji) score += 20;           // canonical kanji form (e.g. 猫, 良い)
+    else if (hasKanji) score += 3;             // obscure/non-common kanji form
+
+    if (hasCommonKana && !hasKanji) score += 20;  // canonical kana-only word (e.g. いい)
+    else if (hasCommonKana) score += 5;            // common reading of a kanji word
+
+    if (entry.sense && entry.sense.length > 1) score += 2;
     return score;
   }
 

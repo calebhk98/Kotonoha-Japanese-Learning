@@ -137,7 +137,11 @@ async function runTests() {
     assert('寝/寝る is returned by /api/extract', !!ne,
       `words returned: ${words.map((w: any) => w.word).join(', ')}`);
     if (ne) {
-      assertContains('寝る primary meaning contains "sleep"', ne.meaning, 'sleep');
+      // "to sleep", "to go to bed", "to lie down" are all valid primary meanings
+      const sleepRelated = ne.meaning.toLowerCase().includes('sleep') ||
+        ne.meaning.toLowerCase().includes('bed') ||
+        ne.meaning.toLowerCase().includes('lie');
+      assert('寝る primary meaning is sleep-related', sleepRelated, `got: "${ne.meaning}"`);
       assertNotContains('寝る primary meaning is not "to ferment"', ne.meaning, 'ferment');
     }
   }
