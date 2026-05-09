@@ -203,6 +203,57 @@ export class JishoApiDictionary implements Dictionary {
   }
 }
 
+// ==================== JMDict Helpers (exported for testing) ====================
+
+// ==================== JMDict Helpers (exported for testing) ====================
+// NOTE: These functions are exported so they can be unit-tested in dictionary.test.ts.
+// The tests below currently FAIL — they document the correct behaviour that the
+// existing implementation does not yet satisfy (TDD red state).
+
+/**
+ * Returns the English-language gloss strings from a JMDict sense.
+ *
+ * BUG (#186 — not yet fixed): the fallback below returns the first gloss
+ * regardless of language. If a sense has only German or Spanish glosses this
+ * will return non-English text as a definition.
+ */
+export function getEnglishGlosses(sense: any): string[] {
+  const filtered = ((sense.gloss as any[]) || [])
+    .filter((g) => g.lang === "en")
+    .map((g) => g.text)
+    .filter(Boolean);
+  if (filtered.length > 0) return filtered;
+  // BUG: falls back to first gloss without checking language (original behaviour)
+  return sense.gloss?.[0]?.text ? [sense.gloss[0].text] : [];
+}
+
+/**
+ * Scores a JMDict sense by how "common" / everyday it is.
+ *
+ * BUG (#187 — not yet fixed): this only scans the gloss *text* for words like
+ * "rare" or "archaic". JMDict encodes register in a structured `misc` array
+ * (e.g. misc:['sl'] for slang, misc:['arch'] for archaic) which this function
+ * never reads, so slang/archaic senses score identically to common senses.
+ */
+export function getSenseCommonness(sense: any): number {
+  let score = 0;
+
+  // BUG: checks gloss text, not sense.misc[] — misses the structured JMDict markers
+  if (sense.gloss && Array.isArray(sense.gloss) && sense.gloss.length > 1) {
+    score += 5;
+  }
+  const gloss = sense.gloss?.[0]?.text || '';
+  const specializedTerms = ['esp.', 'rare', 'archaic', 'obsolete', 'old', 'dated', 'specialized'];
+  if (specializedTerms.some(term => gloss.toLowerCase().includes(term))) {
+    score -= 10;
+  }
+  if (gloss.toLowerCase().includes('copula') || gloss.toLowerCase().includes('auxiliary')) {
+    score += 3;
+  }
+
+  return score;
+}
+
 // ==================== JMDict Wrapper Dictionary ====================
 export class JmdictDictionary implements Dictionary {
   private db: any = null;
@@ -276,6 +327,7 @@ export class JmdictDictionary implements Dictionary {
           if (glossTexts.length > 0) {
             meanings.push(...glossTexts);
           } else if (sense.gloss[0]?.text) {
+            // BUG (#186): pushes first gloss without language check — can be German/Spanish
             meanings.push(sense.gloss[0].text);
           }
         }
@@ -294,49 +346,17 @@ export class JmdictDictionary implements Dictionary {
   }
 
   private getEntryCommonness(entry: any): number {
-    // Score entries by how "common" they appear
     let score = 0;
-
-    // Prefer entries with kanji (more concrete words)
-    if (entry.kanji && entry.kanji.length > 0) {
-      score += 10;
-    }
-
-    // Prefer entries with multiple kanji variants (widely used)
-    if (entry.kanji && entry.kanji.length > 1) {
-      score += 5;
-    }
-
-    // Prefer entries with multiple senses (more established)
-    if (entry.sense && entry.sense.length > 1) {
-      score += 3;
-    }
-
+    if (entry.kanji && entry.kanji.length > 0) score += 10;
+    if (entry.kanji && entry.kanji.length > 1) score += 5;
+    if (entry.sense && entry.sense.length > 1) score += 3;
     return score;
   }
 
+  // Delegates to the top-level exported getSenseCommonness so the logic is
+  // unit-testable without instantiating the class or touching the database.
   private getSenseCommonness(sense: any): number {
-    // Score senses by how "common" they are
-    let score = 0;
-
-    // Prefer senses with multiple glosses (well-established meanings)
-    if (sense.gloss && Array.isArray(sense.gloss) && sense.gloss.length > 1) {
-      score += 5;
-    }
-
-    // Penalize specialized meanings
-    const gloss = sense.gloss?.[0]?.text || '';
-    const specializedTerms = ['esp.', 'rare', 'archaic', 'obsolete', 'old', 'dated', 'specialized'];
-    if (specializedTerms.some(term => gloss.toLowerCase().includes(term))) {
-      score -= 10;
-    }
-
-    // Prefer common grammatical terms
-    if (gloss.toLowerCase().includes('copula') || gloss.toLowerCase().includes('auxiliary')) {
-      score += 3;
-    }
-
-    return score;
+    return getSenseCommonness(sense);
   }
 }
 
