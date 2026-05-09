@@ -40,12 +40,9 @@ export class SudachiTSImpl implements Tokenizer {
     try {
       const { DictionaryFactory } = await import('sudachi-ts');
       const path = await import('path');
-      const systemSmallPath = path.join(process.cwd(), 'sudachi-dictionary-20250129', 'system_small.dic');
+      const configPath = path.join(process.cwd(), 'sudachi.json');
 
-      this.dict = await (DictionaryFactory as any).create({
-        configPath: path.join(process.cwd(), 'sudachi.json'),
-        userDict: undefined,
-      });
+      this.dict = await new DictionaryFactory().create(configPath);
       console.log(`[Tokenizer] ${this.name} ready`);
     } catch (e: any) {
       console.warn(`[Tokenizer] ${this.name} initialization failed:`, e.message);
