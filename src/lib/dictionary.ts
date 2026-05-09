@@ -203,19 +203,87 @@ export class JishoApiDictionary implements Dictionary {
   }
 }
 
+// ==================== JMDict Helpers (exported for testing) ====================
+
+// ==================== JMDict Helpers (exported for testing) ====================
+
+/**
+ * Returns only the English-language gloss strings from a JMDict sense.
+ *
+ * Fix for #186: the original code had an `else if (sense.gloss[0]?.text)` fallback
+ * that pushed the first gloss without a language check. JMDict entries include
+ * German (ger), Spanish (spa), and other language glosses, so that fallback could
+ * return non-English text as a word's primary definition.
+ */
+export function getEnglishGlosses(sense: any): string[] {
+  return ((sense.gloss as any[]) || [])
+    .filter((g) => g.lang === "en")
+    .map((g) => g.text)
+    .filter(Boolean);
+}
+
+/**
+ * Scores a JMDict sense by how "common" / everyday it is.
+ *
+ * Fix for #187: the original implementation only scanned gloss *text* for strings
+ * like "rare" or "archaic", completely missing JMDict's structured `misc` array.
+ * JMDict editors mark register in misc[], e.g.:
+ *   sl=slang, arch=archaic, obs=obsolete, rare=rare, vulg=vulgar,
+ *   derog=derogatory, X=rude/X-rated, id=idiomatic
+ * Because misc[] was never read, senses like 猫→"submissive partner" (sl) and
+ * 桜→"hired applauder" (arch) scored identically to plain everyday meanings and
+ * could sort to the top as the primary definition.
+ */
+export function getSenseCommonness(sense: any): number {
+  let score = 0;
+  const misc: string[] = sense.misc || [];
+
+  // Heavy penalty for any explicit register/usage marker. -50 is intentionally
+  // large so that even a slang sense with multiple glosses (which earns a +5/+10
+  // bonus below) still ranks well below a single-gloss plain sense.
+  const uncommonMarkers = ['sl', 'arch', 'obs', 'rare', 'vulg', 'derog', 'X', 'id'];
+  if (misc.some((m) => uncommonMarkers.includes(m))) {
+    score -= 50;
+  }
+
+  // Mild penalty for domain-restricted senses (e.g. computing, music). These
+  // are legitimate meanings but rarely what a beginner is looking for.
+  if (sense.field && Array.isArray(sense.field) && sense.field.length > 0) {
+    score -= 10;
+  }
+
+  // Bonus for senses with multiple English synonyms: JMDict editors add more
+  // glosses for well-established, high-frequency meanings.
+  const enGlosses = getEnglishGlosses(sense);
+  if (enGlosses.length > 1) score += 5;
+  if (enGlosses.length > 2) score += 5;
+
+  return score;
+}
+
 // ==================== JMDict Wrapper Dictionary ====================
 export class JmdictDictionary implements Dictionary {
   private db: any = null;
   private initialized = false;
   private readingAnywhere: any = null;
   private kanjiAnywhere: any = null;
+  private readingBeginning: any = null;
+  private kanjiBeginning: any = null;
 
   async initialize(jmdictPath: string, jmdictFile: string): Promise<void> {
     try {
       const require = createRequire(import.meta.url);
-      const { setup: setupJmdict, readingAnywhere, kanjiAnywhere } = require("jmdict-wrapper");
+      const {
+        setup: setupJmdict,
+        readingAnywhere,
+        kanjiAnywhere,
+        readingBeginning,
+        kanjiBeginning,
+      } = require("jmdict-wrapper");
       this.readingAnywhere = readingAnywhere;
       this.kanjiAnywhere = kanjiAnywhere;
+      this.readingBeginning = readingBeginning;
+      this.kanjiBeginning = kanjiBeginning;
 
       const result = await setupJmdict(jmdictPath, jmdictFile, false);
       this.db = result.db;
@@ -232,32 +300,42 @@ export class JmdictDictionary implements Dictionary {
   }
 
   async lookup(word: string): Promise<WordLookupResult | null> {
-    if (!this.db || !this.readingAnywhere || !this.kanjiAnywhere) return null;
+    if (!this.db || !this.readingBeginning || !this.kanjiBeginning) return null;
 
     try {
-      let results: any[] = await this.readingAnywhere(this.db, word, 10);
-      if (results.length === 0) {
-        results = await this.kanjiAnywhere(this.db, word, 10);
-      }
-      if (results.length === 0) return null;
+      // Use the exact-form indexes (indexes/kana/{word}-* and indexes/kanji/{word}-*)
+      // rather than the partial indexes. The partial scan (readingAnywhere / kanjiAnywhere)
+      // is limited to 20 results and may miss the target entry when many other words
+      // contain the search string as a substring (e.g. 'いい' in おおきい, etc.).
+      // readingBeginning / kanjiBeginning scan the prefix-keyed exact-form index which
+      // only returns entries where the kana/kanji text STARTS WITH the search word, so
+      // we then filter to exact matches. No artificial result limit needed here.
+      const [readingCandidates, kanjiCandidates] = await Promise.all([
+        this.readingBeginning(this.db, word, -1),
+        this.kanjiBeginning(this.db, word, -1),
+      ]);
 
-      // Find best match: prioritize entries with exact kana/kanji match + common words
-      let bestMatch = results.find(
+      const allCandidates = [...readingCandidates, ...kanjiCandidates];
+
+      // Keep only entries where a kana or kanji text is EXACTLY the search word.
+      const exactMatches = allCandidates.filter(
         (r) =>
           r.kana.some((k: any) => k.text === word) ||
           r.kanji.some((k: any) => k.text === word)
       );
 
-      // If no exact match, score all results by commonness
-      if (!bestMatch) {
-        bestMatch = results.reduce((best: any, current: any) => {
-          const bestScore = this.getEntryCommonness(best);
-          const currentScore = this.getEntryCommonness(current);
-          return currentScore > bestScore ? current : best;
-        });
-      }
+      if (exactMatches.length === 0) return null;
 
-      // Extract all meanings (prioritize more common senses)
+      // Among exact matches, pick the entry with the most senses (most complete entry).
+      // For words like 行く that have multiple variants (行く, 往く), all exact matches
+      // refer to the same underlying word — pick the most common entry.
+      const bestMatch = exactMatches.reduce((best: any, current: any) => {
+        const bestScore = this.getEntryCommonness(best);
+        const currentScore = this.getEntryCommonness(current);
+        return currentScore > bestScore ? current : best;
+      });
+
+      // Extract all meanings, deprioritising rare/slang/archaic senses (#187).
       const meanings: string[] = [];
       const sensesWithScores = (bestMatch.sense || []).map((sense: any, idx: number) => ({
         sense,
@@ -265,26 +343,29 @@ export class JmdictDictionary implements Dictionary {
         commonness: this.getSenseCommonness(sense)
       }));
 
-      // Sort by commonness (higher first)
-      sensesWithScores.sort((a, b) => b.commonness - a.commonness);
+      // Sort by commonness descending; use original order as tiebreaker.
+      sensesWithScores.sort((a, b) => {
+        const diff = b.commonness - a.commonness;
+        return diff !== 0 ? diff : a.order - b.order;
+      });
 
       for (const { sense } of sensesWithScores) {
-        if (sense.gloss && sense.gloss.length > 0) {
-          const glossTexts = (sense.gloss as any[])
-            .filter((g) => g.lang === "en")
-            .map((g) => g.text);
-          if (glossTexts.length > 0) {
-            meanings.push(...glossTexts);
-          } else if (sense.gloss[0]?.text) {
-            meanings.push(sense.gloss[0].text);
-          }
+        // getEnglishGlosses() only returns lang:"en" entries, so non-English
+        // JMDict senses are silently skipped rather than leaking German/Spanish
+        // text as definitions (fix for #186).
+        const glossTexts = getEnglishGlosses(sense);
+        if (glossTexts.length > 0) {
+          meanings.push(...glossTexts);
         }
       }
 
-      const meaning = meanings[0] || "Unknown";
+      // Return null when no English meanings were found — this lets DictionaryManager
+      // try the fallback chain (JMnedict → Jisho) rather than returning "Unknown".
+      if (meanings.length === 0) return null;
+
       return {
-        meaning,
-        meanings: meanings.length > 0 ? meanings : undefined,
+        meaning: meanings[0],
+        meanings: meanings.length > 1 ? meanings : undefined,
         reading: bestMatch.kana[0]?.text || word,
       };
     } catch (e) {
@@ -294,49 +375,17 @@ export class JmdictDictionary implements Dictionary {
   }
 
   private getEntryCommonness(entry: any): number {
-    // Score entries by how "common" they appear
     let score = 0;
-
-    // Prefer entries with kanji (more concrete words)
-    if (entry.kanji && entry.kanji.length > 0) {
-      score += 10;
-    }
-
-    // Prefer entries with multiple kanji variants (widely used)
-    if (entry.kanji && entry.kanji.length > 1) {
-      score += 5;
-    }
-
-    // Prefer entries with multiple senses (more established)
-    if (entry.sense && entry.sense.length > 1) {
-      score += 3;
-    }
-
+    if (entry.kanji && entry.kanji.length > 0) score += 10;
+    if (entry.kanji && entry.kanji.length > 1) score += 5;
+    if (entry.sense && entry.sense.length > 1) score += 3;
     return score;
   }
 
+  // Delegates to the module-level getSenseCommonness so the logic can be
+  // unit-tested without instantiating the class or touching the database.
   private getSenseCommonness(sense: any): number {
-    // Score senses by how "common" they are
-    let score = 0;
-
-    // Prefer senses with multiple glosses (well-established meanings)
-    if (sense.gloss && Array.isArray(sense.gloss) && sense.gloss.length > 1) {
-      score += 5;
-    }
-
-    // Penalize specialized meanings
-    const gloss = sense.gloss?.[0]?.text || '';
-    const specializedTerms = ['esp.', 'rare', 'archaic', 'obsolete', 'old', 'dated', 'specialized'];
-    if (specializedTerms.some(term => gloss.toLowerCase().includes(term))) {
-      score -= 10;
-    }
-
-    // Prefer common grammatical terms
-    if (gloss.toLowerCase().includes('copula') || gloss.toLowerCase().includes('auxiliary')) {
-      score += 3;
-    }
-
-    return score;
+    return getSenseCommonness(sense);
   }
 }
 
