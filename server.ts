@@ -189,9 +189,9 @@ const dictionaryReady = (async () => {
 async function resolveWordMeaning(
   wordStr: string,
   baseForm: string,
-  kanaCache?: Map<string, any>
+  lookupCache?: Map<string, any>
 ): Promise<{ reading: string; meaning: string; meanings: string[] | undefined }> {
-  // Step 1: kanji-data (fast, synchronous, covers kanji words)
+  // Step 1: kanji-data (fast, synchronous) — used for reading and as fallback meaning
   let entries = getCachedDictionaryEntries(baseForm);
   if (entries.length === 0 && baseForm !== wordStr) {
     entries = getCachedDictionaryEntries(wordStr);
@@ -199,63 +199,63 @@ async function resolveWordMeaning(
   const { variant, entry } = findBestVariant(baseForm, entries);
 
   let reading  = wordStr;
-  let meaning  = "Unknown meaning";
-  let meanings: string[] | undefined = undefined;
+  let kanjiMeaning  = "Unknown meaning";
+  let kanjiMeanings: string[] | undefined = undefined;
 
   if (entry && variant) {
     reading = variant.pronounced || wordStr;
-    meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
-    // Collect all meanings in insertion order — no Set, which loses ordering
-    const allMeanings: string[] = [];
+    kanjiMeaning = entry.meanings[0]?.glosses?.join(", ") || kanjiMeaning;
+    const allKanjiMeanings: string[] = [];
     const seen = new Set<string>();
     for (const m of entry.meanings) {
       for (const g of (m.glosses || [])) {
-        if (!seen.has(g)) { seen.add(g); allMeanings.push(g); }
+        if (!seen.has(g)) { seen.add(g); allKanjiMeanings.push(g); }
       }
     }
-    if (allMeanings.length > 1) meanings = allMeanings;
+    if (allKanjiMeanings.length > 1) kanjiMeanings = allKanjiMeanings;
   }
 
-  // Step 2: for kana-only words (です, ます, katakana loanwords, etc.) kanji-data
-  // has no data. Fall through to JMDict / Jisho when the dictionary is available.
-  const isKanaOnly = /^[ぁ-ん]+$/.test(wordStr) || /^[ァ-ヴー]+$/.test(wordStr);
-  if (isKanaOnly && dictionary) {
-    const cachedEntries = wordsCache.get(wordStr);
-    let dictResult: any = null;
+  // Step 2: JMDict lookup for ALL words (not just kana-only).
+  //
+  // kanji-data sense ordering is not controlled by us — it can put rare, archaic,
+  // or slang senses first (e.g. 猫→"submissive partner", 春→"New Year").
+  // JMDict results are sorted by getSenseCommonness() which deprioritises those
+  // senses. We prefer JMDict when it returns something; kanji-data is the fallback.
+  let meaning  = kanjiMeaning;
+  let meanings = kanjiMeanings;
 
-    if (cachedEntries && cachedEntries.length > 0 && cachedEntries[0].meanings?.length > 0) {
-      const ce = cachedEntries[0];
-      dictResult = {
-        meaning:  ce.meanings[0]?.glosses?.join(", ") || "Unknown",
-        reading:  ce.variants?.[0]?.pronounced || wordStr,
-        meanings: ce.meanings.map((m: any) => m.glosses?.join(", ")).filter(Boolean),
-      };
-    } else {
-      dictResult = kanaCache?.get(wordStr);
-      if (!dictResult) {
+  if (dictionary) {
+    // Use the same cache for both kana-only words (original behaviour) and kanji words.
+    const cacheKey = baseForm !== wordStr ? baseForm : wordStr;
+    let dictResult: any = lookupCache?.get(cacheKey) ?? null;
+
+    if (dictResult === null) {
+      // Try baseForm first (dictionary/citation form of conjugated verbs), then surface
+      dictResult = await dictionary.lookup(baseForm);
+      if (!dictResult && baseForm !== wordStr) {
         dictResult = await dictionary.lookup(wordStr);
-        kanaCache?.set(wordStr, dictResult ?? null);
       }
-      if (dictResult) {
-        const cacheEntry: DictionaryEntry = {
-          meanings: (dictResult.meanings || [dictResult.meaning])
-            .filter(Boolean)
-            .map((m: string) => ({ glosses: [m] })),
-          variants: [{ pronounced: dictResult.reading || wordStr, written: wordStr, priorities: [] }],
-        };
-        wordsCache.set(wordStr, [cacheEntry]);
-      }
+      lookupCache?.set(cacheKey, dictResult ?? false); // false = "looked up, not found"
     }
 
-    if (dictResult) {
-      meaning  = dictResult.meaning;
-      meanings = dictResult.meanings;
-      reading  = dictResult.reading || wordStr;
+    if (dictResult && dictResult !== false) {
+      const jmdictMeaning = dictResult.meaning;
+      // Only use JMDict result when it actually has an English definition.
+      // readingAnywhere/kanjiAnywhere can match compound entries that share a
+      // character but have no English glosses — those come back as "Unknown".
+      if (jmdictMeaning && jmdictMeaning !== 'Unknown') {
+        // Keep kanji-data reading (it matched the conjugated surface form exactly);
+        // only use JMDict reading for kana-only words where kanji-data had nothing.
+        if (!reading || reading === wordStr) reading = dictResult.reading || reading;
+        meaning  = jmdictMeaning;
+        meanings = dictResult.meanings;
+      }
     }
   }
 
   if (meaning === "Unknown meaning" && /^[ぁ-ん]+$/.test(wordStr)) {
-    meaning = "Kana particle / expression";
+    const morphemeFallback = getMorphemeDefinition(wordStr);
+    meaning = morphemeFallback || "Kana particle / expression";
   }
 
   return { reading, meaning, meanings };
@@ -278,9 +278,9 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     const surface = token.surface;
     if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    if (isSingleKana(surface)) {
-      // Check if it's a morpheme we have a definition for
-      const morphemeDef = getMorphemeDefinition(surface);
+    const morphemeDef = getMorphemeDefinition(surface);
+    const isKanaMorpheme = morphemeDef && /^[ぁ-んー]+$/.test(surface);
+    if (isSingleKana(surface) || isKanaMorpheme) {
       if (morphemeDef) {
         morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
       }
@@ -371,9 +371,9 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     const surface = token.surface;
     if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    if (isSingleKana(surface)) {
-      // Check if it's a morpheme we have a definition for
-      const morphemeDef = getMorphemeDefinition(surface);
+    const morphemeDef = getMorphemeDefinition(surface);
+    const isKanaMorpheme = morphemeDef && /^[ぁ-んー]+$/.test(surface);
+    if (isSingleKana(surface) || isKanaMorpheme) {
       if (morphemeDef) {
         morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
       }

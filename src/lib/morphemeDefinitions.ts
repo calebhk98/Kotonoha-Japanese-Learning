@@ -14,12 +14,18 @@ export const morphemeDefinitions: Record<string, string> = {
   せ: "Causative passive",
   ん: "Negative form / Emphatic particle",
   ぬ: "Negative form (classical)",
-  ない: "Negative form",
-  なかった: "Past negative",
+  ない: "not; negative form",
+  なかった: "was not; past negative",
+
+  // Copula and auxiliary verbs
+  です: "polite copula; to be (is/are)",
+  でした: "polite past copula; was/were",
 
   // Auxiliary verbs and endings
-  ます: "Polite form marker",
-  ました: "Past polite form",
+  ます: "polite verb ending (non-past)",
+  ました: "polite past form",
+  まし: "Polite verb stem (masu-stem form)",
+  たい: "want to (do something); desiderative auxiliary",
   なさい: "Imperative form",
 
   // Honorific/humble prefixes
