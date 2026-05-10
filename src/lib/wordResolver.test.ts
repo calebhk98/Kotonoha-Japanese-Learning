@@ -56,7 +56,8 @@ describe('WordResolver – morpheme early-return guard (#188)', () => {
 
 // ── All fields returned in one call (the whole point of the class) ───────────
 
-describe('WordResolver – single-call contract', () => {
+// kanji-data cold-start can be slow on first lookup; allow 15 s for the suite.
+describe('WordResolver – single-call contract', { timeout: 15000 }, () => {
   it('resolve() returns all required fields without extra calls', async () => {
     const resolver = new WordResolver(null);
     const result = await resolver.resolve('猫', '猫');
