@@ -387,6 +387,48 @@ comment first.
 
 ---
 
+## TDD workflow (required for bug fixes and behaviour changes)
+
+The git history shows this is the team's preferred pattern — see e.g.
+`004dcc0 test(#189): add failing tests for conjugated verb display and lookup`
+followed by the actual fix commits. Follow it:
+
+1. **Write a failing test first.** Add a `*.test.ts` next to the code you're
+   about to change in `src/**`. The test should describe the behaviour you
+   *want*, expressed against the current API. Don't hand-wave with
+   `expect(true).toBe(false)` — make it a real assertion that exercises the
+   actual code path.
+2. **Run `npm test` and confirm the new test fails for the right reason.** Not
+   "fails to compile", not "throws because a fixture is missing" — fails because
+   the production code doesn't do the thing yet. If the failure mode is wrong,
+   fix the test before touching production code.
+3. **Commit the failing test on its own.** Message format:
+   `test(#<issue>): add failing test for <behaviour>`. This makes the bug
+   reproducible from git history alone — anyone can `git checkout <that sha>`
+   and see the red.
+4. **Implement the fix.** Keep the diff minimal — only what's needed to flip
+   the new test to green. Don't sneak in unrelated refactors.
+5. **Run `npm test` again.** New test passes, *and* nothing in the existing 94
+   tests regresses. Run `npm run lint` too.
+6. **Commit the fix separately.** `fix(#<issue>): <one-line description>`.
+
+Why this matters here: tokenizer / scoring / dictionary-lookup logic is
+interconnected (#188, #189 each touched 2–3 files) and it's easy to "fix" one
+call site while leaving another broken. A test that nails down the desired
+output for a representative input is the only way to keep the regression from
+sneaking back in next sprint.
+
+Exceptions where TDD is overkill:
+- Pure docs / comment changes.
+- New stories or content additions in `src/stories|music|videos/`.
+- Mechanical renames where `tsc` is the actual safety net.
+
+For everything else — especially anything that touches `server.ts`,
+`src/lib/scoring.ts`, `src/lib/dictionary.ts`, `src/lib/tokenizers.ts`, or
+`src/hooks/useContentData.ts` — write the failing test first.
+
+---
+
 ## House rules for agents
 
 - **Run `npm run lint` and `npm test` before claiming you're done.** Both are fast (~20 s each). They will catch the things humans usually catch in review.
