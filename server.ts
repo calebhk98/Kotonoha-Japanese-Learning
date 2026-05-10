@@ -699,7 +699,9 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
 }
 
 async function startServer() {
-  // Wait for tokenizer and dictionary to be ready before starting server
+  // Startup takes ~30 seconds: dictionary decompression and tokenizer (Sudachi WASM)
+  // both load here before the server binds. Wait for "Server running on http://localhost:3000"
+  // before sending requests — the port is not open until this function reaches app.listen().
   await tokenizerReady;
   await dictionaryReady;
 
