@@ -572,8 +572,6 @@ addressed by the time you're reading this.
   never run by `npm test`. Either rename / move / delete the obsolete
   ones or wire them into the test runner. As-is, an agent looking for
   "where the tests are" lands in the wrong place.
-- ~~**Multiple tokenizer packages, only one supported.**~~ Fixed in #203: pruned `@didmar/sudachi-wasm`, `@hiogawa/sudachi.wasm`, `sudachi`, `sudachi-ts`, `lindera-nodejs`, `kuromoji`, `mecab-async` from `package.json`. Only `tiny-segmenter` (the emergency dev fallback) is retained. The `*Impl` classes are still in `src/lib/tokenizers.ts` and marked `@deprecated` with per-class reinstall instructions if needed.
-- ~~**Repo-root one-offs.**~~ Fixed in #203: `populate-cache.ts` → `scripts/populate-cache.ts` (run via `npm run populate-cache`); `tokenizer-comparison.ts` → `scripts/dev/tokenizer-comparison.ts`; `script.cjs` → `scripts/legacy/script.cjs`. See `scripts/README.md`.
 - **`App.tsx` is ~920 lines of single-component everything.** Routing,
   view switching, modal management, vocab loading, filtering,
   WaniKani, and import/export all live in one component. Worth a

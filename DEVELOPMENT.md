@@ -246,9 +246,9 @@ TOKENIZER=tinysegmenter npm run dev
 
 Do not ship with `TOKENIZER=tinysegmenter` — vocabulary scores and word lookups silently degrade.
 
-### Deprecated tokenizers (packages removed)
+### Re-enabling other tokenizers
 
-`SudachiTSImpl`, `LinderaImpl`, and `KuromojiImpl` are still in `src/lib/tokenizers.ts` but marked `@deprecated` and their npm packages were removed in [#203](https://github.com/calebhk98/Kotonoha-Japanese-Learning/issues/203). Each class has a JSDoc comment with the exact `npm install` command needed to re-enable it.
+`SudachiTSImpl`, `LinderaImpl`, and `KuromojiImpl` are in `src/lib/tokenizers.ts` but marked `@deprecated` — their npm packages are not installed. Each class has a JSDoc comment with the exact `npm install` command to bring it back. After installing, set the `TOKENIZER` env var to the matching value (`sudachi-ts`, `lindera`, or `kuromoji`) and restart the server.
 
 ### Tokenizer interface
 
