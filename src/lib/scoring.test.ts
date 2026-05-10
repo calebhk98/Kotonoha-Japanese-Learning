@@ -133,6 +133,74 @@ describe('getWordScoreBreakdown', () => {
 });
 
 // ---------------------------------------------------------------------------
+// getWordScoreBreakdown – mixed kanji+kana (#191)
+// ---------------------------------------------------------------------------
+
+describe('getWordScoreBreakdown – mixed kanji+kana (#191)', () => {
+  it('食べる (to eat): kanji 食 produces at least one JLPT value', () => {
+    const result = getWordScoreBreakdown('食べる', null);
+    expect(result.breakdown.jlptValues.length).toBeGreaterThan(0);
+    expect(result.score).toBeGreaterThanOrEqual(1);
+    expect(result.score).toBeLessThanOrEqual(100);
+  });
+
+  it('飲む (to drink): kanji 飲 produces JLPT values', () => {
+    const result = getWordScoreBreakdown('飲む', null);
+    expect(result.breakdown.jlptValues.length).toBeGreaterThan(0);
+  });
+
+  it('学校 (school): two N5 kanji produce exactly two JLPT values', () => {
+    const result = getWordScoreBreakdown('学校', null);
+    expect(result.breakdown.jlptValues.length).toBe(2);
+    expect(result.jlpt).toBe(5); // both 学 and 校 are N5
+  });
+
+  it('日本語 (Japanese language): three kanji each contribute a JLPT value', () => {
+    const result = getWordScoreBreakdown('日本語', null);
+    expect(result.breakdown.jlptValues.length).toBe(3);
+  });
+
+  it('可愛い (cute): kanji 可 and 愛 both appear in JLPT values', () => {
+    const result = getWordScoreBreakdown('可愛い', null);
+    expect(result.breakdown.jlptValues.length).toBeGreaterThan(0);
+    expect(result.score).toBeGreaterThanOrEqual(1);
+    expect(result.score).toBeLessThanOrEqual(100);
+  });
+
+  it('桜 (cherry blossom): single kanji produces one JLPT value', () => {
+    const result = getWordScoreBreakdown('桜', null);
+    expect(result.breakdown.jlptValues.length).toBeGreaterThan(0);
+    expect(result.score).toBeGreaterThanOrEqual(1);
+  });
+
+  it('春 (spring): single N4 kanji produces one JLPT value', () => {
+    const result = getWordScoreBreakdown('春', null);
+    expect(result.breakdown.jlptValues.length).toBeGreaterThan(0);
+  });
+
+  it('プレゼント (present/gift): pure katakana has no kanji JLPT or grade values', () => {
+    const result = getWordScoreBreakdown('プレゼント', null);
+    expect(result.breakdown.jlptValues).toHaveLength(0);
+    expect(result.breakdown.gradeValues).toHaveLength(0);
+  });
+
+  it('コーヒー (coffee): pure katakana with long-vowel mark has no JLPT values', () => {
+    const result = getWordScoreBreakdown('コーヒー', null);
+    expect(result.breakdown.jlptValues).toHaveLength(0);
+    expect(result.breakdown.gradeValues).toHaveLength(0);
+  });
+
+  it('mixed word scores stay within 1–100 regardless of kanji mix', () => {
+    const words = ['食べる', '飲む', '学校', '日本語', '可愛い', '桜', '春', 'プレゼント', 'コーヒー'];
+    for (const word of words) {
+      const result = getWordScoreBreakdown(word, null);
+      expect(result.score, `score for ${word}`).toBeGreaterThanOrEqual(1);
+      expect(result.score, `score for ${word}`).toBeLessThanOrEqual(100);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // findBestVariant
 // ---------------------------------------------------------------------------
 
