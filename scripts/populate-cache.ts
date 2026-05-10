@@ -1,4 +1,4 @@
-import { getStories } from './src/data/content';
+import { getStories } from '../src/data/content.js';
 import http from 'http';
 
 async function makeRequest(method: string, path: string, data?: any): Promise<any> {
