@@ -28,7 +28,7 @@ import {
   getWordScoreBreakdown,
 } from './scoring.js';
 import { getMorphemeDefinition } from './morphemeDefinitions.js';
-import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord } from './extraction-helpers.js';
+import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem } from './extraction-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Public types (imported by server.ts for type-safety on the message channel)
@@ -218,7 +218,7 @@ async function extractBatch(items: BatchItem[]): Promise<BatchResult[]> {
     for (const token of item.tokens) {
       const s = token.surface;
       if (s.trim() === '' || isPunctuation(s) || isSingleKana(s)) continue;
-      if (isHiraganaWord(s) || isKatakanaWord(s)) uniqueKanaWords.add(s);
+      if ((isHiraganaWord(s) || isKatakanaWord(s)) && !looksLikePartialStem(s)) uniqueKanaWords.add(s);
     }
   }
 
