@@ -139,6 +139,11 @@ function getEntriesByKanjiLookup(wordStr: string): DictionaryEntry[] {
   return allEntries;
 }
 
+/**
+ * @internal Use WordResolver.resolve() from server endpoints; this is exposed
+ * only for cache-warming optimisations in batch-extract and for WordResolver's
+ * own pipeline internals.
+ */
 export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
 
@@ -221,6 +226,10 @@ export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   return entries;
 }
 
+/**
+ * @internal Use WordResolver.resolve() from server endpoints; this function is
+ * part of WordResolver's private pipeline.
+ */
 export function findBestVariant(wordStr: string, entries: DictionaryEntry[]): FindBestVariantResult {
   // Track entry positions to prefer earlier entries
   const entryMap = new Map<DictionaryEntry, number>();
