@@ -136,6 +136,23 @@ export class SudachiWasmImpl implements Tokenizer {
     //   - 動詞 when tePending                      → append surface, clear tePending
     //   - anything else                            → flush current group, start new group
     const GROUPABLE_AUX = new Set(['ます', 'た', 'ず']);
+
+    // Grammaticalized verbs that function as aspectual/benefactive auxiliaries
+    // after the te-form (て/で). Content verbs like 食べる or 転ぶ must NOT be
+    // included — they start a new clause, not a continuation of the same verb.
+    const TE_CONTINUATION_VERBS = new Set([
+      '居る',   // ている/ていた — progressive
+      '呉れる', // てくれる — giving (someone does for me)
+      '貰う',   // てもらう — receiving (I have someone do)
+      '仕舞う', // てしまう — completion / regret
+      'おく',   // ておく — advance preparation (Sudachi normalizes auxiliary おく to hiragana)
+      '見る',   // てみる — try doing
+      '有る',   // てある — resultant state
+      '行く',   // ていく — receding action
+      '来る',   // てくる — approaching action
+      '上げる', // てあげる — doing for someone (upward benefactive)
+      '為る',   // てする — (catches する after て, e.g. in compound verbs)
+    ]);
     let groupSurface = '';
     let groupBaseForm = '';
     let groupIsVerb = false;
@@ -175,8 +192,9 @@ export class SudachiWasmImpl implements Tokenizer {
         // Conjunctive て/で — attach and wait for the continuation verb (いる, くれる, …)
         groupSurface += surface;
         tePending = true;
-      } else if (tePending && pos === '動詞') {
-        // Continuation verb after te-form (e.g. い from いる, くれ from くれる)
+      } else if (tePending && pos === '動詞' && TE_CONTINUATION_VERBS.has(m.normalized_form)) {
+        // Grammaticalized continuation verb after te-form (いる, くれる, しまう, …)
+        // Content verbs (食べる, 走る, …) fall through to flush — they start a new clause.
         groupSurface += surface;
         tePending = false;
       } else {
