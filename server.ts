@@ -15,7 +15,7 @@ import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 import { getMorphemeDefinition } from "./src/lib/morphemeDefinitions.js";
 import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk } from "./src/lib/storyLoader.js";
 import { initDatabase, WordsCache, JishoCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
-import { isPunctuation, isSingleKana } from "./src/lib/extraction-helpers.js";
+import { isPunctuation, isSingleKana, looksLikePartialStem } from "./src/lib/extraction-helpers.js";
 import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -438,7 +438,7 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
       const surface = token.surface;
       if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
       if (/^[ぁ-ん]+$/.test(surface) || /^[ァ-ヴー]+$/.test(surface)) {
-        uniqueKanaWords.add(surface);
+        if (!looksLikePartialStem(surface)) uniqueKanaWords.add(surface);
       }
     }
   }

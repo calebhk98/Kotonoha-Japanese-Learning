@@ -33,3 +33,13 @@ export function isHiraganaWord(s: string): boolean {
 export function isKatakanaWord(s: string): boolean {
   return s.length > 0 && /^[ァ-ヴー]+$/.test(s);
 }
+
+/**
+ * Returns true when a kana word ends in small-tsu (っ), indicating it is a
+ * cut-off verb-stem conjugation artifact (e.g. もらっ, 走っ) rather than a
+ * complete dictionary entry.  No valid Japanese dictionary form ends in っ, so
+ * sending these to Jisho returns geographic noise like "Molazzana" (#174).
+ */
+export function looksLikePartialStem(s: string): boolean {
+  return s.length > 0 && s.endsWith('っ');
+}
