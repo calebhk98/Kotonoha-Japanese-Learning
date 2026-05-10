@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, Dispatch, SetStateAction } from "react";
 
 export function useUrlRouting({ setSelectedWord }: UseUrlRoutingParams): UseUrlRoutingReturn {
   const navigateToWord = (word: string) => {
@@ -26,7 +26,7 @@ export function useUrlRouting({ setSelectedWord }: UseUrlRoutingParams): UseUrlR
 }
 
 type UseUrlRoutingParams = {
-  setSelectedWord: React.Dispatch<React.SetStateAction<string | null>>;
+  setSelectedWord: Dispatch<SetStateAction<string | null>>;
 };
 
 type UseUrlRoutingReturn = {
