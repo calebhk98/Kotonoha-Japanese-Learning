@@ -474,6 +474,121 @@ comment first.
 
 ---
 
+## GitHub issues are starting points, not specifications
+
+**Issue descriptions in this repo can be wrong about root cause.** They're
+written from observed symptoms — sometimes by an agent in a previous
+session, sometimes by a human in a hurry — and the diagnosis hasn't always
+been verified against the code. Treat the *bug report* (the user-visible
+symptom and the input that triggers it) as authoritative; treat the *cause
+analysis* and the *suggested fix* as a hypothesis to verify.
+
+Concrete example: **issue #189** ("Sudachi mode C groups compound verb
+forms, causing dictionary lookup to fail for conjugated verbs"). The issue
+confidently asserted that mode C produced compound tokens like
+`寝ています` as a single morpheme that the dictionary couldn't find, and
+recommended switching to mode A. Actual investigation showed:
+
+- Modes A, B, and C **produce identical splits** for the conjugated-verb
+  cases in question — `走っています` always becomes `[走っ, て, い, ます]`.
+- The `normalized_form` on each morpheme was already correct
+  (`走っ → 走る`), so dictionary lookup was *not* failing.
+- The real bug was **display fragmentation**: the server surfaced each
+  morpheme as a separate vocab entry, so users saw `走っ | て | い | ます`
+  as four words instead of `走っています` as one phrase.
+
+An agent who'd followed the issue's prescription (switch to mode A) would
+have made the UI fragmentation *worse* while believing they were fixing
+dictionary lookups. The fix that landed (`claude/fix-sudachi-verb-grouping-ZEz4i`)
+left the mode alone and post-processed Sudachi output to group verb stems
+with their auxiliaries.
+
+Process to apply:
+
+1. Reproduce the user-visible symptom yourself before reading the cause
+   section. Use the smallest input that triggers it.
+2. Confirm the proposed root cause with a probe (a script, a console log,
+   a unit test) — don't assume the issue's diagnosis is right.
+3. If your investigation contradicts the issue, **say so in a comment on
+   the issue and update the description before you start fixing**, so the
+   next person isn't misled the same way.
+4. The TDD workflow below is the safety net here: a failing test pinned
+   to the symptom (not the supposed cause) catches misdirection early.
+
+---
+
+## Issues worth filing (spotted during this orientation pass)
+
+These are things that struck me as wrong / dead / risky while writing
+this guide. None of them are urgent; verify each one against the
+current code before opening a ticket — see the section above about
+issues being starting points, not specs. Some may have already been
+addressed by the time you're reading this.
+
+- **`npm start` is broken.** `package.json` script is `node server.ts`,
+  but `server.ts` is TypeScript with ESM imports — the process exits
+  immediately. Either change to `tsx server.ts` or delete the script
+  (it's never been the right command).
+- **`resolveWordMeaning` is a convention, not a guarantee.** The fix for
+  #188 routed three call sites through one resolver function, but
+  endpoints still independently call `getCachedDictionaryEntries` /
+  `findBestVariant` for score calculation, which is exactly how #188
+  happened in the first place. A `WordResolver` class with private
+  helpers and a single public API would make bypass impossible. File
+  it as a refactor, not a bug.
+- **`INITIAL_CONTENT` is effectively dead code.** It's an empty array
+  whose only readers are the disk-loader fallback (which never fires in
+  a real checkout), two legacy migration scripts
+  (`scripts/migrate-stories.ts`,
+  `scripts/migrate-content-to-disk.ts`), and two standalone tests
+  (`tests/test-5-stories.ts`, `tests/test-stories-via-api.ts`). Removal
+  is a cleanup PR, not a one-liner — the migration scripts are the
+  historical record of how content got onto disk, so think about
+  whether to keep them as docs or delete with the constant.
+- **Server SIGTERM handling is hostile to orchestration.** `server.ts`
+  catches SIGTERM and explicitly logs "ignoring gracefully", plus a
+  `setInterval(..., 30000)` keep-alive that prevents Node from exiting
+  on its own. This breaks `docker stop`, systemd, k8s, and CI runners
+  that send SIGTERM and expect the process to drain and exit. Either
+  honour SIGTERM (save DB, close server, exit) or document why we
+  don't.
+- **Startup extraction blocks the event loop.** On a fresh `.cache.db`,
+  the server opens port 3000 and *then* spends minutes calling Jisho
+  hundreds of times in chunks of 20, on the same event loop that
+  serves user requests. The user-visible result: "the server is up
+  but everything times out for 5 minutes". Options: move extraction
+  to a worker thread; throttle / yield between chunks so HTTP
+  requests interleave; or wait until extraction is done before
+  binding the port (and print honest progress).
+- **`TOKENIZER_ANALYSIS.md` is stale.** It quotes ~60% definition
+  accuracy and recommends fixes that may have already shipped via
+  #189's grouping work. Worth re-running its measurement and
+  rewriting (or marking as historical).
+- **The `tests/` folder advertises itself as the test location** — file
+  names like `test-server-api.ts`, `test-dictionaries.ts` look like
+  vitest specs — but `tsconfig.json` excludes `tests/**` and they're
+  never run by `npm test`. Either rename / move / delete the obsolete
+  ones or wire them into the test runner. As-is, an agent looking for
+  "where the tests are" lands in the wrong place.
+- **Multiple tokenizer packages, only one supported.** `package.json`
+  ships `@didmar/sudachi-wasm`, `@hiogawa/sudachi.wasm`, `sudachi`,
+  `sudachi-ts`, `lindera-nodejs`, `kuromoji`, `mecab-async`, and
+  `tiny-segmenter` even though only Sudachi WASM is the supported
+  path. That's a lot of install footprint and supply-chain surface
+  for emergency-only fallbacks. Pruning candidate.
+- **Repo-root one-offs.** `populate-cache.ts`, `tokenizer-comparison.ts`,
+  and `script.cjs` sit at the root with no obvious owner. Move into
+  `scripts/` (with a README pointer) or delete if nothing imports
+  them.
+- **`App.tsx` is ~920 lines of single-component everything.** Routing,
+  view switching, modal management, vocab loading, filtering,
+  WaniKani, and import/export all live in one component. Worth a
+  splitting pass — at minimum, extract the home view, the vocab
+  view, and the URL-routing effect into siblings under a thin shell
+  component.
+
+---
+
 ## TDD workflow (required for bug fixes and behaviour changes)
 
 The git history shows this is the team's preferred pattern — see e.g.
