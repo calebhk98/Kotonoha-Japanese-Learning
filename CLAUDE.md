@@ -2,10 +2,18 @@
 
 Guidance for Claude Code (and other AI agents) working in this repository.
 
-This file is the source of truth for *how things actually work right now* — verified
-by running the code, not just reading the docs. Some details here disagree with the
-human-facing docs (README.md, DEVELOPMENT.md, TOKENIZER_SETUP.md); when they do,
-this file is correct unless you re-verify and update it.
+This file is a *rough orientation guide* for AI agents and humans dropping
+into the repo cold. It was written by reading the code and running it on a
+specific commit, so the broad strokes (architecture, what each piece does,
+where the gotchas are) should hold up over time, but **specific numbers,
+line counts, file paths, and timings will drift**. The codebase is the
+only real source of truth — when something here disagrees with the code,
+the code wins. If you spot drift while you're in here, fix the doc.
+
+A few details here also disagree with the human-facing docs (README.md,
+DEVELOPMENT.md, TOKENIZER_SETUP.md). Those have their own drift problem;
+when in doubt, check `server.ts`, `package.json`, and `src/lib/`
+directly.
 
 ---
 
@@ -203,6 +211,15 @@ some endpoints take whole story texts.
 *and* require the body to contain at least one Japanese codepoint
 (`/[぀-ゟ゠-ヿ一-鿿]/`). 400-status is returned otherwise.
 
+The 50k cap isn't arbitrary: earlier attempts to feed entire stories /
+transcripts in one POST were failing — the server would either time
+out, blow up under tokenization load, or the response wouldn't make it
+back to the browser (suspected hitting some
+request/response/proxy-buffer limit on the way through). 50k is the
+ceiling that empirically *worked*. If you find yourself wanting to
+raise it, chunk the text on the client instead and use
+`/api/batch-extract` — don't just bump the constant.
+
 `/api/content` returns 163 entries on this checkout (123 stories + 21 music + 19 videos).
 Each entry has `{ id, title, type, description, text, mediaUrl?, imageUrl? }`. Total
 payload was ~440 KB.
@@ -239,6 +256,17 @@ minimum:
 `getContent()` / `getStories()` / `getMusic()` / `getVideos()`.
 `INITIAL_CONTENT` is intentionally **empty** — all content is on disk now. Don't
 add content arrays back in.
+
+`INITIAL_CONTENT` itself looks like dead code at this point: it's an
+empty array used as a "fallback" that can never trigger (disk loading
+returns ≥1 item in any real checkout), plus a few legacy migration
+scripts (`scripts/migrate-stories.ts`,
+`scripts/migrate-content-to-disk.ts`) and standalone tests
+(`tests/test-5-stories.ts`, `tests/test-stories-via-api.ts`) that still
+import it. Probably worth deleting along with those scripts in a
+follow-up cleanup, but don't yank it as a drive-by — the migration
+scripts are the historical record of how the on-disk content got
+there.
 
 Story metadata supports two relationship fields (use one, not both):
 - `parentId` — episodes/variants of a single story
@@ -285,6 +313,22 @@ Default is selected by `createTokenizer()` based on `process.env.TOKENIZER`:
 | `kuromoji`        | Kuromoji             | poor hiragana support                 |
 | `tinysegmenter`   | TinySegmenter        | no base forms — surface = baseForm    |
 
+**Treat the non-Sudachi entries as emergency-only crash carts, not real
+alternatives.** Sudachi WASM is the only tokenizer this app is actually
+tested against; the others exist because at various points we needed
+something that ran while Sudachi was broken. Their accuracy and behaviour
+diverge enough that swapping in a fallback masks bugs rather than fixing
+them — vocabulary scores and word lookups will silently degrade. If
+Sudachi WASM fails to load:
+
+1. Diagnose the Sudachi issue first (rebuild `sudachi-wasm-built/`,
+   reinstall Rust, check `setup-sudachi.sh` output).
+2. Only fall back to `TOKENIZER=tinysegmenter` as a *temporary* workaround
+   so you can keep the rest of the app working while you fix #1. Don't
+   ship a tokenizer change.
+3. Don't write code that branches on `tokenizer.name` to paper over the
+   differences. Fix Sudachi.
+
 Sudachi WASM lives in `sudachi-wasm-built/` (built by
 `scripts/setup-sudachi.sh`). The `index_bg.wasm` blob is ~208 MB and includes
 the UniDic dictionary. Sudachi tokenization mode C (compound) is the default
@@ -303,6 +347,17 @@ paths had different lookup logic. Order:
 
 If you change lookup behaviour, update **all** call sites by routing through
 `resolveWordMeaning` — that was the whole point.
+
+**Design smell**: needing to remember to "route everything through one
+function" is a sign the function isn't actually the only entry point.
+Several handlers still do their own `getCachedDictionaryEntries` /
+`findBestVariant` calls before/after `resolveWordMeaning`, which is how
+#188 happened in the first place. Worth filing an issue to refactor
+this into a `WordResolver` class (or similar) where the lookup pipeline
+is the only public surface and the kanji-data / JMDict / morpheme
+fallbacks are private — that way new endpoints physically can't bypass
+it. Until then, grep for `getCachedDictionaryEntries` whenever you
+touch this code path.
 
 ### Scoring (`src/lib/scoring.ts`)
 
@@ -342,6 +397,38 @@ There are two layers of cache, plus two on-disk artefacts:
 | `.word-cache.json[.gz]`  | gzipped pre-warmed dump of the words cache             | optional, background-loaded       |
 | `.jisho-cache.json[.gz]` | gzipped pre-warmed dump of the Jisho lookup cache      | optional, background-loaded       |
 
+### Why the JSON files exist alongside the SQLite DB — DO NOT delete them
+
+`.cache.db` is **per-checkout, per-machine**. The server doesn't sync it
+anywhere, and it's gitignored. So a fresh clone or a CI run starts with
+an empty SQLite cache, and the startup-extraction step (see "Dev server
+startup") then has to call Jisho hundreds of times to repopulate it —
+that's the multi-minute warmup penalty.
+
+The gzipped `.word-cache.json.gz` and `.jisho-cache.json.gz` are how we
+share that pre-warmed cache across machines via git. They're committed
+on purpose. `setup-cache.sh` decompresses them into the bare
+`.word-cache.json` / `.jisho-cache.json` working files; `setup-cache.sh`
+and the server consult the decompressed versions to seed `JishoCache`
+on startup so a fresh clone doesn't have to re-fetch every lookup from
+Jisho.
+
+So the four files do four different jobs and **none of them are
+redundant**:
+
+- `.cache.db` — the live, runtime, mutated SQLite cache.
+- `.word-cache.json` / `.jisho-cache.json` — decompressed seed data
+  used at startup. Generated locally; gitignored.
+- `.word-cache.json.gz` / `.jisho-cache.json.gz` — the *committed*
+  shipping format of the seed data. This is the only way new clones
+  inherit a warm cache.
+
+People have deleted `.word-cache.json` / `.jisho-cache.json` thinking
+"the database has all this already" — **don't**. The DB only has what
+*this machine* has happened to look up. If you need to regenerate the
+gzipped versions after intentionally extending the cache, run
+`npm run compress-cache`.
+
 The current `server.ts` deliberately **skips** loading `.word-cache.json.gz`
 into memory (relies on the SQLite-backed `WordsCache` instead — see the
 `loadCachesInBackground` block). If you find yourself "fixing" that, read the
@@ -370,8 +457,8 @@ comment first.
 - Tests sit next to the code they test (`foo.ts` ↔ `foo.test.ts`). Keep them in `src/`, not `tests/`.
 - Don't add deps for things `lucide-react` / `motion` / `tailwindcss` already cover.
 - Don't put new content into `src/data/content.ts` — content is on disk under `src/stories|music|videos/`.
-- Don't push `.cache.db`, `.word-cache.json`, `.jisho-cache.json` to git (the gzipped versions *are* committed).
-- The branch you're on for any agent work specified by the harness — currently `claude/create-claude-md-OoPU9` — is where commits go. Don't push to `main`.
+- Don't push `.cache.db`, `.word-cache.json`, `.jisho-cache.json` to git (the gzipped versions *are* committed). See the "Why the JSON files exist…" section above before deleting any of these.
+- Push to whichever branch the harness or task specifies for your run. Don't push to `main`.
 
 ---
 
@@ -393,23 +480,28 @@ The git history shows this is the team's preferred pattern — see e.g.
 `004dcc0 test(#189): add failing tests for conjugated verb display and lookup`
 followed by the actual fix commits. Follow it:
 
-1. **Write a failing test first.** Add a `*.test.ts` next to the code you're
-   about to change in `src/**`. The test should describe the behaviour you
-   *want*, expressed against the current API. Don't hand-wave with
-   `expect(true).toBe(false)` — make it a real assertion that exercises the
-   actual code path.
-2. **Run `npm test` and confirm the new test fails for the right reason.** Not
-   "fails to compile", not "throws because a fixture is missing" — fails because
-   the production code doesn't do the thing yet. If the failure mode is wrong,
-   fix the test before touching production code.
-3. **Commit the failing test on its own.** Message format:
-   `test(#<issue>): add failing test for <behaviour>`. This makes the bug
-   reproducible from git history alone — anyone can `git checkout <that sha>`
-   and see the red.
+1. **Write a failing test (or tests) first.** Add `*.test.ts` files next to
+   the code you're about to change in `src/**`. Each test should describe a
+   behaviour you *want*, expressed against the current API. Don't hand-wave
+   with `expect(true).toBe(false)` — make it a real assertion that exercises
+   the actual code path. Multiple tests in one commit is fine and often
+   *preferable* for messy bugs: if you don't yet know exactly where the
+   problem lives, shotgunning 5–20 small tests across the suspected surface
+   area is a legitimate debugging technique. Some will go red, some green,
+   and the pattern of failures tells you where the bug actually is.
+2. **Run `npm test` and confirm the new tests fail for the right reasons.**
+   Not "fails to compile", not "throws because a fixture is missing" — fails
+   because the production code doesn't do the thing yet. If a failure mode is
+   wrong, fix the test before touching production code.
+3. **Commit the failing tests on their own.** Message format:
+   `test(#<issue>): add failing test(s) for <behaviour>`. One commit can hold
+   many tests — the point is that the failing-test commit is separate from
+   the fix commit, so the bug is reproducible from git history alone (anyone
+   can `git checkout <that sha>` and see the red).
 4. **Implement the fix.** Keep the diff minimal — only what's needed to flip
-   the new test to green. Don't sneak in unrelated refactors.
-5. **Run `npm test` again.** New test passes, *and* nothing in the existing 94
-   tests regresses. Run `npm run lint` too.
+   the new tests to green. Don't sneak in unrelated refactors.
+5. **Run `npm test` again.** New tests pass, *and* nothing in the existing
+   suite regresses. Run `npm run lint` too.
 6. **Commit the fix separately.** `fix(#<issue>): <one-line description>`.
 
 Why this matters here: tokenizer / scoring / dictionary-lookup logic is

@@ -289,12 +289,35 @@ VITE_API_URL=http://localhost:3000
 
 ## API Endpoints
 
-The backend (Express.js) provides these endpoints:
+The backend (Express.js) provides these endpoints. `server.ts` is the source
+of truth — if this list and the code disagree, the code wins.
 
-- `GET /api/stories` - List all stories
-- `GET /api/stories/:id` - Get story by ID
-- `POST /api/analyze` - Tokenize and analyze Japanese text
-- `GET /api/dictionary/:word` - Look up word in dictionary
+**Vocabulary / tokenization:**
+
+- `POST /api/extract` - Tokenize and score arbitrary Japanese text. Body: `{ text }`. Returns `WordInfo[]`. Enforces a 50,000-character limit and rejects text with no Japanese codepoints.
+- `POST /api/batch-extract` - Same as `/api/extract`, but takes `{ texts: string[] }` and returns one result per input.
+- `POST /api/process-story` - Tokenize a story for the reader view (returns tokens with positions, base forms, and per-token metadata). Same 50k-char limit.
+- `POST /api/update-words` - Recompute scores for an array of `WordInfo` entries (used when the user edits a word).
+- `POST /api/clear-cache` - Clear the in-memory and SQLite caches.
+
+**Single word lookup:**
+
+- `GET /api/word/:word` - Reading + meaning + score for a single word.
+
+**Content (stories / music / videos loaded from `src/stories|music|videos/`):**
+
+- `GET /api/content` - All content items.
+- `GET /api/content/words` - All known content → words mappings.
+- `GET /api/content/:contentId/words` - Words for one content item.
+
+**WaniKani sync:**
+
+- `POST /api/wanikani/validate` - Validate a WaniKani API token.
+- `POST /api/wanikani/sync` - Pull SRS data for the user's known kanji.
+
+The older endpoints `/api/stories`, `/api/stories/:id`, `/api/analyze`, and
+`/api/dictionary/:word` no longer exist; if you find references to them in
+old docs or code, update them to the equivalents above.
 
 ## Common Issues
 
