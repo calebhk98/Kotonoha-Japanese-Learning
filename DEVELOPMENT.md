@@ -194,7 +194,6 @@ npm run test:watch          # Run tests in watch mode
 npm run test:stories        # Quick test of story functionality
 npm run test:stories:full   # Full test suite for all stories
 npm run add-story           # CLI: Add a new story interactively
-npm run migrate-stories     # Migrate old story format to new format
 npm run populate-cache      # Pre-populate the server word cache (server must be running)
 ```
 
@@ -210,7 +209,6 @@ See [scripts/README.md](scripts/README.md) for the full annotated list. Key scri
 | `add-story.ts` | CLI tool to create a new story with template files |
 | `add-series.ts` | CLI tool to create a story series (for multi-episode content) |
 | `populate-cache.ts` | Pre-populates the server word cache via the API (requires dev server running) |
-| `migrate-stories.ts` | Migrates stories to new folder structure/format (historical; do not re-run) |
 | `analyze-story.ts` | Analyzes a story for vocabulary, difficulty, word frequency |
 | `dev/tokenizer-comparison.ts` | Compares TinySegmenter/BudouX/Kuromoji on test text (dev exploration) |
 

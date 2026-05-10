@@ -19,7 +19,6 @@
     "test:stories": "npx tsx integration/test-stories-quick.ts",
     "test:stories:full": "npx tsx integration/test-all-stories.ts",
     "add-story": "npx tsx scripts/add-story.ts",
-    "migrate-stories": "npx tsx scripts/migrate-stories.ts",
     "populate-cache": "npx tsx scripts/populate-cache.ts"
   },
   "dependencies": {

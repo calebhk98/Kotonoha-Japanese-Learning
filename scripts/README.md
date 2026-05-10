@@ -18,8 +18,6 @@ Utility and maintenance scripts for Kotonoha. Run with `npx tsx <script>` unless
 |--------|---------|--------------|
 | `add-story.ts` | `npm run add-story` | Interactive prompt to scaffold a new story folder under `src/stories/`. |
 | `add-series.ts` | `npx tsx scripts/add-series.ts` | Like `add-story.ts` but for a new series with episode metadata. |
-| `migrate-stories.ts` | `npm run migrate-stories` | Migrates stories from the old inline `INITIAL_CONTENT` format to disk. Historical record; do not re-run on a live checkout. |
-| `migrate-content-to-disk.ts` | `npx tsx scripts/migrate-content-to-disk.ts` | Earlier migration step (predates `migrate-stories.ts`). Historical record only. |
 
 ## Cache utilities
 
