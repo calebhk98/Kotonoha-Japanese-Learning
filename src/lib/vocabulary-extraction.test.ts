@@ -88,11 +88,11 @@ describe('vocabulary extraction pipeline', () => {
 
   it('applies frequency penalties correctly across priority ranges', () => {
     const testCases = [
-      // (priorities, expectedMinScore, description)
-      (['ichi1'], null, 'very common word'),
-      (['nf01'], null, 'frequent in general corpus'),
-      (['nf31'], null, 'rare in general corpus'),
-      ([], null, 'no frequency data'),
+      // [priorities, expectedMinScore, description]
+      [['ichi1'], null, 'very common word'],
+      [['nf01'], null, 'frequent in general corpus'],
+      [['nf31'], null, 'rare in general corpus'],
+      [[], null, 'no frequency data'],
     ];
 
     const entry: DictionaryEntry = {
