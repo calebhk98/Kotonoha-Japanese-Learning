@@ -1028,10 +1028,6 @@ async function startServer() {
     }
   })();
 
-  // Keep server alive even if parent process tries to shut down
-  let shutdownRequested = false;
-  let shutdownAttempts = 0;
-
   // Save database on shutdown
   process.on('SIGINT', () => {
     console.log('\n[Server] Shutting down, saving database...');
@@ -1040,20 +1036,10 @@ async function startServer() {
   });
 
   process.on('SIGTERM', () => {
-    shutdownAttempts++;
-    console.log(`[Server] Received SIGTERM (attempt ${shutdownAttempts}), ignoring gracefully...`);
-
-    if (!shutdownRequested) {
-      shutdownRequested = true;
-      console.log('[Server] Server will continue running. Press Ctrl+C to stop.');
-    }
-    // Don't exit - server should stay alive
+    console.log('[Server] Received SIGTERM, shutting down gracefully...');
+    saveDatabase();
+    process.exit(0);
   });
-
-  // Prevent the process from exiting due to empty event loop
-  setInterval(() => {
-    // Keep-alive interval to prevent process exit
-  }, 30000);
 }
 
 startServer().catch((err) => {
