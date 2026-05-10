@@ -14,10 +14,13 @@ Kotonoha-Japanese-Learning/
 │   ├── App.tsx              # Main React app
 │   └── main.tsx             # React entry point
 ├── tests/                   # Test files (unit, integration, etc)
-├── scripts/                 # Helper scripts
+├── scripts/                 # Helper scripts (see scripts/README.md for full list)
 │   ├── add-story.ts         # CLI tool to add new stories
 │   ├── add-series.ts        # CLI tool to add story series
-│   └── setup-sudachi.sh     # Build Sudachi WASM tokenizer
+│   ├── setup-sudachi.sh     # Build Sudachi WASM tokenizer
+│   ├── populate-cache.ts    # Pre-populate the server lookup cache
+│   ├── dev/                 # Dev-only exploration scripts
+│   └── legacy/              # Historical scripts (do not run)
 ├── server.ts                # Express.js backend server
 ├── package.json             # Dependencies and scripts
 ├── vite.config.ts           # Vite build configuration
@@ -49,12 +52,9 @@ Kotonoha-Japanese-Learning/
   - Serves the frontend React app
   - Handles tokenization requests
 - **index.html** - HTML entry point for the web application (loads React)
-- **populate-cache.ts** - Utility to pre-populate the vocabulary cache (run via `npx tsx`)
 
 ### Tokenizer & Text Processing
 - **char.def** - Character definition file used by Sudachi for morphological analysis
-- **tokenizer-comparison.ts** - Utility script to test and compare different tokenizers (for development/debugging)
-- **script.cjs** - CommonJS helper script for node operations
 
 ### Dictionary Data (Compressed)
 - **jmdict-all-3.6.2.json.tgz** (25 MB) - Japanese-English dictionary (JMdict format)
@@ -195,11 +195,12 @@ npm run test:stories        # Quick test of story functionality
 npm run test:stories:full   # Full test suite for all stories
 npm run add-story           # CLI: Add a new story interactively
 npm run migrate-stories     # Migrate old story format to new format
+npm run populate-cache      # Pre-populate the server word cache (server must be running)
 ```
 
 ### Helper Scripts in `scripts/`
 
-These are utility scripts for development and maintenance:
+See [scripts/README.md](scripts/README.md) for the full annotated list. Key scripts:
 
 | Script | Purpose |
 |--------|---------|
@@ -208,14 +209,10 @@ These are utility scripts for development and maintenance:
 | `compress-cache.sh` | Compresses the vocabulary cache for smaller file size |
 | `add-story.ts` | CLI tool to create a new story with template files |
 | `add-series.ts` | CLI tool to create a story series (for multi-episode content) |
-| `migrate-stories.ts` | Migrates stories to new folder structure/format |
-| `migrate-content-to-disk.ts` | Moves story content from database/memory to disk files |
+| `populate-cache.ts` | Pre-populates the server word cache via the API (requires dev server running) |
+| `migrate-stories.ts` | Migrates stories to new folder structure/format (historical; do not re-run) |
 | `analyze-story.ts` | Analyzes a story for vocabulary, difficulty, word frequency |
-| `analyze-duplicates.ts` | Finds duplicate stories or content |
-| `analyze-filtering.ts` | Analyzes word filtering and scoring behavior |
-| `deduplicate-content.ts` | Removes duplicate stories/content |
-| `list-filtered-tokens.ts` | Lists tokens that match certain filters |
-| `setup-jmnedict.ts` | Sets up Japanese name dictionary |
+| `dev/tokenizer-comparison.ts` | Compares TinySegmenter/BudouX/Kuromoji on test text (dev exploration) |
 
 ### Dictionary Files
 
@@ -230,33 +227,32 @@ These files are automatically decompressed and processed into the vocabulary cac
 
 ## Tokenizers
 
-The app supports multiple Japanese tokenizers. The default is **Sudachi WASM**.
+The app uses **Sudachi WASM** as its only supported tokenizer. **TinySegmenter** is available as a lightweight emergency fallback during development.
 
-### Available Tokenizers
+### Supported tokenizers
 
-- **Sudachi WASM** (default): Morphological analyzer, runs in WebAssembly
-- **Sudachi-TS**: TypeScript implementation
-- **Lindera**: Fast Rust-based tokenizer
-- **Kuromoji**: Pure JavaScript tokenizer
-- **TinySegmenter**: Lightweight JavaScript segmenter
+| `TOKENIZER` value | Status | Notes |
+|-------------------|--------|-------|
+| `sudachi-wasm` (default) | **Supported** | Built via `npm run setup-sudachi`. ~83% hiragana accuracy. |
+| `tinysegmenter` | Emergency fallback | No base-form support; use only while fixing Sudachi. |
 
-### Switching Tokenizers
+### Emergency fallback
 
-Set the `TOKENIZER` environment variable:
+If Sudachi WASM fails to load, use TinySegmenter while you fix it:
 
 ```bash
-TOKENIZER=kuromoji npm run dev
+TOKENIZER=tinysegmenter npm run dev
 ```
 
-Or in `.env`:
+Do not ship with `TOKENIZER=tinysegmenter` — vocabulary scores and word lookups silently degrade.
 
-```
-TOKENIZER=lindera
-```
+### Re-enabling other tokenizers
 
-### Tokenizer Configuration
+`SudachiTSImpl`, `LinderaImpl`, and `KuromojiImpl` are in `src/lib/tokenizers.ts` but marked `@deprecated` — their npm packages are not installed. Each class has a JSDoc comment with the exact `npm install` command to bring it back. After installing, set the `TOKENIZER` env var to the matching value (`sudachi-ts`, `lindera`, or `kuromoji`) and restart the server.
 
-Tokenizers are implemented in `src/lib/tokenizers.ts`. Each implements the `Tokenizer` interface:
+### Tokenizer interface
+
+Tokenizers are implemented in `src/lib/tokenizers.ts`. Each implements:
 
 ```typescript
 interface Tokenizer {
@@ -266,7 +262,7 @@ interface Tokenizer {
 }
 ```
 
-To add a new tokenizer, implement this interface and add it to the `createTokenizer()` function.
+To add a new tokenizer, implement this interface and add it to `createTokenizer()`.
 
 ## Word Scoring System
 

@@ -31,7 +31,11 @@ export class TinySegmenterImpl implements Tokenizer {
   }
 }
 
-// Sudachi-TS implementation
+/**
+ * @deprecated Emergency fallback only. Not supported in production.
+ * To re-enable: npm install sudachi-ts
+ * Then set TOKENIZER=sudachi-ts before starting the server.
+ */
 export class SudachiTSImpl implements Tokenizer {
   name = 'Sudachi-TS';
   private dict: any = null;
@@ -60,7 +64,12 @@ export class SudachiTSImpl implements Tokenizer {
   }
 }
 
-// Lindera implementation
+/**
+ * @deprecated Emergency fallback only. Not supported in production.
+ * To re-enable: npm install lindera-nodejs
+ * Then set TOKENIZER=lindera before starting the server.
+ * Note: lindera-nodejs requires a native binary compatible with your platform.
+ */
 export class LinderaImpl implements Tokenizer {
   name = 'Lindera';
   private tokenizer: any = null;
@@ -211,7 +220,11 @@ export class SudachiWasmImpl implements Tokenizer {
   }
 }
 
-// Kuromoji implementation (for reference/fallback)
+/**
+ * @deprecated Emergency fallback only. Poor hiragana support. Not supported in production.
+ * To re-enable: npm install kuromoji
+ * Then set TOKENIZER=kuromoji before starting the server.
+ */
 export class KuromojiImpl implements Tokenizer {
   name = 'Kuromoji';
   private tokenizer: any = null;

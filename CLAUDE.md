@@ -35,7 +35,7 @@ Express server (single port).
 |-------------------|-----------------------------------------------------------------------|
 | Frontend          | React 19, TypeScript, Vite 6, Tailwind CSS 4 (`@tailwindcss/vite`)    |
 | Backend           | Express 4 (`server.ts`), run via `tsx`                                |
-| Tokenizer         | **Sudachi WASM** (default), with Sudachi-TS / Lindera / Kuromoji / TinySegmenter fallbacks |
+| Tokenizer         | **Sudachi WASM** (default); TinySegmenter as emergency dev fallback; Sudachi-TS / Lindera / Kuromoji classes retained but `@deprecated` (packages removed — see tokenizers.ts for reinstall instructions) |
 | Dictionaries      | JMdict (`jmdict-all-3.6.2.json.tgz`), JMnedict (`jmnedict.json.gz`), `kanji-data` (npm) |
 | Persistent cache  | SQLite via `sql.js` → `.cache.db` at repo root                        |
 | Tests             | Vitest (`environment: 'node'`)                                        |
@@ -64,7 +64,12 @@ Node 18+ required.
 │   ├── stories/               # 123 directories of stories on disk (README claims 104)
 │   ├── music/                 # 21 directories
 │   └── videos/                # 19 directories
-├── scripts/                   # ~25 setup/maintenance/CLI scripts (.ts and .sh)
+├── scripts/                   # ~25 setup/maintenance/CLI scripts (.ts and .sh); see scripts/README.md
+│   ├── populate-cache.ts      # Pre-populate the server lookup cache (run via `npm run populate-cache`)
+│   ├── dev/
+│   │   └── tokenizer-comparison.ts  # Dev-only: compare TinySegmenter/BudouX/Kuromoji on test text
+│   └── legacy/
+│       └── script.cjs         # Historical: one-off content generator (pre-disk content model)
 ├── tests/                     # Standalone integration scripts (NOT run by `npm test`)
 ├── sudachi-wasm-built/        # Output of setup-sudachi.sh (must exist for default tokenizer)
 ├── jmdict-all-3.6.2.json.tgz  # 25 MB; auto-extracted on server start
@@ -74,9 +79,6 @@ Node 18+ required.
 ├── .cache.db                  # SQLite DB (created on first run)
 ├── char.def                   # Sudachi character definitions
 ├── sudachi.json               # Sudachi tokenizer config
-├── populate-cache.ts          # Utility to pre-populate the lookup cache
-├── tokenizer-comparison.ts    # Dev-only tokenizer comparison
-├── script.cjs                 # Misc CommonJS helper
 └── index.html                 # Vite entry
 ```
 
@@ -570,16 +572,6 @@ addressed by the time you're reading this.
   never run by `npm test`. Either rename / move / delete the obsolete
   ones or wire them into the test runner. As-is, an agent looking for
   "where the tests are" lands in the wrong place.
-- **Multiple tokenizer packages, only one supported.** `package.json`
-  ships `@didmar/sudachi-wasm`, `@hiogawa/sudachi.wasm`, `sudachi`,
-  `sudachi-ts`, `lindera-nodejs`, `kuromoji`, `mecab-async`, and
-  `tiny-segmenter` even though only Sudachi WASM is the supported
-  path. That's a lot of install footprint and supply-chain surface
-  for emergency-only fallbacks. Pruning candidate.
-- **Repo-root one-offs.** `populate-cache.ts`, `tokenizer-comparison.ts`,
-  and `script.cjs` sit at the root with no obvious owner. Move into
-  `scripts/` (with a README pointer) or delete if nothing imports
-  them.
 - **`App.tsx` is ~920 lines of single-component everything.** Routing,
   view switching, modal management, vocab loading, filtering,
   WaniKani, and import/export all live in one component. Worth a
