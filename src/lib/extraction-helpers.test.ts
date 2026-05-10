@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord } from './extraction-helpers.js';
+import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem } from './extraction-helpers.js';
 
 describe('extraction helpers', () => {
   describe('isPunctuation', () => {
@@ -90,6 +90,36 @@ describe('extraction helpers', () => {
 
     it('returns false for mixed kanji-katakana', () => {
       expect(isKatakanaWord('日テレ')).toBe(false);
+    });
+  });
+
+  describe('looksLikePartialStem', () => {
+    it('returns true for verb stems ending in small tsu (っ)', () => {
+      // These are cut-off conjugation artifacts — no valid Japanese dictionary
+      // entry ends in っ. Sending them to Jisho returns geographic junk like
+      // "Molazzana" (the original bug in issue #174).
+      expect(looksLikePartialStem('もらっ')).toBe(true);
+      expect(looksLikePartialStem('走っ')).toBe(true);
+      expect(looksLikePartialStem('やっ')).toBe(true);
+      expect(looksLikePartialStem('あっ')).toBe(true);
+    });
+
+    it('returns false for complete hiragana words', () => {
+      expect(looksLikePartialStem('もらう')).toBe(false);
+      expect(looksLikePartialStem('ありがとう')).toBe(false);
+      expect(looksLikePartialStem('です')).toBe(false);
+      expect(looksLikePartialStem('ねこ')).toBe(false);
+    });
+
+    it('returns false for words with っ in the middle (valid dictionary entries)', () => {
+      // きって (stamp), もって (holding) etc. are valid words
+      expect(looksLikePartialStem('きって')).toBe(false);
+      expect(looksLikePartialStem('もって')).toBe(false);
+      expect(looksLikePartialStem('まって')).toBe(false);
+    });
+
+    it('returns false for empty string', () => {
+      expect(looksLikePartialStem('')).toBe(false);
     });
   });
 
