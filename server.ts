@@ -702,6 +702,7 @@ async function startServer() {
   // Startup takes ~30 seconds: dictionary decompression and tokenizer (Sudachi WASM)
   // both load here before the server binds. Wait for "Server running on http://localhost:3000"
   // before sending requests — the port is not open until this function reaches app.listen().
+  console.log('[Server] Starting up — please wait ~30s for dictionaries and tokenizer to load before sending requests...');
   await tokenizerReady;
   await dictionaryReady;
 
