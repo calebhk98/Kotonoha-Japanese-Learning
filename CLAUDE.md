@@ -255,7 +255,6 @@ minimum:
 
 `storyLoader.ts` is the loader; `src/data/content.ts` exposes
 `getContent()` / `getStories()` / `getMusic()` / `getVideos()`.
-All content is on disk — do not add inline content arrays to `content.ts`.
 
 Story metadata supports two relationship fields (use one, not both):
 - `parentId` — episodes/variants of a single story
