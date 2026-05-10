@@ -1035,9 +1035,14 @@ async function startServer() {
     process.exit(0);
   });
 
+  // SIGTERM was previously ignored (commit 1b49e85) to survive GitHub Codespaces idle
+  // timeouts, but that breaks docker stop / systemd / k8s. If Codespaces kills the server
+  // on idle, restart it — don't make the server unkillable to compensate.
   process.on('SIGTERM', () => {
     console.log('[Server] Received SIGTERM, shutting down gracefully...');
-    saveDatabase();
+    try { saveDatabase(); } catch (err) {
+      console.error('[Server] Error saving database on shutdown:', err);
+    }
     process.exit(0);
   });
 }
