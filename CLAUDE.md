@@ -65,7 +65,7 @@ Node 18+ required.
 │   ├── music/                 # 21 directories
 │   └── videos/                # 19 directories
 ├── scripts/                   # ~25 setup/maintenance/CLI scripts (.ts and .sh)
-├── tests/                     # Standalone integration scripts (NOT run by `npm test`)
+├── integration/               # Standalone integration scripts (NOT run by `npm test`)
 ├── sudachi-wasm-built/        # Output of setup-sudachi.sh (must exist for default tokenizer)
 ├── jmdict-all-3.6.2.json.tgz  # 25 MB; auto-extracted on server start
 ├── jmnedict.json.gz           # 8.8 MB
@@ -95,7 +95,7 @@ All measured on this checkout, on this machine. Re-measure if you doubt them.
 |----------------------|-----------------------------------------------------------|-----------------------|
 | `npm install`        | Installs deps + runs `postinstall` (Sudachi + cache setup; can be 3–5 min on a cold machine) | not re-run |
 | `npm run dev`        | Starts Express + Vite dev middleware on port 3000         | port opens ~10 s; see "Dev server startup" below |
-| `npm run lint`       | `tsc --noEmit` on the project (excludes `tests/`)         | **~23 s**, exit 0     |
+| `npm run lint`       | `tsc --noEmit` on the project (excludes `integration/`)   | **~23 s**, exit 0     |
 | `npm test`           | `vitest run` — **5 test files, 94 tests passing**         | **~21 s**, exit 0     |
 | `npm run test:watch` | Vitest in watch mode                                      | —                     |
 | `npm run build`      | `vite build`                                              | not measured          |
@@ -123,9 +123,9 @@ broken.
 - `src/lib/vocabulary-extraction.test.ts`
 - `src/hooks/useContentData.test.ts`
 
-Files in `tests/` (e.g. `test-all-stories.ts`, `test-server-api.ts`,
+Files in `integration/` (e.g. `test-all-stories.ts`, `test-server-api.ts`,
 `test-sudachi-*.mjs`) are **not** picked up by vitest — `tsconfig.json`
-explicitly excludes `tests/**`. They are standalone scripts you run with `tsx` /
+explicitly excludes `integration/**`. They are standalone scripts you run with `tsx` /
 `node`. Don't add new vitest specs there.
 
 ---
@@ -261,12 +261,11 @@ add content arrays back in.
 empty array used as a "fallback" that can never trigger (disk loading
 returns ≥1 item in any real checkout), plus a few legacy migration
 scripts (`scripts/migrate-stories.ts`,
-`scripts/migrate-content-to-disk.ts`) and standalone tests
-(`tests/test-5-stories.ts`, `tests/test-stories-via-api.ts`) that still
-import it. Probably worth deleting along with those scripts in a
-follow-up cleanup, but don't yank it as a drive-by — the migration
-scripts are the historical record of how the on-disk content got
-there.
+`scripts/migrate-content-to-disk.ts`) that still import it. Probably worth
+deleting along with those scripts in a follow-up cleanup, but don't yank it as
+a drive-by — the migration scripts are the historical record of how the on-disk
+content got there. The standalone test scripts that used `INITIAL_CONTENT`
+(`test-5-stories.ts`, `test-stories-via-api.ts`) have already been deleted.
 
 Story metadata supports two relationship fields (use one, not both):
 - `parentId` — episodes/variants of a single story
@@ -454,7 +453,7 @@ comment first.
 
 - **Imports use `.js` extensions** even for `.ts` source — `tsconfig` uses `moduleResolution: bundler` + `allowImportingTsExtensions`, but server-side `tsx` runs ESM and the existing pattern in `server.ts` is `from "./src/lib/scoring.js"`. Match the surrounding file.
 - Path alias `@/*` maps to repo root (`vite.config.ts` and `tsconfig.json`).
-- Tests sit next to the code they test (`foo.ts` ↔ `foo.test.ts`). Keep them in `src/`, not `tests/`.
+- Tests sit next to the code they test (`foo.ts` ↔ `foo.test.ts`). Keep them in `src/`, not `integration/`.
 - Don't add deps for things `lucide-react` / `motion` / `tailwindcss` already cover.
 - Don't put new content into `src/data/content.ts` — content is on disk under `src/stories|music|videos/`.
 - Don't push `.cache.db`, `.word-cache.json`, `.jisho-cache.json` to git (the gzipped versions *are* committed). See the "Why the JSON files exist…" section above before deleting any of these.
@@ -466,7 +465,7 @@ comment first.
 
 - `npm start` is broken (it tries to `node server.ts`). Use `npm run dev`.
 - The README says 104 stories; the disk has 123. Don't trust counts in docs.
-- `tests/` is **not** the vitest location — it's standalone scripts. New unit tests go into `src/**/*.test.ts`.
+- `integration/` is **not** the vitest location — it's standalone integration scripts. New unit tests go into `src/**/*.test.ts`.
 - `DEVELOPMENT.md`'s API endpoint list (`/api/stories`, `/api/analyze`, `/api/dictionary/:word`) is **stale** — see the API table above.
 - Sudachi WASM build needs Rust. If `sudachi-wasm-built/` is missing, the default tokenizer fails to start. Fall back with `TOKENIZER=tinysegmenter npm run dev` while you fix it.
 - The first start of the server has to extract `jmdict-all-3.6.2.json.tgz` (25 MB → ~270 MB). Don't kill it during that step.
@@ -540,11 +539,11 @@ addressed by the time you're reading this.
   whose only readers are the disk-loader fallback (which never fires in
   a real checkout), two legacy migration scripts
   (`scripts/migrate-stories.ts`,
-  `scripts/migrate-content-to-disk.ts`), and two standalone tests
-  (`tests/test-5-stories.ts`, `tests/test-stories-via-api.ts`). Removal
-  is a cleanup PR, not a one-liner — the migration scripts are the
-  historical record of how content got onto disk, so think about
-  whether to keep them as docs or delete with the constant.
+  `scripts/migrate-content-to-disk.ts`). Removal is a cleanup PR, not a
+  one-liner — the migration scripts are the historical record of how content
+  got onto disk, so think about whether to keep them as docs or delete with
+  the constant. The standalone test scripts that used it were deleted as part
+  of the `tests/` → `integration/` cleanup.
 - **Server SIGTERM handling is hostile to orchestration.** `server.ts`
   catches SIGTERM and explicitly logs "ignoring gracefully", plus a
   `setInterval(..., 30000)` keep-alive that prevents Node from exiting
@@ -564,12 +563,7 @@ addressed by the time you're reading this.
   accuracy and recommends fixes that may have already shipped via
   #189's grouping work. Worth re-running its measurement and
   rewriting (or marking as historical).
-- **The `tests/` folder advertises itself as the test location** — file
-  names like `test-server-api.ts`, `test-dictionaries.ts` look like
-  vitest specs — but `tsconfig.json` excludes `tests/**` and they're
-  never run by `npm test`. Either rename / move / delete the obsolete
-  ones or wire them into the test runner. As-is, an agent looking for
-  "where the tests are" lands in the wrong place.
+- ~~**The `tests/` folder advertises itself as the test location**~~ — resolved: the directory was renamed to `integration/`, throwaway ad-hoc scripts and files importing deprecated `INITIAL_CONTENT` were deleted, and `tsconfig.json` / `package.json` were updated to match.
 - **Multiple tokenizer packages, only one supported.** `package.json`
   ships `@didmar/sudachi-wasm`, `@hiogawa/sudachi.wasm`, `sudachi`,
   `sudachi-ts`, `lindera-nodejs`, `kuromoji`, `mecab-async`, and
