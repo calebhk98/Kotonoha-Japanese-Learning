@@ -1,17 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
-import { getAllContentWords } from './lib/api';
-import { BookOpen, Video, Music, CheckCircle, ChevronRight, PlayCircle, Loader2, Library, Plus, Settings, Search, X } from 'lucide-react';
-import { Content } from './data/content';
-import { useContentData, applyWaniKaniToWords } from './hooks/useContentData';
+import { CheckCircle, Plus, Settings } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { ContentDetail } from './components/ContentDetail';
 import { ImportModal } from './components/ImportModal';
+import { SettingsPage } from './components/SettingsPage';
 import { WordDetailModal } from './components/WordDetailModal';
 import { WordDetailPage } from './components/WordDetailPage';
-import { SettingsPage } from './components/SettingsPage';
+import { Content } from './data/content';
+import { applyWaniKaniToWords, useContentData } from './hooks/useContentData';
+import { useUrlRouting } from './hooks/useUrlRouting';
+import { getAllContentWords } from './lib/api';
 import { WordInfo } from './types';
 import HomeView from './views/HomeView';
-import VocabView from './views/VocabView';
 import ScoringView from './views/ScoringView';
+import VocabView from './views/VocabView';
 
 export default function App() {
   const {
@@ -72,27 +73,7 @@ export default function App() {
   const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [comprehensionFilter, setComprehensionFilter] = useState<'all' | 'almost' | 'ready'>('all');
 
-  // URL routing for word detail page
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      if (path.startsWith('/word/')) {
-        const word = decodeURIComponent(path.slice(6));
-        setSelectedWord(word);
-      } else {
-        setSelectedWord(null);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    handlePopState();
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  const navigateToWord = (word: string) => {
-    setSelectedWord(word);
-    window.history.pushState({ type: 'word', word, scrollPos: window.scrollY }, '', `/word/${encodeURIComponent(word)}`);
-  };
+  const { navigateToWord } = useUrlRouting({ setSelectedWord });
 
   const navigateBack = () => {
     if (selectedWord) {
