@@ -60,7 +60,7 @@ Node 18+ required.
 │   ├── components/            # 7 components (.tsx)
 │   ├── hooks/                 # useContentData (+ test)
 │   ├── lib/                   # tokenizers, scoring, dictionary, storyLoader, etc.
-│   ├── data/content.ts        # Content type defs + loader; INITIAL_CONTENT is empty
+│   ├── data/content.ts        # Content type defs + loader (getContent/getStories/getMusic/getVideos)
 │   ├── stories/               # 123 directories of stories on disk (README claims 104)
 │   ├── music/                 # 21 directories
 │   └── videos/                # 19 directories
@@ -107,7 +107,6 @@ All measured on this checkout, on this machine. Re-measure if you doubt them.
 | `npm run setup-cache`   | Decompress dictionaries / caches                       | —                     |
 | `npm run compress-cache`| Recompress caches                                      | —                     |
 | `npm run add-story`     | `tsx scripts/add-story.ts` — interactive new story     | —                     |
-| `npm run migrate-stories` | Migrate old story format                             | —                     |
 | `npm run test:stories` / `:full` | Standalone story integration scripts (NOT vitest) | —              |
 
 **Note on `npm start`**: the script is `node server.ts`, which will fail because
@@ -256,18 +255,6 @@ minimum:
 
 `storyLoader.ts` is the loader; `src/data/content.ts` exposes
 `getContent()` / `getStories()` / `getMusic()` / `getVideos()`.
-`INITIAL_CONTENT` is intentionally **empty** — all content is on disk now. Don't
-add content arrays back in.
-
-`INITIAL_CONTENT` itself looks like dead code at this point: it's an
-empty array used as a "fallback" that can never trigger (disk loading
-returns ≥1 item in any real checkout), plus a few legacy migration
-scripts (`scripts/migrate-stories.ts`,
-`scripts/migrate-content-to-disk.ts`) that still import it. Probably worth
-deleting along with those scripts in a follow-up cleanup, but don't yank it as
-a drive-by — the migration scripts are the historical record of how the on-disk
-content got there. The standalone test scripts that used `INITIAL_CONTENT`
-(`test-5-stories.ts`, `test-stories-via-api.ts`) have already been deleted.
 
 Story metadata supports two relationship fields (use one, not both):
 - `parentId` — episodes/variants of a single story
@@ -537,15 +524,6 @@ addressed by the time you're reading this.
   happened in the first place. A `WordResolver` class with private
   helpers and a single public API would make bypass impossible. File
   it as a refactor, not a bug.
-- **`INITIAL_CONTENT` is effectively dead code.** It's an empty array
-  whose only readers are the disk-loader fallback (which never fires in
-  a real checkout), two legacy migration scripts
-  (`scripts/migrate-stories.ts`,
-  `scripts/migrate-content-to-disk.ts`). Removal is a cleanup PR, not a
-  one-liner — the migration scripts are the historical record of how content
-  got onto disk, so think about whether to keep them as docs or delete with
-  the constant. The standalone test scripts that used it were deleted as part
-  of the `tests/` → `integration/` cleanup.
 - **Server SIGTERM handling is hostile to orchestration.** `server.ts`
   catches SIGTERM and explicitly logs "ignoring gracefully", plus a
   `setInterval(..., 30000)` keep-alive that prevents Node from exiting
