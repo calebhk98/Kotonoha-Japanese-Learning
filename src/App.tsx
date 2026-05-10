@@ -9,10 +9,65 @@ import { Content } from './data/content';
 import { applyWaniKaniToWords, useContentData } from './hooks/useContentData';
 import { useUrlRouting } from './hooks/useUrlRouting';
 import { getAllContentWords } from './lib/api';
+import {
+  applyContentFilters,
+  collectLevels,
+  collectTags,
+  DEFAULT_FILTERS,
+  sortContent,
+  type ContentFilters,
+  type LengthFilter,
+  type SearchScope,
+  type SortBy,
+  type SortDir,
+} from './lib/contentFilters';
 import { WordInfo } from './types';
 import HomeView from './views/HomeView';
 import ScoringView from './views/ScoringView';
 import VocabView from './views/VocabView';
+
+const HOME_FILTERS_KEY = 'homeFilters';
+
+interface PersistedHomeFilters {
+  searchQuery: string;
+  searchScope: SearchScope[];
+  typeFilter: string[];
+  levelFilter: string[];
+  tagFilter: string[];
+  lengthFilter: LengthFilter;
+  comprehensionRange: [number, number];
+  sortBy: SortBy;
+  sortDir: SortDir;
+}
+
+function loadPersistedFilters(): {
+  filters: ContentFilters;
+  sortBy: SortBy;
+  sortDir: SortDir;
+} {
+  const fallback = { filters: { ...DEFAULT_FILTERS }, sortBy: 'difficulty' as SortBy, sortDir: 'asc' as SortDir };
+  try {
+    const raw = localStorage.getItem(HOME_FILTERS_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<PersistedHomeFilters>;
+    return {
+      filters: {
+        searchQuery: parsed.searchQuery ?? '',
+        searchScope: new Set(parsed.searchScope ?? ['title', 'description']),
+        typeFilter: new Set(parsed.typeFilter ?? []),
+        levelFilter: new Set(parsed.levelFilter ?? []),
+        tagFilter: new Set(parsed.tagFilter ?? []),
+        lengthFilter: parsed.lengthFilter ?? 'all',
+        comprehensionRange: parsed.comprehensionRange ?? [0, 100],
+      },
+      sortBy: parsed.sortBy ?? 'difficulty',
+      sortDir: parsed.sortDir ?? 'asc',
+    };
+  } catch (e) {
+    console.error('Failed to parse persisted home filters:', e);
+    return fallback;
+  }
+}
 
 export default function App() {
   const {
@@ -68,10 +123,17 @@ export default function App() {
     fetchContent();
   }, []);
 
-  // Filter state for home view (#12, #13)
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
-  const [comprehensionFilter, setComprehensionFilter] = useState<'all' | 'almost' | 'ready'>('all');
+  // Filter / sort state for home view — persisted to localStorage under HOME_FILTERS_KEY.
+  const persisted = useMemo(() => loadPersistedFilters(), []);
+  const [searchQuery, setSearchQuery] = useState(persisted.filters.searchQuery);
+  const [searchScope, setSearchScope] = useState<Set<SearchScope>>(persisted.filters.searchScope);
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(persisted.filters.typeFilter);
+  const [levelFilter, setLevelFilter] = useState<Set<string>>(persisted.filters.levelFilter);
+  const [tagFilter, setTagFilter] = useState<Set<string>>(persisted.filters.tagFilter);
+  const [lengthFilter, setLengthFilter] = useState<LengthFilter>(persisted.filters.lengthFilter);
+  const [comprehensionRange, setComprehensionRange] = useState<[number, number]>(persisted.filters.comprehensionRange);
+  const [sortBy, setSortBy] = useState<SortBy>(persisted.sortBy);
+  const [sortDir, setSortDir] = useState<SortDir>(persisted.sortDir);
 
   const { navigateToWord } = useUrlRouting({ setSelectedWord });
 
@@ -207,27 +269,39 @@ export default function App() {
     }
   }, [ALL_CONTENT.length, batchExtractionAttempted, wkData]);
 
-  // Sort and filter content (#11, #12, #13)
+  const filters = useMemo<ContentFilters>(() => ({
+    searchQuery,
+    searchScope,
+    typeFilter,
+    levelFilter,
+    tagFilter,
+    lengthFilter,
+    comprehensionRange,
+  }), [searchQuery, searchScope, typeFilter, levelFilter, tagFilter, lengthFilter, comprehensionRange]);
+
+  // Persist filter/sort selections so they survive a reload.
+  useEffect(() => {
+    const payload: PersistedHomeFilters = {
+      searchQuery,
+      searchScope: Array.from(searchScope),
+      typeFilter: Array.from(typeFilter),
+      levelFilter: Array.from(levelFilter),
+      tagFilter: Array.from(tagFilter),
+      lengthFilter,
+      comprehensionRange,
+      sortBy,
+      sortDir,
+    };
+    localStorage.setItem(HOME_FILTERS_KEY, JSON.stringify(payload));
+  }, [searchQuery, searchScope, typeFilter, levelFilter, tagFilter, lengthFilter, comprehensionRange, sortBy, sortDir]);
+
   const sortedContent = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return [...ALL_CONTENT]
-      .filter(c => {
-        if (q && !c.title.toLowerCase().includes(q)) return false;
-        if (typeFilter.size > 0 && !typeFilter.has(c.type)) return false;
-        const status = getContentStatus(c.id);
-        if (status.totalCount === 0) return comprehensionFilter === 'all'; // unloaded items only show in 'all'
-        if (comprehensionFilter === 'almost') return status.comprehension >= 90 && status.comprehension < 100;
-        if (comprehensionFilter === 'ready') return status.comprehension === 100;
-        return true;
-      })
-      .sort((a, b) => {
-        const statusA = getContentStatus(a.id);
-        const statusB = getContentStatus(b.id);
-        if (statusA.totalCount === 0 && statusB.totalCount !== 0) return 1;
-        if (statusA.totalCount !== 0 && statusB.totalCount === 0) return -1;
-        return statusA.score - statusB.score;
-      });
-  }, [ALL_CONTENT, searchQuery, typeFilter, comprehensionFilter, getContentStatus]);
+    const filtered = applyContentFilters(ALL_CONTENT, getContentStatus, filters);
+    return sortContent(filtered, getContentStatus, contentVocab, sortBy, sortDir);
+  }, [ALL_CONTENT, filters, sortBy, sortDir, getContentStatus, contentVocab]);
+
+  const availableTags = useMemo(() => collectTags(ALL_CONTENT), [ALL_CONTENT]);
+  const availableLevels = useMemo(() => collectLevels(ALL_CONTENT), [ALL_CONTENT]);
 
   const visibleContent = sortedContent.slice(0, displayCount);
 
@@ -240,7 +314,54 @@ export default function App() {
     setDisplayCount(12);
   };
 
-  const hasActiveFilters = searchQuery.trim() !== '' || typeFilter.size > 0 || comprehensionFilter !== 'all';
+  const toggleLevelFilter = (level: string) => {
+    setLevelFilter(prev => {
+      const next = new Set(prev);
+      next.has(level) ? next.delete(level) : next.add(level);
+      return next;
+    });
+    setDisplayCount(12);
+  };
+
+  const toggleTagFilter = (tag: string) => {
+    setTagFilter(prev => {
+      const next = new Set(prev);
+      next.has(tag) ? next.delete(tag) : next.add(tag);
+      return next;
+    });
+    setDisplayCount(12);
+  };
+
+  const toggleSearchScope = (scope: SearchScope) => {
+    setSearchScope(prev => {
+      const next = new Set(prev);
+      next.has(scope) ? next.delete(scope) : next.add(scope);
+      // Don't allow zero scopes — re-enable title if user removed the last one.
+      if (next.size === 0) next.add('title');
+      return next;
+    });
+    setDisplayCount(12);
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setSearchScope(new Set(['title', 'description']));
+    setTypeFilter(new Set());
+    setLevelFilter(new Set());
+    setTagFilter(new Set());
+    setLengthFilter('all');
+    setComprehensionRange([0, 100]);
+    setDisplayCount(12);
+  };
+
+  const hasActiveFilters =
+    searchQuery.trim() !== '' ||
+    typeFilter.size > 0 ||
+    levelFilter.size > 0 ||
+    tagFilter.size > 0 ||
+    lengthFilter !== 'all' ||
+    comprehensionRange[0] !== 0 ||
+    comprehensionRange[1] !== 100;
 
   const comprehensionColor = (pct: number) => {
     if (pct >= 90) return 'text-green-700 bg-green-50 border-green-200';
@@ -392,15 +513,29 @@ export default function App() {
 
         {view === 'home' && (
           <HomeView
-            setSearchQuery={setSearchQuery}
             setDisplayCount={setDisplayCount}
             searchQuery={searchQuery}
-            toggleTypeFilter={toggleTypeFilter}
+            setSearchQuery={setSearchQuery}
+            searchScope={searchScope}
+            toggleSearchScope={toggleSearchScope}
             typeFilter={typeFilter}
-            setComprehensionFilter={setComprehensionFilter}
-            comprehensionFilter={comprehensionFilter}
-            setTypeFilter={setTypeFilter}
+            toggleTypeFilter={toggleTypeFilter}
+            levelFilter={levelFilter}
+            toggleLevelFilter={toggleLevelFilter}
+            availableLevels={availableLevels}
+            tagFilter={tagFilter}
+            toggleTagFilter={toggleTagFilter}
+            availableTags={availableTags}
+            lengthFilter={lengthFilter}
+            setLengthFilter={setLengthFilter}
+            comprehensionRange={comprehensionRange}
+            setComprehensionRange={setComprehensionRange}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            sortDir={sortDir}
+            setSortDir={setSortDir}
             hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearAllFilters}
             getContentStatus={getContentStatus}
             visibleContent={visibleContent}
             loadingContent={loadingContent}
