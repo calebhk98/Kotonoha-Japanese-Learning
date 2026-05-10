@@ -122,24 +122,91 @@ export class SudachiWasmImpl implements Tokenizer {
 
     const result: TokenInfo[] = [];
 
-    // Simple approach: process each morpheme individually to avoid stack overflow
-    // on large texts. Phrase grouping can be optimized separately if needed.
+    // Group verb stems with their trailing auxiliaries so that e.g.
+    // 走っ+て+い+ます becomes one token {surface:'走っています', baseForm:'走る'}.
+    //
+    // Only pure conjugation auxiliaries are grouped; semantic auxiliaries
+    // (たい "want to", ない "not", られる passive/potential, させる causative)
+    // keep their own tokens so their meanings remain visible to learners.
+    //
+    // Rules (applied in order per morpheme):
+    //   - 補助記号 / whitespace                    → flush current group, skip
+    //   - 助動詞 with norm in {ます,た,ず} after verb group → append surface only
+    //   - て or で (助詞) after verb               → append surface, set tePending
+    //   - 動詞 when tePending                      → append surface, clear tePending
+    //   - anything else                            → flush current group, start new group
+    const GROUPABLE_AUX = new Set(['ます', 'た', 'ず']);
+
+    // Grammaticalized verbs that function as aspectual/benefactive auxiliaries
+    // after the te-form (て/で). Content verbs like 食べる or 転ぶ must NOT be
+    // included — they start a new clause, not a continuation of the same verb.
+    const TE_CONTINUATION_VERBS = new Set([
+      '居る',   // ている/ていた — progressive
+      '呉れる', // てくれる — giving (someone does for me)
+      '貰う',   // てもらう — receiving (I have someone do)
+      '仕舞う', // てしまう — completion / regret
+      'おく',   // ておく — advance preparation (Sudachi normalizes auxiliary おく to hiragana)
+      '見る',   // てみる — try doing
+      '有る',   // てある — resultant state
+      '行く',   // ていく — receding action
+      '来る',   // てくる — approaching action
+      '上げる', // てあげる — doing for someone (upward benefactive)
+      '為る',   // てする — (catches する after て, e.g. in compound verbs)
+    ]);
+    let groupSurface = '';
+    let groupBaseForm = '';
+    let groupIsVerb = false;
+    let tePending = false;
+
+    const flush = () => {
+      if (groupSurface) {
+        result.push({ surface: groupSurface, baseForm: groupBaseForm });
+        groupSurface = '';
+        groupBaseForm = '';
+        groupIsVerb = false;
+        tePending = false;
+      }
+    };
+
     for (let i = 0; i < morphemes.length; i++) {
       const m = morphemes[i];
       const pos = m.part_of_speech[0];
       const surface = m.surface;
 
-      // Skip whitespace and punctuation
       if (pos === '補助記号' || /^\s+$/.test(surface)) {
+        flush();
         continue;
       }
 
-      // Use Sudachi's normalized form (dictionary form) directly
       const baseForm = m.normalized_form || surface;
 
-      result.push({ surface, baseForm });
+      if (!groupSurface) {
+        groupSurface = surface;
+        groupBaseForm = baseForm;
+        groupIsVerb = pos === '動詞';
+        tePending = false;
+      } else if (groupIsVerb && pos === '助動詞' && GROUPABLE_AUX.has(m.normalized_form)) {
+        groupSurface += surface;
+        tePending = false;
+      } else if (groupIsVerb && pos === '助詞' && (surface === 'て' || surface === 'で')) {
+        // Conjunctive て/で — attach and wait for the continuation verb (いる, くれる, …)
+        groupSurface += surface;
+        tePending = true;
+      } else if (tePending && pos === '動詞' && TE_CONTINUATION_VERBS.has(m.normalized_form)) {
+        // Grammaticalized continuation verb after te-form (いる, くれる, しまう, …)
+        // Content verbs (食べる, 走る, …) fall through to flush — they start a new clause.
+        groupSurface += surface;
+        tePending = false;
+      } else {
+        flush();
+        groupSurface = surface;
+        groupBaseForm = baseForm;
+        groupIsVerb = pos === '動詞';
+        tePending = false;
+      }
     }
 
+    flush();
     return result;
   }
 }

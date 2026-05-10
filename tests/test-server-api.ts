@@ -130,11 +130,14 @@ async function runTests() {
   // -----------------------------------------------------------------------
   // 2. 寝る → "to sleep", not "to ferment" (issue #187 ordering)
   // -----------------------------------------------------------------------
-  section('#187 — 寝 primary meaning is "to sleep", not "to ferment"');
+  section('#187 — 寝ています primary meaning is "to sleep", not "to ferment"');
   {
     const words = curlPost('/api/extract', { text: '猫が寝ています。' });
-    const ne = words.find((w: any) => w.word === '寝' || w.word === '寝る');
-    assert('寝/寝る is returned by /api/extract', !!ne,
+    // After verb-grouping fix 寝+て+い+ます → 寝ています (baseForm: 寝る)
+    const ne = words.find((w: any) =>
+      w.word === '寝ています' || w.word === '寝' || w.word === '寝る'
+    );
+    assert('寝ています is returned by /api/extract', !!ne,
       `words returned: ${words.map((w: any) => w.word).join(', ')}`);
     if (ne) {
       // "to sleep", "to go to bed", "to lie down" are all valid primary meanings
@@ -164,16 +167,19 @@ async function runTests() {
   // -----------------------------------------------------------------------
   // 4. 買い → "to buy", not "paying for a prostitute" (issue #187 ordering)
   // -----------------------------------------------------------------------
-  section('#187 — 買い primary meaning is "to buy", not "paying for a prostitute"');
+  section('#187 — 買いました primary meaning is "to buy", not "paying for a prostitute"');
   {
     const words = curlPost('/api/extract', { text: '本を買いました。' });
-    const kai = words.find((w: any) => w.word === '買い' || w.word === '買う');
-    assert('買い/買う is returned by /api/extract', !!kai,
+    // After verb-grouping fix 買い+まし+た → 買いました (baseForm: 買う)
+    const kai = words.find((w: any) =>
+      w.word === '買いました' || w.word === '買い' || w.word === '買う'
+    );
+    assert('買いました is returned by /api/extract', !!kai,
       `words returned: ${words.map((w: any) => w.word).join(', ')}`);
     if (kai) {
-      assertContains('買い primary meaning contains "buy"', kai.meaning, 'buy');
-      assertNotContains('買い primary meaning not about prostitution', kai.meaning, 'prostitut');
-      assertNotContains('買い primary meaning not about geisha', kai.meaning, 'geisha');
+      assertContains('買う primary meaning contains "buy"', kai.meaning, 'buy');
+      assertNotContains('買う primary meaning not about prostitution', kai.meaning, 'prostitut');
+      assertNotContains('買う primary meaning not about geisha', kai.meaning, 'geisha');
     }
   }
 
@@ -215,15 +221,23 @@ async function runTests() {
   // -----------------------------------------------------------------------
   // 7. まし → polite suffix sense, not "appalling" (issues #187, #188)
   // -----------------------------------------------------------------------
-  section('#187 / #188 — まし is not "appalling" (polite verb stem)');
+  section('#187 / #188 — 来ました meaning is "came / arrived", not "appalling"');
   {
     const words = curlPost('/api/extract', { text: '春が来ましたね。' });
-    const mashi = findWord(words, 'まし');
-    assert('まし is returned by /api/extract', !!mashi,
+    // After verb-grouping fix 来+まし+た → 来ました (baseForm: 来る). まし is no longer standalone.
+    const kimashita = words.find((w: any) =>
+      w.word === '来ました' || w.word === '来' || w.word === '来る'
+    );
+    assert('来ました is returned by /api/extract', !!kimashita,
       `words returned: ${words.map((w: any) => w.word).join(', ')}`);
-    if (mashi) {
-      assertNotContains('まし meaning is not "appalling"', mashi.meaning, 'appalling');
-      assertNotContains('まし meaning is not "terrible"', mashi.meaning, 'terrible');
+    if (kimashita) {
+      assertNotContains('来ました meaning is not "appalling"', kimashita.meaning, 'appalling');
+      assertNotContains('来ました meaning is not "terrible"', kimashita.meaning, 'terrible');
+      const comeRelated =
+        kimashita.meaning.toLowerCase().includes('come') ||
+        kimashita.meaning.toLowerCase().includes('arrive') ||
+        kimashita.meaning.toLowerCase().includes('reach');
+      assert('来ました meaning is come/arrive-related', comeRelated, `got: "${kimashita.meaning}"`);
     }
   }
 
@@ -262,16 +276,19 @@ async function runTests() {
   // -----------------------------------------------------------------------
   // 10. 行き → "to go", not "to die / pass away" (issue #187 ordering)
   // -----------------------------------------------------------------------
-  section('#187 — 行き primary meaning is "to go", not "to die / pass away"');
+  section('#187 — 行きました primary meaning is "to go", not "to die / pass away"');
   {
     const words = curlPost('/api/extract', { text: '行きました。' });
-    const iki = words.find((w: any) => w.word === '行き' || w.word === '行く');
-    assert('行き/行く is returned by /api/extract', !!iki,
+    // After verb-grouping fix 行き+まし+た → 行きました (baseForm: 行く)
+    const iki = words.find((w: any) =>
+      w.word === '行きました' || w.word === '行き' || w.word === '行く'
+    );
+    assert('行きました is returned by /api/extract', !!iki,
       `words returned: ${words.map((w: any) => w.word).join(', ')}`);
     if (iki) {
-      assertContains('行き primary meaning contains "go"', iki.meaning, 'go');
-      assertNotContains('行き primary meaning is not "to die"', iki.meaning, 'to die');
-      assertNotContains('行き primary meaning is not "pass away"', iki.meaning, 'pass away');
+      assertContains('行く primary meaning contains "go"', iki.meaning, 'go');
+      assertNotContains('行く primary meaning is not "to die"', iki.meaning, 'to die');
+      assertNotContains('行く primary meaning is not "pass away"', iki.meaning, 'pass away');
     }
   }
 
@@ -295,6 +312,284 @@ async function runTests() {
           (result.meaning || '') + ' ' + (result.meanings || []).join(' '),
           expectedHint);
       }
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Issue #189 — Conjugated verb lookup (Sudachi mode C groups verb forms)
+  //
+  // With mode C alone, tokens like 寝ています have no dictionary entry and
+  // return "Unknown meaning". The fix uses dual-mode: mode C surface for
+  // display, mode A normalized_form for dictionary lookup.
+  //
+  // These tests are written BEFORE the fix and are expected to fail until
+  // dual-mode tokenization is implemented.
+  // -----------------------------------------------------------------------
+
+  // --- Group A: て-います progressive forms --------------------------------
+  section('#189 — 寝ています (progressive) → sleep-related meaning, not Unknown');
+  {
+    const words = curlPost('/api/extract', { text: '猫が寝ています。' });
+    const nete = findWord(words, '寝ています');
+    assert(
+      '寝ています appears as a single word (surface preserved from mode C)',
+      !!nete,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`
+    );
+    if (nete) {
+      assertNotContains('寝ています meaning is not "Unknown"', nete.meaning, 'Unknown');
+      const sleepRelated =
+        nete.meaning.toLowerCase().includes('sleep') ||
+        nete.meaning.toLowerCase().includes('bed') ||
+        nete.meaning.toLowerCase().includes('lie down');
+      assert('寝ています meaning is sleep-related', sleepRelated, `got: "${nete.meaning}"`);
+    }
+  }
+
+  section('#189 — 走っています (progressive) → run-related meaning, not Unknown');
+  {
+    const words = curlPost('/api/extract', { text: '毎朝走っています。' });
+    const hashitte = findWord(words, '走っています');
+    assert(
+      '走っています appears as a single word',
+      !!hashitte,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`
+    );
+    if (hashitte) {
+      assertNotContains('走っています meaning is not "Unknown"', hashitte.meaning, 'Unknown');
+      const runRelated =
+        hashitte.meaning.toLowerCase().includes('run') ||
+        hashitte.meaning.toLowerCase().includes('jog');
+      assert('走っています meaning is run-related', runRelated, `got: "${hashitte.meaning}"`);
+    }
+  }
+
+  section('#189 — 笑っています (progressive) → laugh/smile meaning, not Unknown');
+  {
+    const words = curlPost('/api/extract', { text: '彼女は笑っています。' });
+    const waratte = findWord(words, '笑っています');
+    assert(
+      '笑っています appears as a single word',
+      !!waratte,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`
+    );
+    if (waratte) {
+      assertNotContains('笑っています meaning is not "Unknown"', waratte.meaning, 'Unknown');
+      // Primary meaning should be "laugh/smile"; "sneer" is a secondary sense
+      const laughRelated =
+        waratte.meaning.toLowerCase().includes('laugh') ||
+        waratte.meaning.toLowerCase().includes('smile') ||
+        waratte.meaning.toLowerCase().includes('sneer') ||
+        waratte.meaning.toLowerCase().includes('grin');
+      assert('笑っています meaning is laugh/smile/sneer-related', laughRelated, `got: "${waratte.meaning}"`);
+    }
+  }
+
+  // --- Group B: ました polite past forms -----------------------------------
+  section('#189 — 描きました (polite past) → draw/paint meaning, not Unknown');
+  {
+    const words = curlPost('/api/extract', { text: '絵を描きました。' });
+    const kakimashita = findWord(words, '描きました');
+    assert(
+      '描きました appears as a single word',
+      !!kakimashita,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`
+    );
+    if (kakimashita) {
+      assertNotContains('描きました meaning is not "Unknown"', kakimashita.meaning, 'Unknown');
+      const drawRelated =
+        kakimashita.meaning.toLowerCase().includes('draw') ||
+        kakimashita.meaning.toLowerCase().includes('paint') ||
+        kakimashita.meaning.toLowerCase().includes('sketch');
+      assert('描きました meaning is draw/paint-related', drawRelated, `got: "${kakimashita.meaning}"`);
+    }
+  }
+
+  section('#189 — 読みました (polite past) → read-related meaning, not Unknown');
+  {
+    const words = curlPost('/api/extract', { text: '本を読みました。' });
+    const yomimashita = findWord(words, '読みました');
+    assert(
+      '読みました appears as a single word',
+      !!yomimashita,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`
+    );
+    if (yomimashita) {
+      assertNotContains('読みました meaning is not "Unknown"', yomimashita.meaning, 'Unknown');
+      // Primary meaning should be "read"; "recite" is a secondary sense
+      const readRelated =
+        yomimashita.meaning.toLowerCase().includes('read') ||
+        yomimashita.meaning.toLowerCase().includes('recite');
+      assert('読みました meaning is read/recite-related', readRelated, `got: "${yomimashita.meaning}"`);
+    }
+  }
+
+  section('#189 — 食べました (polite past) → eat-related meaning, not Unknown');
+  {
+    const words = curlPost('/api/extract', { text: 'ご飯を食べました。' });
+    const tabemashita = findWord(words, '食べました');
+    assert(
+      '食べました appears as a single word',
+      !!tabemashita,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`
+    );
+    if (tabemashita) {
+      assertNotContains('食べました meaning is not "Unknown"', tabemashita.meaning, 'Unknown');
+      // Primary meaning should be "eat"; "live on" is a secondary sense
+      const eatRelated =
+        tabemashita.meaning.toLowerCase().includes('eat') ||
+        tabemashita.meaning.toLowerCase().includes('food') ||
+        tabemashita.meaning.toLowerCase().includes('consume') ||
+        tabemashita.meaning.toLowerCase().includes('live on');
+      assert('食べました meaning is eat-related', eatRelated, `got: "${tabemashita.meaning}"`);
+    }
+  }
+
+  // --- Group C: て-いました past progressive --------------------------------
+  section('#189 — 食べていました (past progressive) → eat-related meaning, not Unknown');
+  {
+    const words = curlPost('/api/extract', { text: 'ご飯を食べていました。' });
+    const tabeteimashita = findWord(words, '食べていました');
+    assert(
+      '食べていました appears as a single word',
+      !!tabeteimashita,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`
+    );
+    if (tabeteimashita) {
+      assertNotContains('食べていました meaning is not "Unknown"', tabeteimashita.meaning, 'Unknown');
+      // Primary meaning should be "eat"; "live on" is a secondary sense
+      const eatRelated =
+        tabeteimashita.meaning.toLowerCase().includes('eat') ||
+        tabeteimashita.meaning.toLowerCase().includes('food') ||
+        tabeteimashita.meaning.toLowerCase().includes('live on');
+      assert('食べていました meaning is eat-related', eatRelated, `got: "${tabeteimashita.meaning}"`);
+    }
+  }
+
+  // --- Group D: ません negative polite -------------------------------------
+  section('#189 — 飲みません (negative polite) → drink-related meaning, not Unknown');
+  {
+    const words = curlPost('/api/extract', { text: 'お酒を飲みません。' });
+    const nomimasen = findWord(words, '飲みません');
+    assert(
+      '飲みません appears as a single word',
+      !!nomimasen,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`
+    );
+    if (nomimasen) {
+      assertNotContains('飲みません meaning is not "Unknown"', nomimasen.meaning, 'Unknown');
+      const drinkRelated =
+        nomimasen.meaning.toLowerCase().includes('drink') ||
+        nomimasen.meaning.toLowerCase().includes('swallow');
+      assert('飲みません meaning is drink-related', drinkRelated, `got: "${nomimasen.meaning}"`);
+    }
+  }
+
+  // --- Group E: て-くれました compound giving verb --------------------------
+  section('#189 — 喜んでくれました (compound giving verb) → rejoice/glad meaning, not Unknown');
+  {
+    const words = curlPost('/api/extract', { text: '友達が喜んでくれました。' });
+    // Mode C may group differently; accept the token containing 喜
+    const yorokobu = words.find((w: any) =>
+      w.word.includes('喜') || w.word === '喜ぶ'
+    );
+    assert(
+      'A word containing 喜 is returned',
+      !!yorokobu,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`
+    );
+    if (yorokobu) {
+      assertNotContains('喜… meaning is not "Unknown"', yorokobu.meaning, 'Unknown');
+      const gladRelated =
+        yorokobu.meaning.toLowerCase().includes('rejoice') ||
+        yorokobu.meaning.toLowerCase().includes('glad') ||
+        yorokobu.meaning.toLowerCase().includes('happy') ||
+        yorokobu.meaning.toLowerCase().includes('joy') ||
+        yorokobu.meaning.toLowerCase().includes('delight');
+      assert('喜… meaning is glad/rejoice/delight-related', gladRelated, `got: "${yorokobu.meaning}"`);
+    }
+  }
+
+  // --- Group F: Surface form preservation (dual-mode key invariant) --------
+  //
+  // With mode A alone, 寝ています splits into [寝, て, い, ます] — four words.
+  // With dual-mode (C for surface, A for lookup), it stays as one word.
+  // These tests enforce the dual-mode contract.
+  section('#189 — surface form preservation: 寝ています is ONE token, not [寝|て|い|ます]');
+  {
+    const words = curlPost('/api/extract', { text: '猫が寝ています。' });
+    const surfaceForms = words.map((w: any) => w.word);
+
+    // The conjugated form must appear as a single surface word
+    assert(
+      '寝ています appears as one token',
+      surfaceForms.includes('寝ています'),
+      `surfaces: [${surfaceForms.join(', ')}]`
+    );
+    // The bare stem 寝 must NOT appear as a separate vocabulary entry
+    assert(
+      '寝 alone does NOT appear (would mean mode A split it)',
+      !surfaceForms.includes('寝'),
+      `surfaces: [${surfaceForms.join(', ')}]`
+    );
+  }
+
+  section('#189 — surface form preservation: 描きました is ONE token, not [描き|まし|た]');
+  {
+    const words = curlPost('/api/extract', { text: '絵を描きました。' });
+    const surfaceForms = words.map((w: any) => w.word);
+
+    assert(
+      '描きました appears as one token',
+      surfaceForms.includes('描きました'),
+      `surfaces: [${surfaceForms.join(', ')}]`
+    );
+    assert(
+      '描き alone does NOT appear as a separate word',
+      !surfaceForms.includes('描き'),
+      `surfaces: [${surfaceForms.join(', ')}]`
+    );
+  }
+
+  // --- Group G: Compound noun regression (must still work after the fix) ---
+  section('#189 (regression) — 図書館 (multi-kanji compound noun) still returns "library"');
+  {
+    const words = curlPost('/api/extract', { text: '図書館で本を読みました。' });
+    const toshokan = findWord(words, '図書館');
+    assert('図書館 is returned by /api/extract', !!toshokan,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`);
+    if (toshokan) {
+      assertContains('図書館 meaning contains "library"', toshokan.meaning, 'library');
+      assertNotContains('図書館 meaning is not "Unknown"', toshokan.meaning, 'Unknown');
+    }
+  }
+
+  section('#189 (regression) — 新聞 (compound noun) still returns "newspaper"');
+  {
+    const words = curlPost('/api/extract', { text: '毎朝新聞を読んでいます。' });
+    const shinbun = findWord(words, '新聞');
+    assert('新聞 is returned by /api/extract', !!shinbun,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`);
+    if (shinbun) {
+      assertContains('新聞 meaning contains "newspaper"', shinbun.meaning, 'newspaper');
+      assertNotContains('新聞 meaning is not "Unknown"', shinbun.meaning, 'Unknown');
+    }
+  }
+
+  section('#189 (regression) — 勉強 (compound noun / verbal noun) still returns "study"');
+  {
+    const words = curlPost('/api/extract', { text: '毎日日本語を勉強しています。' });
+    const benkyo = findWord(words, '勉強');
+    assert('勉強 is returned by /api/extract', !!benkyo,
+      `words returned: ${words.map((w: any) => w.word).join(', ')}`);
+    if (benkyo) {
+      // Primary meaning should be "study"; "diligence" is a secondary sense
+      const studyRelated =
+        benkyo.meaning.toLowerCase().includes('study') ||
+        benkyo.meaning.toLowerCase().includes('learn') ||
+        benkyo.meaning.toLowerCase().includes('diligence');
+      assert('勉強 meaning is study/diligence-related', studyRelated, `got: "${benkyo.meaning}"`);
+      assertNotContains('勉強 meaning is not "Unknown"', benkyo.meaning, 'Unknown');
     }
   }
 
