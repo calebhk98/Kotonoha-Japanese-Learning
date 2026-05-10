@@ -122,24 +122,73 @@ export class SudachiWasmImpl implements Tokenizer {
 
     const result: TokenInfo[] = [];
 
-    // Simple approach: process each morpheme individually to avoid stack overflow
-    // on large texts. Phrase grouping can be optimized separately if needed.
+    // Group verb stems with their trailing auxiliaries so that e.g.
+    // 走っ+て+い+ます becomes one token {surface:'走っています', baseForm:'走る'}.
+    //
+    // Only pure conjugation auxiliaries are grouped; semantic auxiliaries
+    // (たい "want to", ない "not", られる passive/potential, させる causative)
+    // keep their own tokens so their meanings remain visible to learners.
+    //
+    // Rules (applied in order per morpheme):
+    //   - 補助記号 / whitespace                    → flush current group, skip
+    //   - 助動詞 with norm in {ます,た,ず} after verb group → append surface only
+    //   - て or で (助詞) after verb               → append surface, set tePending
+    //   - 動詞 when tePending                      → append surface, clear tePending
+    //   - anything else                            → flush current group, start new group
+    const GROUPABLE_AUX = new Set(['ます', 'た', 'ず']);
+    let groupSurface = '';
+    let groupBaseForm = '';
+    let groupIsVerb = false;
+    let tePending = false;
+
+    const flush = () => {
+      if (groupSurface) {
+        result.push({ surface: groupSurface, baseForm: groupBaseForm });
+        groupSurface = '';
+        groupBaseForm = '';
+        groupIsVerb = false;
+        tePending = false;
+      }
+    };
+
     for (let i = 0; i < morphemes.length; i++) {
       const m = morphemes[i];
       const pos = m.part_of_speech[0];
       const surface = m.surface;
 
-      // Skip whitespace and punctuation
       if (pos === '補助記号' || /^\s+$/.test(surface)) {
+        flush();
         continue;
       }
 
-      // Use Sudachi's normalized form (dictionary form) directly
       const baseForm = m.normalized_form || surface;
 
-      result.push({ surface, baseForm });
+      if (!groupSurface) {
+        groupSurface = surface;
+        groupBaseForm = baseForm;
+        groupIsVerb = pos === '動詞';
+        tePending = false;
+      } else if (groupIsVerb && pos === '助動詞' && GROUPABLE_AUX.has(m.normalized_form)) {
+        groupSurface += surface;
+        tePending = false;
+      } else if (groupIsVerb && pos === '助詞' && (surface === 'て' || surface === 'で')) {
+        // Conjunctive て/で — attach and wait for the continuation verb (いる, くれる, …)
+        groupSurface += surface;
+        tePending = true;
+      } else if (tePending && pos === '動詞') {
+        // Continuation verb after te-form (e.g. い from いる, くれ from くれる)
+        groupSurface += surface;
+        tePending = false;
+      } else {
+        flush();
+        groupSurface = surface;
+        groupBaseForm = baseForm;
+        groupIsVerb = pos === '動詞';
+        tePending = false;
+      }
     }
 
+    flush();
     return result;
   }
 }
