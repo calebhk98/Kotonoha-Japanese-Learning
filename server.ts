@@ -25,6 +25,8 @@ import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 import { getMorphemeDefinition } from "./src/lib/morphemeDefinitions.js";
 import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk } from "./src/lib/storyLoader.js";
 import { initDatabase, WordsCache, JishoCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
+import { isPunctuation, isSingleKana } from "./src/lib/extraction-helpers.js";
+import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -276,10 +278,6 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
   const tokens = await tokenizer.segment(text);
 
-  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
-  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
-
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
   const validWords = new Map<string, string>(); // Map surface form to baseForm for lookup
@@ -369,9 +367,6 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
 }
 
 async function processTextWithTokens(text: string, tokens: any[], kanaLookupCache: Map<string, any>) {
-  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
-  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
@@ -463,10 +458,6 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
 async function processStoryText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
   const tokenInfos = await tokenizer.segment(text);
-
-  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
-  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
   // Find positions of each segment in the original text
   const tokens: any[] = [];
@@ -573,10 +564,6 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
   console.log(`[API] /api/batch-extract: Step 1 - Tokenization completed in ${Date.now() - tokenStart}ms`);
 
   // Collect unique kana-only words from all texts
-  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
-  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
-
   const collectStart = Date.now();
   const uniqueKanaWords = new Set<string>();
   for (const item of tokenizedBatch) {
@@ -1003,7 +990,10 @@ async function startServer() {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-  // Kick off background extraction for any content not yet in content_words
+  // Kick off background extraction for any content not yet in content_words.
+  // Runs in a worker_threads Worker so the Express event loop stays responsive
+  // to user-facing API requests during the potentially minutes-long warmup.
+  // Fix for #200: previously this ran inline and blocked the event loop.
   (async () => {
     try {
       const allContent = [
@@ -1016,15 +1006,74 @@ async function startServer() {
         console.log('[Server] All content already extracted — skipping startup extraction');
         return;
       }
-      console.log(`[Server] Starting background extraction for ${missing.length}/${allContent.length} content items`);
+      console.log(`[Server] Starting background extraction for ${missing.length}/${allContent.length} content items (worker thread)`);
+
+      const { Worker } = await import('worker_threads');
+
+      // Build chunks upfront; we send one chunk at a time (wait for 'done' before
+      // sending the next) so the worker's event loop isn't flooded.
       const CHUNK_SIZE = 20;
+      const chunks: Array<{ id: string; text: string }[]> = [];
       for (let i = 0; i < missing.length; i += CHUNK_SIZE) {
-        const chunk = missing.slice(i, i + CHUNK_SIZE).map(c => ({ id: c.id, text: c.text }));
-        await runBatchExtract(chunk);
+        chunks.push(missing.slice(i, i + CHUNK_SIZE).map(c => ({ id: c.id, text: c.text })));
       }
-      console.log(`[Server] Startup extraction complete`);
+
+      const workerData: WorkerInitData = {
+        jmdictPath: path.join(__dirname, 'jmdict-db'),
+        jmdictFile: fs.existsSync(path.join(__dirname, 'jmdict-all-3.6.2.json'))
+          ? path.join(__dirname, 'jmdict-all-3.6.2.json')
+          : null,
+        jmnedictFile,
+        // Seed the worker's kana cache with everything already persisted in this
+        // process so the worker avoids redundant Jisho API round-trips.
+        jishoCacheEntries: jishoCache.entries(),
+      };
+
+      const workerUrl = new URL('./src/lib/extraction-worker.ts', import.meta.url);
+      const worker = new Worker(workerUrl, {
+        execArgv: process.execArgv, // inherit tsx loader so .ts imports work
+        workerData,
+      });
+
+      let currentChunk = 0;
+
+      const sendNextChunk = () => {
+        if (currentChunk < chunks.length) {
+          worker.postMessage({ type: 'extract', items: chunks[currentChunk] });
+        } else {
+          console.log('[Server] Startup extraction complete');
+          worker.terminate();
+        }
+      };
+
+      worker.on('message', (msg: WorkerOutMessage) => {
+        switch (msg.type) {
+          case 'ready':
+            console.log('[Server] Extraction worker ready');
+            sendNextChunk();
+            break;
+          case 'result':
+            if (msg.words && Array.isArray(msg.words)) {
+              contentWordsStore.setContentWords(msg.id, msg.words);
+            }
+            break;
+          case 'done':
+            saveDatabase();
+            currentChunk++;
+            console.log(`[Server] Extraction progress: ${currentChunk}/${chunks.length} chunks`);
+            sendNextChunk();
+            break;
+          case 'init_error':
+            console.error('[Server] Extraction worker error:', msg.message);
+            break;
+        }
+      });
+
+      worker.on('error', e =>
+        console.error('[Server] Extraction worker thread error:', e instanceof Error ? e.message : String(e)),
+      );
     } catch (e) {
-      console.error('[Server] Startup extraction error:', e instanceof Error ? e.message : String(e));
+      console.error('[Server] Failed to start extraction worker:', e instanceof Error ? e.message : String(e));
     }
   })();
 
