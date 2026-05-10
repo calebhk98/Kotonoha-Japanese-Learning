@@ -13,7 +13,7 @@ Kotonoha-Japanese-Learning/
 │   ├── stories/             # All story content (organized by difficulty)
 │   ├── App.tsx              # Main React app
 │   └── main.tsx             # React entry point
-├── tests/                   # Test files (unit, integration, etc)
+├── integration/             # Standalone integration scripts (NOT run by `npm test`)
 ├── scripts/                 # Helper scripts (see scripts/README.md for full list)
 │   ├── add-story.ts         # CLI tool to add new stories
 │   ├── add-series.ts        # CLI tool to add story series
@@ -362,9 +362,9 @@ kill -9 <PID>
 - Each story is a folder with `metadata.json` and `content.md`
 - Organized by difficulty level in subdirectories
 
-**tests/** - Test files
-- Unit tests for utilities
-- Integration tests for features
+**integration/** - Standalone integration scripts
+- Run with `npx tsx integration/<script>.ts` (not picked up by `npm test`)
+- Require real infrastructure: dictionary files, Sudachi WASM, or a running server
 
 ## Contributing
 

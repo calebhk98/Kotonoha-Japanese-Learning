@@ -216,7 +216,7 @@ async function addStory(args: StoryArgs) {
     console.log(`  • content.md - Story content (edit this file)`);
     console.log(`\n💡 Next steps:`);
     console.log(`  1. Edit ${storyPath}/content.md with your story`);
-    console.log(`  2. Run the tests to verify: npx tsx tests/test-stories-quick.ts`);
+    console.log(`  2. Run the tests to verify: npx tsx integration/test-stories-quick.ts`);
   } catch (error) {
     console.error(`❌ Error creating story: ${error}`);
     process.exit(1);
