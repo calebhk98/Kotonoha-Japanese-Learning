@@ -1029,11 +1029,13 @@ async function startServer() {
         jishoCacheEntries: jishoCache.entries(),
       };
 
-      const workerUrl = new URL('./src/lib/extraction-worker.ts', import.meta.url);
-      const worker = new Worker(workerUrl, {
-        execArgv: process.execArgv, // inherit tsx loader so .ts imports work
-        workerData,
-      });
+      // Use the plain-JS shim as the worker entry point.
+      // The shim calls register() with the tsx ESM loader so that .ts imports
+      // work inside the worker thread before bootstrapping extraction-worker.ts.
+      // Pointing at the .ts file directly and passing execArgv=['--import','tsx/esm']
+      // does not work: tsx skips hook registration when isMainThread is false.
+      const workerUrl = new URL('./src/lib/extraction-worker-shim.mjs', import.meta.url);
+      const worker = new Worker(workerUrl, { workerData });
 
       let currentChunk = 0;
 
