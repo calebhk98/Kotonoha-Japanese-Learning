@@ -563,7 +563,6 @@ addressed by the time you're reading this.
   accuracy and recommends fixes that may have already shipped via
   #189's grouping work. Worth re-running its measurement and
   rewriting (or marking as historical).
-- ~~**The `tests/` folder advertises itself as the test location**~~ — resolved: the directory was renamed to `integration/`, throwaway ad-hoc scripts and files importing deprecated `INITIAL_CONTENT` were deleted, and `tsconfig.json` / `package.json` were updated to match.
 - **Multiple tokenizer packages, only one supported.** `package.json`
   ships `@didmar/sudachi-wasm`, `@hiogawa/sudachi.wasm`, `sudachi`,
   `sudachi-ts`, `lindera-nodejs`, `kuromoji`, `mecab-async`, and
