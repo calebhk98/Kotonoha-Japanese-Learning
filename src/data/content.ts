@@ -10,6 +10,9 @@ export interface Content {
   text: string; // The transcript or story
   mediaUrl?: string;
   imageUrl?: string;
+  level?: string;     // JLPT level / difficulty band from metadata (e.g. "N5", "beginner")
+  tags?: string[];    // Free-form tags from metadata
+  dateAdded?: string; // ISO date string from metadata (when content was added)
 }
 
 export interface Story extends Content {

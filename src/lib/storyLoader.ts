@@ -154,6 +154,9 @@ export function loadStoriesFromDisk(): Content[] {
         description: metadata.description,
         text: text.trim(),
         imageUrl: metadata.imageUrl,
+        level: metadata.level,
+        tags: metadata.tags,
+        dateAdded: metadata.dateAdded,
       });
     } catch (error) {
       console.warn(`⚠️  Error loading story from ${folder}:`, error);
@@ -208,6 +211,9 @@ export function loadMusicFromDisk(): Content[] {
         text: text.trim(),
         mediaUrl: metadata.mediaUrl,
         imageUrl: metadata.imageUrl,
+        level: metadata.level,
+        tags: metadata.tags,
+        dateAdded: metadata.dateAdded,
       });
     } catch (error) {
       console.warn(`⚠️  Error loading music from ${folder}:`, error);
@@ -262,6 +268,9 @@ export function loadVideosFromDisk(): Content[] {
         text: text.trim(),
         mediaUrl: metadata.mediaUrl,
         imageUrl: metadata.imageUrl,
+        level: metadata.level,
+        tags: metadata.tags,
+        dateAdded: metadata.dateAdded,
       });
     } catch (error) {
       console.warn(`⚠️  Error loading video from ${folder}:`, error);
