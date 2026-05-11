@@ -1,0 +1,13 @@
+{
+  "id": "nhk-for-school-animals",
+  "title": "NHK for School — 日本の動物たち (Animals of Japan)",
+  "type": "video",
+  "description": "An NHK for School nature segment introducing common Japanese wildlife: deer (奈良), foxes (北海道), Japanese macaques at Jigokudani, tanuki, and red-crowned cranes in Kushiro. Simple narration and nature photography make vocabulary acquisition accessible at N5 level.",
+  "level": "N5",
+  "tags": ["NHK", "nature", "animals", "educational", "children", "N5"],
+  "creator": "NHK for School",
+  "sourceUrl": "https://www.nhk.or.jp/school/",
+  "mediaUrl": "https://www.youtube.com/@NHKforSchool",
+  "license": "© NHK — Educational content free for non-commercial use",
+  "dateAdded": "2026-05-11"
+}
