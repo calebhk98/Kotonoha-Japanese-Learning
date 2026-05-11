@@ -18,6 +18,43 @@ Utility and maintenance scripts for Kotonoha. Run with `npx tsx <script>` unless
 |--------|---------|--------------|
 | `add-story.ts` | `npm run add-story` | Interactive prompt to scaffold a new story folder under `src/stories/`. |
 | `add-series.ts` | `npx tsx scripts/add-series.ts` | Like `add-story.ts` but for a new series with episode metadata. |
+| `transcribe.ts` | `npm run transcribe -- <url>` | Downloads audio from a YouTube URL (or reads a local file) and runs OpenAI Whisper to produce a draft `transcript.md`. Works for both `src/music/` and `src/videos/` content. See below for details. |
+
+### transcribe.ts — audio transcription helper
+
+Requires two external tools installed via pip (not npm):
+```
+pip install openai-whisper
+pip install yt-dlp        # or: brew install yt-dlp
+```
+
+**Basic usage:**
+```bash
+# Print draft transcript to stdout
+npm run transcribe -- "https://www.youtube.com/watch?v=XXXX"
+
+# Write directly to a content folder
+npm run transcribe -- "https://www.youtube.com/watch?v=XXXX" --output src/music/MySong/transcript.md
+
+# Use a smaller/faster model for a quick draft
+npm run transcribe -- "https://www.youtube.com/watch?v=XXXX" --model medium
+
+# Include SRT timestamps (useful for video content)
+npm run transcribe -- "https://www.youtube.com/watch?v=XXXX" --timestamps --output src/videos/MyVideo/transcript.md
+
+# Transcribe a local file
+npm run transcribe -- ./audio.mp3
+```
+
+**Model tradeoffs:**
+
+| Model | Speed | Accuracy | Notes |
+|-------|-------|----------|-------|
+| `tiny` / `base` | Very fast | Lower | Good for quick draft check |
+| `small` / `medium` | Moderate | Good | Reasonable for most songs |
+| `large-v3` | Slow (default) | Best | Best for production use |
+
+**Important:** Output is always a **draft**. Japanese homophones cause frequent kanji errors (e.g. 橋/箸, 春/晴). Review every line before committing. Also: transcription does not affect copyright — only use this for public domain or CC-licensed content.
 
 ## Cache utilities
 
