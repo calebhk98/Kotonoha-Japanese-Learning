@@ -19,6 +19,7 @@ Utility and maintenance scripts for Kotonoha. Run with `npx tsx <script>` unless
 | `add-story.ts` | `npm run add-story` | Interactive prompt to scaffold a new story folder under `src/stories/`. |
 | `add-series.ts` | `npx tsx scripts/add-series.ts` | Like `add-story.ts` but for a new series with episode metadata. |
 | `transcribe.ts` | `npm run transcribe -- <url>` | Downloads audio from a YouTube URL (or reads a local file) and runs OpenAI Whisper to produce a draft `transcript.md`. Works for both `src/music/` and `src/videos/` content. See below for details. |
+| `transcribe-missing.ts` | `npm run transcribe-missing` | Scans all `src/music/` and `src/videos/` directories, finds entries that have a playable `mediaUrl` but no `transcript.md`, and batch-transcribes them. Supports `--concurrency N`, `--dry-run`, `--model`, and `--type music\|videos\|all`. Run in background with `nohup npm run transcribe-missing >> transcribe.log 2>&1 &`. |
 
 ### transcribe.ts — audio transcription helper
 
