@@ -1,10 +1,10 @@
 {
   "id": "Shojoji-Tanuki",
-  "title": "証城寺の狸囃子 (Shōjōji no Tanuki Bayashi — The Raccoon Drum-Dance of Shojoji)",
+  "title": "証城寺の狸囃子 (Shōjōji no Tanuki Bayashi — Raccoon-Dog Drumming at Shōjōji)",
   "type": "music",
-  "description": "A playful 1925 children's song about tanuki (raccoon dogs) belly-drumming in the moonlit garden of Shojoji temple. The tanuki call out to each other (皆出て来い) to beat their bellies together (ぽんぽこぽんのぽん) and challenge the temple's head priest to a drum-off. Based on an old legend from Kisarazu, Chiba, the song captures the mischievous spirit of tanuki folklore and is one of Japan's most beloved children's songs.",
+  "description": "On a moonlit night the raccoon-dogs (tanuki) of Shōjōji Temple in Kisarazu come out to beat their bellies like drums — 'ぽんぽこぽんのぽん'. The priest challenges them, but the tanuki win. Based on a legend at an actual Jōdo Buddhist temple in Chiba Prefecture. First published December 1924; song added January 1925. The song became an international hit when Eartha Kitt recorded it in 1955.",
   "level": "N5",
   "tags": ["童謡", "Taisho period", "tanuki", "folklore", "children's song", "Chiba", "festival", "fun"],
-  "sourceUrl": "https://www.worldfolksong.com/songbook/japan/shojoji.htm",
-  "license": "Public Domain (Lyrics by 野口雨情 died 1945, music by 中山晋平 died 1952; published 1925 — copyright expired)"
+  "sourceUrl": "https://ja.wikisource.org/wiki/%E8%A8%BC%E5%9F%8E%E5%AF%BA%E3%81%AE%E7%8B%B8%E5%9B%83%E5%AD%90",
+  "license": "Public Domain (lyrics: 野口雨情 d. 1945, music: 中山晋平 d. 1952 — copyright expired)"
 }

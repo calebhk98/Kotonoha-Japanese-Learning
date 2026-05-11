@@ -1,0 +1,12 @@
+{
+  "id": "Hyakunin-Isshu",
+  "title": "小倉百人一首より (Selections from Ogura Hyakunin Isshu)",
+  "type": "story",
+  "description": "Six tanka (31-syllable classical poems) selected from the 小倉百人一首, the famous anthology of one hundred poems by one hundred poets compiled by 藤原定家 around 1235. These poems — about spring blossoms, snow on Mt. Fuji, autumn longing, and the sleepless nights of love — are memorised by Japanese schoolchildren and played as a card game (かるた) every New Year. Each poem is given with its hiragana reading to help N5 learners access the classical language.",
+  "level": "N5",
+  "author": "Various (anthology compiled by 藤原定家, c. 1235)",
+  "tags": ["tanka", "短歌", "百人一首", "classical poetry", "Heian period", "かるた"],
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Fujiwara_no_Teika.jpg/220px-Fujiwara_no_Teika.jpg",
+  "sourceUrl": "https://www.aozora.gr.jp/cards/000516/card2934.html",
+  "license": "Public Domain (青空文庫 — compiled c. 1235; all poets deceased)"
+}

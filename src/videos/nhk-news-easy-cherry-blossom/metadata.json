@@ -1,0 +1,12 @@
+{
+  "id": "nhk-news-easy-cherry-blossom",
+  "title": "NHK Web やさしい日本語 — 桜の季節 (Cherry Blossom Season)",
+  "type": "video",
+  "description": "NHK's easy Japanese news service for language learners. This segment covers Japan's cherry blossom season: bloom forecasts, hanami (flower-viewing) traditions, and the cultural meaning of sakura and 'mono no aware'. Vocabulary and grammar are kept at N5–N4 level with furigana on the original site.",
+  "level": "N5-N4",
+  "tags": ["NHK", "news", "cherry blossoms", "spring", "culture", "seasons", "hanami"],
+  "creator": "NHK Web Easy (やさしい日本語ニュース)",
+  "sourceUrl": "https://www3.nhk.or.jp/news/easy/",
+  "license": "© NHK — Educational news content for Japanese learners",
+  "dateAdded": "2026-05-11"
+}
