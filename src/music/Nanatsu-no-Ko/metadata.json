@@ -1,10 +1,10 @@
 {
   "id": "Nanatsu-no-Ko",
-  "title": "七つの子 (Nanatsu no Ko)",
+  "title": "七つの子 (Nanatsu no Ko — Seven Young Ones)",
   "type": "music",
-  "description": "A gentle children's song about a crow calling from the mountain because its seven beloved chicks are waiting in the old nest. Written by poet Noguchi Ujō in 1921, the song is famous for its warmth and the endearing image of a crow as a devoted parent. A staple of Japanese childhood.",
-  "level": "N5",
-  "tags": ["童謡", "children's song", "Taisho era", "nature", "birds"],
+  "description": "A beloved 1921 children's song about a crow calling from the mountains. The singer wonders why the crow cries — and the answer is that it has seven young ones waiting in the nest. The crow calls out 'kawaii kawaii' (how dear, how dear) because it loves its children so much. Old mountain nests, round eyes, the tender bond between parent and child — this gentle song captures a warmth that has made it a classic for a century.",
+  "level": "N4",
+  "tags": ["童謡", "Taisho period", "crow", "animals", "family", "nature", "children's song"],
   "sourceUrl": "https://www.worldfolksong.com/songbook/japan/nanatsu.htm",
-  "license": "Public Domain (lyrics: 野口雨情 1921, music: 本居長世 1921 — both authors deceased 50+ years)"
+  "license": "Public Domain (lyrics: 野口雨情 d. 1945, music: 本居長世 d. 1945; published 1921 — copyright expired)"
 }

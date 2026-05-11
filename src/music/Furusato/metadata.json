@@ -1,10 +1,10 @@
 {
   "id": "Furusato",
-  "title": "故郷 (Furusato — Hometown)",
+  "title": "故郷 (Furusato — My Hometown)",
   "type": "music",
-  "description": "Japan's most cherished song of longing for home. The singer recalls childhood: chasing rabbits on the mountain, fishing small carp in the river — and vows to return someday to the blue hills and clear waters of their hometown. Published in 尋常小学唱歌 (Elementary School Songs), Vol. 6, 1914. Sung at graduations and gatherings across Japan to this day.",
-  "level": "N5",
-  "tags": ["唱歌", "school song", "Meiji era", "nostalgia", "hometown", "nature"],
+  "description": "One of Japan's most beloved songs about homesickness and longing for one's birthplace. Written in 1914 for the sixth-grade Ministry of Education songbook, it evokes childhood memories of chasing rabbits in the mountains and catching fish in streams. The final verse speaks of returning home one day after achieving one's aspirations — a sentiment that resonates with every generation.",
+  "level": "N4",
+  "tags": ["文部省唱歌", "Taisho period", "nostalgia", "hometown", "school song", "traditional"],
   "sourceUrl": "https://www.worldfolksong.com/songbook/japan/furusato.htm",
-  "license": "Public Domain (尋常小学唱歌 Vol. 6, 1914; lyrics: 高野辰之 d. 1947, music: 岡野貞一 d. 1944 — PD in Japan under 50-year rule)"
+  "license": "Public Domain (尋常小学唱歌 Vol. 6, 1914; lyrics: 高野辰之 d. 1947, music: 岡野貞一 d. 1944 — copyright expired)"
 }
