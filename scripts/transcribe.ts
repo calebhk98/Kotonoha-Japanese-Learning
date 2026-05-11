@@ -82,7 +82,9 @@ NOTE: Transcription output is a draft. Review carefully before committing:
 }
 
 function checkPrerequisite(cmd: string, installHint: string): void {
-  const result = spawnSync(cmd, ['--version'], { encoding: 'utf8' });
+  // Use 'which' to check existence rather than running --version, since some
+  // tools (whisper) exit non-0 when called without required arguments.
+  const result = spawnSync('which', [cmd], { encoding: 'utf8' });
   if (result.error || result.status !== 0) {
     console.error(`✗ '${cmd}' not found. Install with: ${installHint}`);
     process.exit(1);
