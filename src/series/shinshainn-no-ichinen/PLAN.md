@@ -27,7 +27,7 @@ Age 27. Works in the accounting department on the same floor. She and Keita meet
 Age 45. Section chief (課長). Has the easy authority of someone who stopped caring what people think of him around age 38. He is fair but hard to read, and he delivers both praise and criticism with the same flat tone, so Keita is never sure which he's getting. He mentions his daughter's high school exams roughly once a month.
 
 ### 松本 桃子 (まつもと ももこ) — Matsumoto Momoko
-Age 23. Another new employee in a different team (sales support). Started the same month as Keita; they meet on the first day in the lobby waiting for their access cards. She is sharper at reading office politics than Keita and occasionally sends him knowing glances across conference rooms. Has a perfectionist streak that causes her real stress in episode 5.
+Age 23. Another new employee in a different team (sales support). Started the same month as Keita; they meet on the first day in the lobby waiting for their access cards. She is sharper at reading office politics than Keita and occasionally sends him knowing glances across conference rooms. Has a perfectionist streak that causes her real stress — she made a calculation error in a filed report the same week as Keita's misdirected email (Ep 5), and the coincidence is what makes her support message to him feel genuine rather than breezy.
 
 ---
 
@@ -107,7 +107,7 @@ Age 23. Another new employee in a different team (sales support). Started the sa
 
 ### Ep 7: 評価面談
 - **id**: `shinshainn-ep7-hyouka-mendan`
-- **plot**: December. Keita's first performance review with Eguchi. He has prepared talking points. Eguchi's evaluation is mixed: strong on documentation and follow-through, slower than expected at reading the room in meetings, good instincts but not yet confident enough to act on them. Then Eguchi says something surprising: he asks what kind of work Keita wants to do in two years. Keita hasn't thought that far ahead. He gives an honest, slightly fumbling answer. Eguchi nods and moves on. Walking back to his desk, Keita realizes that was probably the most honest conversation he's had at work all year.
+- **plot**: December. Keita's first performance review with Eguchi. He has prepared talking points. Eguchi's evaluation is mixed: strong on documentation and follow-through, slower than expected at reading the room in meetings, good instincts but not yet confident enough to act on them. Then Eguchi says something surprising: he asks what kind of work Keita wants to do in two years. Keita hasn't thought that far ahead. He gives an honest, slightly fumbling answer. Eguchi nods and moves on. Walking back to his desk, Keita passes Hayakawa in the corridor — she gives him a look that says she just finished hers too, and they exchange a quick grimace before going their separate ways. He realizes that was probably the most honest conversation he's had at work all year.
 - **grammar focus**:
   - ～はずだ (self-expectation) — もっとうまくできるはずだと思っていた。
   - ～ようになる (observed growth) — 少しずつ、会議で発言できるようになってきた。

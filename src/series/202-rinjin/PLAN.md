@@ -281,3 +281,51 @@
 - キャラクターの問題を解決しすぎない。各エピソードの終わりに「小さな変化」はあっていいが、完全な解決は最終話（Ep8）でも起きない。人生は続く。
 - 過度に説明的な地の文（「〜というのは、〜という意味で、〜だからである」）は避ける。描写で示す。
 - 各エピソードに無関係のキャラクターを詰め込まない。1話あたり最大3人が登場する程度にとどめる（POVキャラ＋1〜2人）。
+
+---
+
+## Reviewer Notes (APPROVED)
+
+*Review date: 2026-05-12. Reviewer: curriculum QA pass against N3 standards.*
+
+### Overall verdict
+
+**APPROVED with fixes applied.** The plan is well-constructed: character voices are clearly differentiated, cross-character connections feel organic (shared spaces — laundry room, entrance, hallway, mailboxes — do real narrative work), and the grammar distribution across eight episodes is unusually thoughtful. Three fixes were applied in place; two items require human attention before writers begin drafting.
+
+---
+
+### Fixes applied (CRITICAL / IMPORTANT)
+
+**[CRITICAL — FIXED] Ep 7 example sentence was grammatically broken.**
+Original: `「伝えるかどうか迷ったが、結局、ことにすることにした。」`
+The verb being nominalized was missing, leaving `こと` dangling with nothing to attach to.
+Fixed to: `「伝えるかどうか迷ったが、結局、手紙を書くことにした。」`
+This preserves both ～かどうか and ～ことにする in one coherent sentence that matches Ep 7's plot (あゆみ writes a handwritten note to ジュノ).
+
+**[IMPORTANT — FIXED] 健太's episode list in the character consistency table was incorrect.**
+The table listed 健太 as appearing in Ep1, Ep5, Ep6 — but neither Ep1's plot (誠一 meets ジュノ only) nor Ep6's plot (幸子 meets 誠一 only) names or places 健太. Ep8 explicitly references 健太 by name ("健太が出勤する音"). Corrected to Ep5, Ep8.
+
+**[IMPORTANT — FIXED] ～てしまう reviewer note listed wrong episodes in its heading.**
+The header said "Ep1・Ep6・Ep7" but the body correctly identified Ep1, Ep2, and Ep6 as the three uses. Ep7 does not use ～てしまう in its grammar focus. Heading corrected to Ep1・Ep2・Ep6 and body reorganized in episode order.
+
+---
+
+### Items requiring human attention before drafting
+
+**[IMPORTANT] Ep 6 grammar focus conflates ～ようになる and ～てきた.**
+The Ep6 example for ～ようになる is `「最近、遠くが見えにくくなってきた」`, which grammatically demonstrates ～てきた (progressive change) rather than ～ようになる (threshold: reaching a new state). ～てきた is a separately listed grammar point assigned to Ep3, Ep7, and Ep8. If ～ようになる is intended for Ep6, the example should be restructured — e.g., `「最近、遠くが見えにくくなった」` (without ～てきた). Writers should not conflate the two patterns; learners at N3 are specifically tested on the distinction.
+
+**[MINOR] Ep 3 example sentence uses らしい in two different senses simultaneously.**
+The grammar note identifies `～らしい` as "らしさ・典型的な様子" (noun + らしい = characteristic of), and the inline example `「日本語らしい表現」` correctly illustrates that sense. However, the closing 例文 is `「日本語らしい表現は、先生に教えていただくだけでは身につかないらしい。」` — this sentence ends with evidential らしい (hearsay/inference), a distinct usage. Using both in one example sentence will confuse N3 learners who are learning to tell them apart. The 例文 should demonstrate one usage consistently. Suggested fix: `「日本語らしい自然な話し方は、教科書で学ぶだけでは身につかないようだ。」` (replacing final らしい with ようだ to keep the example focused on the adjectival usage).
+
+---
+
+### Confirmed strengths (no changes needed)
+
+- **JLPT N3 accuracy**: All grammar patterns listed are N3 or below. No N2/N1 grammar slips detected across 8 episodes. The selection covers the N3 core list well: ～のに (逆接), ～ため (purpose/cause), ～さえ, ～ものだ is absent but not required; the set is balanced.
+- **POV differentiation**: The writing guidelines' register distinctions (誠一: 体言止め短文; ジュノ: 丁寧体・硬め; 幸子: 大阪弁ニュアンス) are appropriate and specific enough for writers to execute without additional direction.
+- **Cross-character intersections**: Every inter-character meeting uses a building infrastructure point (ゴミ捨て場, 廊下, 洗濯室, 郵便受け, エントランス). None of the meetings feel contrived given the six residents share one small building.
+- **Grammar distribution**: 20 distinct N3 patterns distributed across 8 episodes with appropriate spread. No single episode carries more than 4 patterns (within the 3–4 guideline). Repeated patterns (～てしまう across Ep1/2/6; ～のに across Ep4/7) are correctly flagged with differentiated usage notes.
+- **Plot logic as standalone + series**: Each episode works independently (a complete emotional arc per episode) while Ep8 rewards readers who followed the full series. The律子 郵便受け detail in Ep8 is correctly flagged as load-bearing and must not be cut.
+- **Episode balance**: Emotional weight distributed well — comic/wry (Ep1, Ep6), anxious (Ep2, Ep5), uncertain/hopeful (Ep3, Ep7), and quietly melancholic (Ep4, Ep8). POV variety is good: 2 × 誠一, 2 × あゆみ, 1 each for the others.
+- **Season pacing**: Ep1–3 autumn → Ep4–6 early winter → Ep7–8 deep winter is a clean atmospheric arc that reinforces the series' emotional cooling-then-warming structure.
