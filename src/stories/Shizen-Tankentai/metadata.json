@@ -1,11 +1,1 @@
-{
-  "id": "Shizen-Tankentai",
-  "title": "しぜんたんけんたい (Shizen Tankentai)",
-  "type": "story",
-  "description": "The school nature club heads to the countryside for a full day of discovery — they find caterpillars, bamboo shoots, a baby calf, apple trees, and even see a distant volcano. A rich, sensory story about Japan's rural landscapes and the small wonders of nature.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "nature", "school", "animals", "science"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Shizen-Tankentai","title":"しぜんたんけんたい (Shizen Tankentai)","type":"story","description":"The school nature club heads to the countryside for a full day of discovery — they find caterpillars, bamboo shoots, a baby calf, apple trees, and even see a distant volcano. A rich, sensory story about Japan's rural landscapes and the small wonders of nature.","author":"オリジナル","level":"n5","tags":["n5","nature","school","animals","science"],"imageUrl":"","dateAdded":"2026-05-10"}

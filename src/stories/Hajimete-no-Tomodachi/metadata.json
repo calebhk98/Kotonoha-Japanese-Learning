@@ -1,11 +1,1 @@
-{
-  "id": "Hajimete-no-Tomodachi",
-  "title": "はじめてのともだち (Hajimete no Tomodachi)",
-  "type": "story",
-  "description": "Yuki has been at school for a week but hasn't made any friends yet. When a classmate named Hana drops her eraser near Yuki's desk, a small act of kindness becomes the first step toward a real friendship.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "school", "friendship", "shyness", "emotions", "courage", "character-education"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Hajimete-no-Tomodachi","title":"はじめてのともだち (Hajimete no Tomodachi)","type":"story","description":"Yuki has been at school for a week but hasn't made any friends yet. When a classmate named Hana drops her eraser near Yuki's desk, a small act of kindness becomes the first step toward a real friendship.","author":"オリジナル","level":"n5","tags":["n5","school","friendship","shyness","emotions","courage","character-education"],"imageUrl":"","dateAdded":"2026-05-10"}

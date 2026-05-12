@@ -1,11 +1,1 @@
-{
-  "id": "Izakaya-no-Yoru",
-  "title": "いざかやのよる (Izakaya no Yoru)",
-  "type": "story",
-  "description": "After a tough week, three coworkers gather at a basement izakaya for drinks and honest conversation. Over sake, spicy food, and whispered secrets, they talk about work pressures, who has real ability and who doesn't, and the unspoken rules of office politics.",
-  "author": "オリジナル",
-  "level": "intermediate",
-  "tags": ["n4", "adult", "work", "social", "night-out"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Izakaya-no-Yoru","title":"いざかやのよる (Izakaya no Yoru)","type":"story","description":"After a tough week, three coworkers gather at a basement izakaya for drinks and honest conversation. Over sake, spicy food, and whispered secrets, they talk about work pressures, who has real ability and who doesn't, and the unspoken rules of office politics.","author":"オリジナル","level":"n3","tags":["n4","adult","work","social","night-out"],"imageUrl":"","dateAdded":"2026-05-10"}

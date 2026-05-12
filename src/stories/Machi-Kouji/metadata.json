@@ -1,11 +1,1 @@
-{
-  "id": "Machi-Kouji",
-  "title": "まちのこうじ (Machi no Kouji)",
-  "type": "story",
-  "description": "It's road construction season in the shopping district. The south exit of the station is blocked, the water pipes need replacing, and the sidewalk is torn up. A local shopkeeper, the project foreman, and a city official navigate weeks of noise, detours, and neighborhood complaints — discovering that rebuilding a street also rebuilds community ties.",
-  "author": "オリジナル",
-  "level": "intermediate",
-  "tags": ["n4", "community", "work", "adult", "neighborhood"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Machi-Kouji","title":"まちのこうじ (Machi no Kouji)","type":"story","description":"It's road construction season in the shopping district. The south exit of the station is blocked, the water pipes need replacing, and the sidewalk is torn up. A local shopkeeper, the project foreman, and a city official navigate weeks of noise, detours, and neighborhood complaints — discovering that rebuilding a street also rebuilds community ties.","author":"オリジナル","level":"n3","tags":["n4","community","work","adult","neighborhood"],"imageUrl":"","dateAdded":"2026-05-10"}

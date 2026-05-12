@@ -1,9 +1,1 @@
-{
-  "id": "Laundry-Day",
-  "title": "せんたく (Laundry Day)",
-  "type": "story",
-  "description": "A story about helping a parent do laundry on the weekend. A child sorts clothes, uses the washing machine, and hangs clothes outside to dry in the sun.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": ""
-}
+{"id":"Laundry-Day","title":"せんたく (Laundry Day)","type":"story","description":"A story about helping a parent do laundry on the weekend. A child sorts clothes, uses the washing machine, and hangs clothes outside to dry in the sun.","author":"オリジナル","level":"n5","imageUrl":""}

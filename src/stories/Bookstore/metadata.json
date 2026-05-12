@@ -1,9 +1,1 @@
-{
-  "id": "Bookstore",
-  "title": "ほんやさん (At the Bookstore)",
-  "type": "story",
-  "description": "Browsing a bookstore — looking at manga, children's books, and picture books, reading the back cover of an interesting one, deciding to buy it, and reading the first page on the way home on the train.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": ""
-}
+{"id":"Bookstore","title":"ほんやさん (At the Bookstore)","type":"story","description":"Browsing a bookstore — looking at manga, children's books, and picture books, reading the back cover of an interesting one, deciding to buy it, and reading the first page on the way home on the train.","author":"オリジナル","level":"n4","imageUrl":""}

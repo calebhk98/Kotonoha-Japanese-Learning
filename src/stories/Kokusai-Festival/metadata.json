@@ -1,11 +1,1 @@
-{
-  "id": "Kokusai-Festival",
-  "title": "こくさいフェスティバル (Kokusai Festival)",
-  "type": "story",
-  "description": "The city's annual international festival draws visitors from dozens of countries. Two university students volunteer as guides — and between navigating crowds, explaining Japanese food to foreign visitors, and getting lost themselves, they discover how big the world really is.",
-  "author": "オリジナル",
-  "level": "intermediate",
-  "tags": ["n4", "culture", "festival", "diversity", "college"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Kokusai-Festival","title":"こくさいフェスティバル (Kokusai Festival)","type":"story","description":"The city's annual international festival draws visitors from dozens of countries. Two university students volunteer as guides — and between navigating crowds, explaining Japanese food to foreign visitors, and getting lost themselves, they discover how big the world really is.","author":"オリジナル","level":"n4","tags":["n4","culture","festival","diversity","college"],"imageUrl":"","dateAdded":"2026-05-10"}

@@ -1,11 +1,1 @@
-{
-  "id": "Taiiku-Sai-no-Hi",
-  "title": "たいいくさいのひ (Taiiku Sai no Hi)",
-  "type": "story",
-  "description": "It's the school sports day! Students practice tug-of-war, kendo, and running all weekend. Some children start out clumsy but improve through dedication. Scores rise and fall, the coach pauses games, and everyone discovers what physical effort really means.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "sports", "school", "physical education", "perseverance"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Taiiku-Sai-no-Hi","title":"たいいくさいのひ (Taiiku Sai no Hi)","type":"story","description":"It's the school sports day! Students practice tug-of-war, kendo, and running all weekend. Some children start out clumsy but improve through dedication. Scores rise and fall, the coach pauses games, and everyone discovers what physical effort really means.","author":"オリジナル","level":"n4","tags":["n5","sports","school","physical education","perseverance"],"imageUrl":"","dateAdded":"2026-05-10"}

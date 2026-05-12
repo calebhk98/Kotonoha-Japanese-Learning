@@ -1,0 +1,236 @@
+# Series Plan: 哲学の庭
+
+## Series Metadata
+- **id**: `tetsugaku-no-niwa`
+- **title**: 哲学の庭
+- **description**: 京都の古書店の奥座敷に毎月集まる、哲学が好きな六人の素人たち。死・自由・記憶・義務・美・言語・幸福といった問いを中心に、議論の波紋が参加者それぞれの日常に静かに広がっていく。
+- **level**: n2
+- **tags**: [philosophy, Kyoto, slice-of-life, discussion, intellectual, character-driven]
+
+---
+
+## Cast
+
+### 1. 村瀬 誠一（むらせ せいいち）
+- **年齢**: 62歳
+- **職業**: 元高校倫理教師、現在は非常勤講師
+- **参加の動機**: 定年後も「哲学を生活の中で考えたい」という思いから、教室ではなく対等な立場で議論できる場を探していた。
+- **性格**: 物知りで語りたがり。話が長くなりがちで若い世代に遠慮なく割り込む。しかし誠実で、自分の間違いはきちんと認める。サークルの非公式な「まとめ役」。
+
+### 2. 岡崎 真帆（おかざき まほ）
+- **年齢**: 34歳
+- **職業**: フリーランスのグラフィックデザイナー
+- **参加の動機**: 仕事での創作について「美とは何か」を自分なりに考えたかった。友人から偶然この会を紹介された。
+- **性格**: 直感的で鋭い。理屈より感覚で話すが、その感覚がしばしば議論の核心を突く。感情が顔に出やすく、退屈すると露骨に他のことを考え始める。
+
+### 3. 辻 浩二（つじ こうじ）
+- **年齢**: 45歳
+- **職業**: 葬儀社の社員（現場担当）
+- **参加の動機**: 死を毎日のように扱う仕事をしているうちに、「自分は死を理解しているのか」という問いが拭えなくなった。
+- **性格**: 寡黙で観察眼が鋭い。発言は少ないが、一言ひとことに重みがある。感情を表に出さない分、稀に見せる動揺が他のメンバーに強く刺さる。
+
+### 4. 林 奈々（はやし なな）
+- **年齢**: 27歳
+- **職業**: 大学院生（社会学専攻）
+- **参加の動機**: 学術的な議論に疲れ、専門用語なしで哲学を話せる場を求めた。論文の外で思考を解放したかった。
+- **性格**: 批判的思考が染みついており、前提を問い直すのが癖。時に議論を壊しすぎるが、本人は自覚していない。裏では繊細で、自分が傷つけた相手を後から気にする。
+
+### 5. 桑原 文子（くわばら ふみこ）
+- **年齢**: 53歳
+- **職業**: 古書店「ことば堂」の店主（会の開催場所の提供者）
+- **参加の動機**: 長年の読書人として、本の外の議論に好奇心があった。自分の店が「場」になることへの静かな誇り。
+- **性格**: 温かく包容力がある。議論が険しくなったとき、茶や菓子を出しながら場を和らげる。しかし内心は誰より鋭く、発言するときは的確で短い。
+
+### 6. 中村 悠太（なかむら ゆうた）
+- **年齢**: 22歳
+- **職業**: フリーター（就職活動中）
+- **参加の動機**: 就活に行き詰まり、「なぜ働くのか」という問いから哲学に辿り着いた。インターネットで「ことば堂の哲学の会」を見つけた。
+- **性格**: 素直で好奇心旺盛。経験が少ないぶん既成概念に縛られず、無邪気な質問が議論を意外な方向に転がすことがある。年上に萎縮しやすいが、徐々に発言が増えていく。
+
+---
+
+## Episodes
+
+### Ep 1: 死を語る夜
+- **Theme**: 死（死とは何か、なぜ恐ろしいのか）
+- **Story ID**: `tetsugaku-ep1-shi-wo-kataru`
+- **Plot**: 第一回の集まりで、辻が「私は毎日遺体に接しているのに、自分の死が怖い」と打ち明けたことから議論が始まる。村瀬はエピクロスの「死は我々に関係しない」論を持ち出し、林はその論理の穴を突く。悠太の「でも残された人が悲しむじゃないですか」という素直な一言が議論を「死者の視点」から「生者の視点」へ転換させる。会が終わった後、辻は一人でいつもより長く帰り道を歩く。
+- **Grammar Focus**:
+  - ～というものだ：「死とは、経験できないというものだ」（death is, by its very nature, something one cannot experience）
+  - ～に違いない：「彼は何かを隠しているに違いない」→ 辻が口数少ない理由を林が推測する場面で使用
+  - ～にすぎない：「それは言葉の定義にすぎない、と村瀬は言った」
+  - ～とは限らない：「死が恐ろしいとは限らない、という考え方もある」
+- **Emotional Beat**: 静かな驚き。死を「仕事」としていた辻の脆さが初めて見える。
+
+---
+
+### Ep 2: 自由という重さ
+- **Theme**: 自由（自由意志と責任の関係）
+- **Story ID**: `tetsugaku-ep2-jiyuu-no-omosa`
+- **Plot**: 就職活動を続ける悠太が「選べるのに選べない感じ」を話したことで、自由意志の議論に火がつく。真帆は「デザインも選択の連続なのに、なぜ自分の人生は選べないと感じるのか」と問い、村瀬はサルトルの「実存は本質に先立つ」を引用する。林は「そもそも選択の前提条件が平等ではない」と社会構造の問題を持ち出し、場が一時紛糾する。会の後、悠太は初めて自分の意志で一社の選考を辞退する。
+- **Grammar Focus**:
+  - ～からには：「選んだからには、責任を取るべきだという話になった」
+  - ～によって：「自由の意味は、人によって大きく異なる」
+  - ～に反して：「周囲の期待に反して、悠太は一社の選考を自ら辞退した」
+  - ～ものの：「選ぶ自由はあるものの、何を選べばいいかは誰も教えてくれない」
+- **Emotional Beat**: 抑えた焦燥。悠太の一歩が小さくても確かに見える。
+
+---
+
+### Ep 3: 記憶の信頼性
+- **Theme**: 記憶（記憶は本当に「私」のものか）
+- **Story ID**: `tetsugaku-ep3-kioku-no-shinraisei`
+- **Plot**: 文子が店の改装中に見つけた昔の日記を読んで「全く別人が書いたようだった」と話したことで、記憶とアイデンティティの議論が始まる。村瀬はロックの人格同一性論を紹介し、林はその理論が記憶の改ざんを説明できないと反論する。真帆は「でも私はその改ざんされた記憶で今の作風を作っている」と言い、記憶の「真実性」より「機能」が問われる。会の帰り、文子はその日記をもう一度読み直す。
+- **Grammar Focus**:
+  - ～にわたって：「長年にわたって積み重ねた記憶が、本当に自分のものかどうか」
+  - ～をめぐって：「記憶の信頼性をめぐって、議論はいつもより長く続いた」
+  - ～に基づいて：「過去の経験に基づいて、人は判断を下す」
+  - ～さえ～ば：「記録さえあれば、記憶がなくても人格は保てるのか」
+- **Emotional Beat**: 穏やかな不安。文子の落ち着きの裏にある問い直しが滲む。
+
+---
+
+### Ep 4: 義務とは誰のためか
+- **Theme**: 義務・責任（道徳的義務の根拠）
+- **Story ID**: `tetsugaku-ep4-gimu-to-dare`
+- **Plot**: 辻が「家族への義務と仕事への義務が衝突したとき、どうすればいいのか」という具体的な悩みを打ち明ける。村瀬はカントの義務論を持ち出すが、真帆は「義務って結局、誰かへの負い目じゃないか」と感情ベースで返す。林は「義務の根拠が社会なら、社会が変われば義務も変わるはず」と言い、悠太は「義務がなければ何もしないのか、自分は」と静かに問う。辻は答えを出さないまま帰る。会が終わった後、村瀬は一人でバスを待ちながら、教師時代に教えた生徒への「義務」をはたして果たせたのか、と初めて声に出さずに自問する。
+- **Grammar Focus**:
+  - ～にもかかわらず：「義務だとわかっているにもかかわらず、体が動かないことがある」
+  - ～だけでなく：「義務は他者へのものだけでなく、自分自身へのものでもある」
+  - ～ばかりか：「辻は仕事で死と向き合うばかりか、家で父の介護まで一人で抱えていた」
+  - ～としては：「葬儀社の社員としては、感情を持ち込まないのが当然とされている」
+- **Emotional Beat**: 重く静かな痛み。辻が初めて個人的な傷を見せる転換点。余韻シーンは村瀬——最も「教える側」だった彼が、初めて自問する側に回る瞬間。
+
+---
+
+### Ep 5: 美は存在するか
+- **Theme**: 美（美の客観性と主観性）
+- **Story ID**: `tetsugaku-ep5-bi-wa-sonzai-suru`
+- **Plot**: 真帆がクライアントに「センスが古い」と言われた話を怒りと共に持ち込み、「美というものは本当に存在するのか」という問いになる。村瀬はカントの「普遍的な美的判断」を説明し、林は「それは西洋中心の美意識ではないか」と文化相対主義で返す。文子は一冊の古い画集を取り出し「これを美しいと感じる人がいる限り、美は消えない」と言う。真帆は帰宅後、クライアントへの返答を書き直す。
+- **Grammar Focus**:
+  - ～というより：「それは好みというより、文化の問題だと言えるかもしれない」
+  - ～からすると：「専門家の目からすると、その判断は偏っているように見える」
+  - ～に関して：「美の基準に関して、万人が合意できる答えはない」
+  - ～に対して：「主観的な感覚に対して、客観的な根拠を示すのは難しい」
+- **Emotional Beat**: 静かな再肯定。真帆が自分の感覚を信じ直す瞬間。
+
+---
+
+### Ep 6: 言葉は思考を作るか
+- **Theme**: 言語と思考（言語が世界の見え方を規定するか）
+- **Story ID**: `tetsugaku-ep6-kotoba-to-shiko`
+- **Plot**: 林が研究で使っている「ケア」という概念を日本語で説明しようとして詰まったことから、ウォーフ仮説（言語が思考を規定する）の議論が始まる。悠太は「日本語にない感情は感じられないのか」と問い、文子は「だから本を読むのだ」と静かに言う。村瀬と林が「言語は思考のツールか枠か」で激しく対立し、真帆は「私はビジュアルで考えるから言語は関係ない」と言い、場が笑いに包まれる。その夜、林は論文の書き出しを言葉ではなく図から始めてみる。
+- **Grammar Focus**:
+  - ～次第：「使う言語次第で、思考の幅が変わるという考え方がある」
+  - ～とはいえ：「言語が思考を規定するとはいえ、完全に決定するとは言えない」
+  - ～にすぎない（再登場）：「言葉は道具にすぎないという立場と、言葉が現実を作るという立場がある」
+  - ～にもかかわらず（再登場）：「言葉がないにもかかわらず、その感情は確かに存在した」
+- **Emotional Beat**: 軽やかな発見。知的な笑いの後に残る真剣な問い。
+
+---
+
+### Ep 7: 幸福とは何か——一年目の終わりに
+- **Theme**: 幸福（幸福の条件と、この会そのものへの問い返し）
+- **Story ID**: `tetsugaku-ep7-koufuku-to-wa-nani-ka`
+- **Plot**: 一年の締めくくりとして文子が「幸福について話しましょう」と提案する。村瀬はアリストテレスの「エウダイモニア（よく生きること）」を持ち出し、辻は「幸福を考える余裕が、この会に来るまでなかった」と初めて素直に言う。悠太は就職先が決まったことを報告し、林は「でもそれが幸福への一歩かどうかは、まだわからない」と言う。真帆は「この部屋で一時間だけ正直でいられること、それが今の私には幸福かもしれない」と言い、しばらく誰も喋らない。文子はいつもより多く茶を注ぐ。
+- **Grammar Focus**:
+  - ～にわたって（再登場）：「一年にわたる議論を通じて、六人それぞれが変わっていた」
+  - ～というものだ（再登場）：「幸福とは、追いかけているときには気づかないというものだ」
+  - ～からには（再登場）：「ここに集まってきたからには、何かを求めていたはずだ」
+  - ～とは限らない（再登場）：「幸せな人生が、正しい答えを持つ人生とは限らない」
+- **Emotional Beat**: 温かく余韻の長い着地。答えではなく、問い続けること自体の肯定。
+
+---
+
+## Writing Guidelines
+
+### 文体と語調
+各エピソードは、議論シーン（会話体・知的）と会後の個人シーン（叙述体・内省的）を組み合わせる。会話は自然な口語を使いながらも、テーマに即した語彙（概念語・抽象語）を適切に含める。地の文は落ち着いた文語調を基本とし、感情描写は抑制的に行う。
+
+### 語彙・漢字密度
+N2水準の語彙を積極的に使用する（概念、根拠、主観、客観、前提、義務、普遍、相対、規定、判断、本質など）。難読漢字にはルビを振ることを検討する（葬儀、遺体、人格同一性など）。N1レベルの語彙は会話の中で自然に登場する場合のみ使用し、地の文では避ける。
+
+### 文長と構文
+一文は25〜50字程度を目安とし、単純構造と複文を交互に配置する。接続詞（しかし、だからこそ、一方で、それにもかかわらず）を使って論理の流れを明示する。各エピソードの日本語テキストは500〜650語を目標とする。
+
+### 会話の書き方
+発言者の職業・年齢・性格が滲み出るよう、語尾や言い回しを使い分ける。
+- 村瀬：「〜というわけですよ」「〜ではないでしょうか」（丁寧体・やや説教調）
+- 林：「〜という前提自体が問題です」「〜とは言えません」（論理的・批判的）
+- 真帆：「〜っていう感じ、わかりますか？」（口語・感覚的）
+- 辻：発言は短く、「……そうかもしれない」「私には、まだわからない」
+- 文子：「まあ、お茶でも」「そういうことかもしれませんね」（包容的・短く核心を突く）
+- 悠太：「あの、聞いてもいいですか」「そういう考え方、なかったです」（素直・敬語）
+
+### N2文法の配置原則
+各エピソードにターゲット文法を4つ割り当て、そのうち少なくとも2つは本文中の日本語例文として地の文または会話の中に自然に埋め込む。文法項目は終盤エピソード（6・7話）で再登場させ、学習者が定着を確認できるようにする。
+
+### エピソード構成の目安
+1. 導入（50〜80語）：会の始まりの情景、今回のテーマが浮上する経緯
+2. 議論（250〜300語）：中心的な問いと、複数の視点からの応答
+3. 転換点（50〜80語）：議論が個人の問題に接地する瞬間
+4. 余韻（100〜150語）：会が終わった後の、一人のメンバーの内省シーン
+
+---
+
+## Reviewer Notes
+
+### テーマと人物の一貫性リスク
+
+**1. 辻の感情開示ペーシング**
+辻は寡黙というキャラクター設定上、感情を出す場面が過剰になると不自然に映る。Ep4（父の見舞い）とEp7（「余裕がなかった」発言）は大きな開示場面であり、Ep1〜3での沈黙と対比が機能するかどうか、各エピソードで辻の発言量と内容を意図的にコントロールすること。
+
+**2. 林の「議論を壊す」役割と読者の共感バランス**
+林は知的に鋭いが、共感を失いかけるリスクがある。Ep2（社会構造の問題で場が紛糾）とEp6（村瀬との激しい対立）が重なると、「批判機械」に見えてしまう。**対処必須**: Ep3の記憶の議論で、林は文子の「別人が書いた日記」発言に対して、前提を問うのではなく「それはあなたにとってどんな感じでしたか」と個人的に問いかける一言を入れること。批判の手を止めて他者の経験に関心を向ける場面を少なくともEp3に一か所確保し、Ep6の激しい対立の前に読者との信頼を積み上げておく。
+
+**3. 村瀬の哲学用語使用量**
+各エピソードで哲学者名や専門用語を引用する役割を担うが、全7話で毎回同じパターンになると教科書的になる。Ep5以降は村瀬が理論を引用しない回を一つ作り、個人的な経験から語る場面を作ること。
+
+**4. 悠太の成長弧とエピソード配置**
+Ep1では萎縮、Ep2では初めての意志的行動（選考辞退）、Ep7では就職決定と報告、という成長弧を設計しているが、Ep3〜6での悠太の変化が見えにくい。各中間エピソードで悠太が一度は主体的な発言をするよう意識すること。
+
+**5. 文子の「場の提供者」と「参加者」の二重性**
+文子は店主として場を提供しつつ議論にも加わるが、ホスト役が強くなりすぎると思想的な発言が少なくなる。Ep3（日記の話）とEp5（画集）のように、文子が個人的な経験を持ち込む回を意図的に配置し、彼女自身も「問われる人」であることを示すこと。
+
+**6. 哲学的テーマの感情的強度の分布**
+Ep1（死）とEp4（義務）は感情的に重い。Ep6（言語）とEp5（美）は比較的明るい。重さの波があること自体は良いが、Ep7（幸福）が締めくくりとして機能するには、前6話の感情的な振れ幅が最終話への布石になっていることを確認する。各エピソードの末尾の「余韻シーン」の登場人物を意図的に変え、全員にほぼ均等にスポットが当たるよう調整すること。**修正済み（改訂版）**: 当初Ep1（辻）とEp4（辻）が連続していたため、Ep4の余韻シーンを村瀬に変更した。現行の余韻シーン分布: Ep1=辻、Ep2=悠太、Ep3=文子、Ep4=村瀬、Ep5=真帆、Ep6=林、Ep7=全員（アンサンブル）。六人全員がほぼ均等にカバーされた。
+
+**7. N2文法パターンの自然な埋め込み**
+文法項目を会話に埋め込む際、教科書例文のような不自然さが生じるリスクがある。各文法項目は、その話者のキャラクターが使いそうな文脈で使うこと（例：「〜にもかかわらず」は辻の葛藤を表す地の文で使う）。Ep6・7での再登場は、初出時と異なる文脈で使い、定着確認と表現の幅拡大を両立させること。
+
+---
+
+## Reviewer Notes (APPROVED)
+
+**Review date**: 2026-05-12
+**Reviewer**: Curriculum review pass — N2 serialized story series
+
+### Issues found and resolved
+
+**CRITICAL (fixed in this pass)**
+
+1. **内定/選考 factual inconsistency in Ep2 grammar example** — The original ～に反して example used 「期待に反して、彼は内定を断った」. 悠太 is still in the 選考 (screening) stage throughout Ep2; he cannot have received 内定 (a formal job offer) to refuse. The plot itself correctly says 選考を辞退. Fixed: example changed to 「周囲の期待に反して、悠太は一社の選考を自ら辞退した」, which is factually consistent with the plot and character stage.
+
+2. **辻の余韻シーン連続（Ep1・Ep4）** — Both Ep1 and Ep4 originally ended with 辻 alone (walk home / hospital visit). This is a double-spotlight that undermines the stated goal of distributing afterglow scenes across all members, and collapses 辻's character arc into two similar solitary beats rather than a progression. More critically, 村瀬 — the most active discussion participant in all 7 episodes — had no private afterglow scene anywhere in the series, making him feel like a narrative device rather than a character. Fixed: Ep4's afterglow reassigned to 村瀬 (waiting for the bus, quietly questioning whether he fulfilled his duty to former students). The distribution is now: Ep1=辻、Ep2=悠太、Ep3=文子、Ep4=村瀬、Ep5=真帆、Ep6=林、Ep7=アンサンブル。
+
+**IMPORTANT (fixed in this pass)**
+
+3. **Ep4 ～ばかりか example used 「彼」instead of a named character** — 「彼は仕事の義務を果たすばかりか…」distances the example from 辻, who is the obvious referent in context, and introduces an unnamed male pronoun in a scene where gender-ambiguous reference creates confusion. The character sheet also does not establish that 辻 carries sole family caregiving, so the example needed to be grounded in the established plot (父の病院) rather than inventing a new fact. Fixed: rewritten as 「辻は仕事で死と向き合うばかりか、家で父の介護まで一人で抱えていた」, tying the grammar example to the Ep4 plot detail of 辻 visiting his hospitalised father.
+
+4. **林の共感リスク: Reviewer Note too vague** — The original note flagged the risk but offered no binding instruction, only "考慮する". Given that Ep2 and Ep6 both feature 林 disrupting the group, leaving this as optional guidance is insufficient. Fixed: Note 2 updated to specify a concrete required action — a moment in Ep3 where 林 asks 文子 a personal question rather than challenging a premise, establishing human warmth before the Ep6 confrontation.
+
+**MINOR (fixed in this pass)**
+
+5. **Ep3 ～をめぐって example: 「深夜まで続いた」** — The group meets at a bookshop run by a 53-year-old woman; a session running until deep into the night is logistically implausible and inconsistent with the slice-of-life register. Fixed: changed to 「いつもより長く続いた」.
+
+### Issues found but requiring human attention
+
+6. **Ep7 has zero new grammar patterns** — All four grammar items in Ep7 are repeats from earlier episodes. This is consistent with the stated Writing Guidelines (revision/consolidation in the final episode), so it is not a structural error. However, for a learner cohort that finds consolidation episodes unsatisfying without at least one new exposure, this may feel thin. The human author should decide whether to introduce one mild new pattern (e.g. ～ことになっている or ～に当たって) in the Ep7 discussion, or retain the full-consolidation design. No change made pending that decision.
+
+7. **村瀬の非引用回の指定** — Reviewer Note 3 instructs authors to give 村瀬 at least one episode where he does not quote a philosopher. No specific episode is designated. The plan as written has 村瀬 quoting in Ep1 (エピクロス), Ep2 (サルトル), Ep3 (ロック), Ep4 (カント), Ep5 (カント again). Ep6 and Ep7 have no explicit 村瀬 philosopher-quote in the plot text — this may already satisfy the instruction, but authors should confirm consciously rather than by accident.
+
+8. **Ep5の「普遍的な美的判断」** — カントの第三批判の概念をN2文脈で口語的に説明しようとすると、術語の日本語が難しい（判断力、共通感覚、無関心的関心など）。この概念をN2学習者に理解可能な形で台詞に落とし込む際に、村瀬の台詞が教科書的になりすぎないよう注意が必要。執筆時に要注意。
+
+### Overall assessment
+
+The series plan is **approved for episode writing** with the above fixes applied. The philosophical themes are appropriate for N2 — the discussions centre on relatable life situations (career, memory, obligation, aesthetics) and the philosophical frameworks (エピクロス, サルトル, カント) are introduced through character dialogue, not narrated exposition, which keeps the register accessible. Grammar distribution is well-balanced: 4 patterns per episode, all confirmed N2, with meaningful contextual variation in Ep6/7 reuses. Character voices are distinct and internally consistent. The two-part episode structure (discussion + afterglow) is maintained uniformly across all 7 episodes.

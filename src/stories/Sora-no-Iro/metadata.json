@@ -1,11 +1,1 @@
-{
-  "id": "Sora-no-Iro",
-  "title": "そらのいろ (Sora no Iro)",
-  "type": "story",
-  "description": "A child sits in the same spot from early morning to night, watching how the color of the sky changes — from the pale light of dawn, to deep blue, to the red and gold of sunset, to the dark of night. A grandmother shares quiet stories under each sky.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["wanikani-lv5", "n5", "sky", "nature", "colors", "contemplative", "family"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-11"
-}
+{"id":"Sora-no-Iro","title":"そらのいろ (Sora no Iro)","type":"story","description":"A child sits in the same spot from early morning to night, watching how the color of the sky changes — from the pale light of dawn, to deep blue, to the red and gold of sunset, to the dark of night. A grandmother shares quiet stories under each sky.","author":"オリジナル","level":"n5","tags":["wanikani-lv5","n5","sky","nature","colors","contemplative","family"],"imageUrl":"","dateAdded":"2026-05-11"}

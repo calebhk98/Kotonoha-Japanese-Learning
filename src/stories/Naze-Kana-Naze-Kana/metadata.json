@@ -1,11 +1,1 @@
-{
-  "id": "Naze-Kana-Naze-Kana",
-  "title": "なぜかな、なぜかな (Naze Kana, Naze Kana)",
-  "type": "story",
-  "description": "A delightfully curious child named Hoshi asks 'why?' about everything — why is the sky blue, why do cats purr, why does rice taste better with chopsticks, why do we wave goodbye? Each answer leads to another why. A long, cumulative, participatory story that celebrates childlike curiosity about the world.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "interactive", "curiosity", "cumulative", "nature"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Naze-Kana-Naze-Kana","title":"なぜかな、なぜかな (Naze Kana, Naze Kana)","type":"story","description":"A delightfully curious child named Hoshi asks 'why?' about everything — why is the sky blue, why do cats purr, why does rice taste better with chopsticks, why do we wave goodbye? Each answer leads to another why. A long, cumulative, participatory story that celebrates childlike curiosity about the world.","author":"オリジナル","level":"n5","tags":["n5","interactive","curiosity","cumulative","nature"],"imageUrl":"","dateAdded":"2026-05-10"}

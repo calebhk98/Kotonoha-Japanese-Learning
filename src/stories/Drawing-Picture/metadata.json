@@ -1,10 +1,1 @@
-{
-  "id": "Drawing-Picture",
-  "title": "えをかく (Drawing a Picture)",
-  "type": "story",
-  "description": "Rainy afternoon drawing — choosing colored pencils, making mistakes/erasing, starting over, finishing, showing parent.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": "",
-  "vocabularyFocus": ["え", "かく", "いろえんぴつ", "えらぶ", "まちがえる", "けす", "もういちど", "できた", "じょうず", "みせる"]
-}
+{"id":"Drawing-Picture","title":"えをかく (Drawing a Picture)","type":"story","description":"Rainy afternoon drawing — choosing colored pencils, making mistakes/erasing, starting over, finishing, showing parent.","author":"オリジナル","level":"n5","imageUrl":"","vocabularyFocus":["え","かく","いろえんぴつ","えらぶ","まちがえる","けす","もういちど","できた","じょうず","みせる"]}

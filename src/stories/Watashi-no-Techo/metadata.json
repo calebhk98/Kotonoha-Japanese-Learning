@@ -1,11 +1,1 @@
-{
-  "id": "Watashi-no-Techo",
-  "title": "わたしのてちょう (Watashi no Techo)",
-  "type": "story",
-  "description": "A child keeps a pocket diary counting down days, weeks, and months until the big summer festival. Each diary entry uses dates, question words, and comparisons with last year — a gentle story about anticipation and the passage of time.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "diary", "calendar", "counting", "seasons"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Watashi-no-Techo","title":"わたしのてちょう (Watashi no Techo)","type":"story","description":"A child keeps a pocket diary counting down days, weeks, and months until the big summer festival. Each diary entry uses dates, question words, and comparisons with last year — a gentle story about anticipation and the passage of time.","author":"オリジナル","level":"n4","tags":["n5","diary","calendar","counting","seasons"],"imageUrl":"","dateAdded":"2026-05-10"}

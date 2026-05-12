@@ -1,11 +1,1 @@
-{
-  "id": "Asa-no-Oto",
-  "title": "あさのおと (Asa no Oto)",
-  "type": "story",
-  "description": "A quiet sensory morning. Someone wakes slowly and listens: birds singing outside, wind in the trees, sounds from the kitchen, a phone ringing next door. They take their time, make breakfast, and let soft music fill the room. A peaceful story about noticing the sounds of an ordinary morning.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["wanikani-lv8", "n5", "morning", "daily-life", "sensory", "music", "peaceful"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-11"
-}
+{"id":"Asa-no-Oto","title":"あさのおと (Asa no Oto)","type":"story","description":"A quiet sensory morning. Someone wakes slowly and listens: birds singing outside, wind in the trees, sounds from the kitchen, a phone ringing next door. They take their time, make breakfast, and let soft music fill the room. A peaceful story about noticing the sounds of an ordinary morning.","author":"オリジナル","level":"n5","tags":["wanikani-lv8","n5","morning","daily-life","sensory","music","peaceful"],"imageUrl":"","dateAdded":"2026-05-11"}
