@@ -1,65 +1,207 @@
 # Series Plan: 転職の春
 
+## Series Metadata
+- **id**: `tenshoku-no-haru`
+- **title**: 転職の春
+- **description**: 安定した会社員の生活に疑問を感じた35歳の田中勇介が、突然パティシエを目指して転職を決意する。家族の反対、経済的な不安、そして新しい世界での挫折と小さな喜びを通じて、本当の自分を見つけていく物語。
+- **level**: n3
+- **tags**: [career-change, food, family, self-discovery, slice-of-life, drama, n3]
+
+---
+
 ## Cast
-- **橋本誠一 (Hashimoto Seiichi)**, 34 — Protagonist. Insurance company employee, 12 years. Section chief candidate. Outwardly dependable, inwardly disconnected. Bakes on weekends but dismisses it as a hobby. Speaks keigo at work; plain/terse at home. Central question: does he want to be a chef, or just want to NOT be where he is?
-- **橋本由美 (Hashimoto Yumi)**, 33 — Wife. Works part-time at dental clinic. Pragmatic, warm, not uncritical. Supported his decision before he made it. Quietly calculates the mortgage. Not a villain, not a saint. Her arc: holding the household while refusing to be reduced to that role.
-- **田村課長 (Tamura Kachō)**, 51 — Section chief at insurance company. Competent, not unkind. Made his own peace with compromise 30 years ago. Represents the road not taken. Unsettled by Seiichi's resignation in a way he doesn't admit.
-- **宮崎シェフ (Miyazaki Chef)**, 47 — Head instructor at culinary school. Exacting, dry-humored, gives no encouragement. Has seen 40 career-changers; can tell within 2 weeks which ones survive. Does NOT tell Seiichi which category he's in.
-- **木村さやか (Kimura Sayaka)**, 27 — Fellow culinary student. Dropped out of music degree. Technically gifted, casually confident. Unlikely friend. Midnight onigiri on the curb. Doesn't need Seiichi to be composed.
-- **橋本誠二 (Hashimoto Seiji)**, 38 — Older brother. Runs auto-repair shop. Didn't go to university; watched Seiichi be the "successful" brother for 12 years with layered feelings.
+
+### 田中 勇介（たなか ゆうすけ）— 35歳
+主人公。大手電機メーカーの営業部に10年勤めた中堅サラリーマン。仕事ができないわけではないが、毎日が同じルーティンの繰り返しで心が満たされない。休日に趣味で焼いたケーキを友人に振る舞うことだけが生きがいだった。内向的だが、一度決めたことは最後まで押し通す頑固さを持つ。
+
+### 田中 美咲（たなか みさき）— 33歳（妻）
+パート勤務のデザイナー。勇介の情熱は理解できるが、住宅ローンと子どもの教育費を前に現実的にならざるを得ない。夫への愛情はあるが、支えることと諦めることの狭間で揺れる。物語を通じて最終的に夫の夢の一番の味方になる。
+
+### 田中 蓮（たなか れん）— 8歳（息子）
+小学二年生。パパの作るケーキが大好きで「パパのパティシエ応援団長」を自称する。子どもの無邪気な一言が勇介の背中を押したり、心を折りかけたりする。8歳なりの不安（パパが変わること、お金のこと）も時折見せるとリアルになる。
+
+### 田中 義雄（たなか よしお）— 67歳（父）
+元・国鉄職員。終身雇用こそ美徳という世代。息子の転職宣言に激怒し、二人の関係は数話にわたって険悪になる。しかし過去に自分が夢を諦めた経験があり、終盤でそれが明かされる。不器用な愛情の持ち主。
+
+### 岸本 千夏（きしもと ちなつ）— 28歳（専門学校のクラスメート）
+製菓専門学校で勇介のクラスメートになる年下の女性。一度製菓学校を卒業しているが、フランス料理店での修業が合わず再入学した。技術は確かで勇介の良き師であり友人。サバサバした性格で、本音を言える唯一の存在。恋愛要素は持たせない。
+
+### 澤田 雄一郎（さわだ ゆういちろう）— 45歳（専門学校講師）
+パリで修業した実力派のパティシエ。口は悪いが教え方は丁寧。学ぶ意欲のある生徒を見抜く目を持ち、勇介の不器用ながら真剣な姿勢を早くから評価している。物語後半で知人のカフェへ勇介を紹介する。
+
+---
 
 ## Episodes
 
-### Ep 1: 最後の定時退社
-- **id**: `tenshoku-ep1-teiji-taisha`
-- Ordinary Thursday. Seiichi leaves the office at exactly 6 PM for the first time in 3 years — because he submitted his resignation that afternoon. Quiet episode: train home, detour past patisserie window, Yumi already knowing something happened before he says a word. We don't yet know what made him decide TODAY.
-- **Grammar focus**: ～てしまう (出してしまった — irreversible), ～わけだ (logical conclusion), ～ことにした (decided to), keigo resignation letter language (お世話になりました/誠に勝手ながら), contrast: 普通なら～のに/今日は～
-- **Emotional beat**: Quiet before the storm. Seiichi is calm in an almost alarming way.
+### Ep 1: さようなら、スーツ
+**id**: `tenshoku-ep1-sayounara-suutsu`
 
-### Ep 2: 田村課長との面談
-- **id**: `tenshoku-ep2-mendan`
-- Formal exit interview. Tamura offers a counter — promotion that would have thrilled Seiichi 2 years ago. Entire conversation in keigo; masterclass in saying nothing directly. Afterward Seiichi at the vending machine realizes he felt nothing when Tamura named the new salary. Key moment: Tamura mentions he once thought about opening a restaurant. He says it the way you mention a country you never visited.
-- **Grammar focus**: Keigo throughout (～ていただけますか/～でございます/～かと存じます), ～にもかかわらず, reported speech in formal register (～とおっしゃいました), hedging (～とは言い切れませんが/～かもしれません), ～に違いない (Seiichi reading between Tamura's lines)
+**plot**: 勇介は10年間勤めた会社の送別会で同期が昇進する姿を目にし、自分の空虚感がピークに達する。深夜に一人でシュークリームを焼きながら、「このまま定年まで続けるのか」と自問する。翌朝、息子の蓮に「パパ、ケーキ屋さんになればいいのに」と言われ、心の中で何かが動く。まだ決断はしていないが、製菓専門学校のパンフレットをこっそり取り寄せることにする。
 
-### Ep 3: 入学式のあとで
-- **id**: `tenshoku-ep3-nyugakushiki`
-- First day at culinary school. Seiichi is by a decade the oldest student. Gap between baking at home and performing under instruction is immediate and humbling. Meets Sayaka, who correctly guesses he came from white-collar work within 4 minutes.
-- **Grammar focus**: ～ように (purpose: 上手くできるように練習する), ～ために (上手くなるために), comparative structures (～より～のほうが/～ほど～ない), casual speech contrasted with Seiichi's formal register, culinary vocabulary (生地/焼き加減/火加減/粉を振る)
+**grammar focus**:
+- ～ようになる「最近、仕事が楽しくないと思うようになった。」（変化の経緯）
+- ～てしまう「また一日が終わってしまった。」（完了・感慨）
+- ～のに（逆接）「頑張っているのに、何も変わらない気がする。」
+- ～ことにする「パンフレットだけ取り寄せることにした。」（小さな決断）
 
-### Ep 4: 兄からの電話
-- **id**: `tenshoku-ep4-ani-no-denwa`
-- Seiji calls — first time in 4 months. Heard about the resignation from their mother. Call is simultaneously supportive and wounding, as only older siblings can. Seiichi tries to explain culinary school; Seiji listens in uncomfortable silence. Seiji says he'll visit if there's ever a public tasting. This is enormous from Seiji. Seiichi doesn't know how to receive it.
-- **Grammar focus**: ～とともに (年齢とともに考え方が変わった), telephone register — informal family speech with tension, ～んだけど (casual softening), indirect self-expression, ～ばよかった/～ておけばよかった (implied regret)
-- **Reviewer note**: Seiji's stance should be AMBIVALENT — both "I told you office work was a cage" AND "now you think you're like me." Give him lines that carry both meanings simultaneously. Do not resolve which he feels.
+**emotional beat**: 決断の予感。閉塞感の中に小さな光が差し込む瞬間。まだ何も変えていないが、何かが変わり始めた。
 
-### Ep 5: 由美の話
-- **id**: `tenshoku-ep5-yumi-no-hanashi`
-- TOLD FROM YUMI'S PERSPECTIVE — a first for the series. Lunch break with a friend who asks how Seiichi's "adventure" is going. Yumi's answer to the friend differs from what she says to Seiichi at home. Neither version is dishonest exactly. She does the mortgage calculation on her phone under the table.
-- **Grammar focus**: ～一方で (formal contrast within narration), ～のに (despite — 心配しているのに言えない), inner monologue shifting between plain form narrative and polite speech to friend, concern without complaint (～気になるんだよね/～わけじゃないけど), household finance vocabulary
+---
 
-### Ep 6: 宮崎シェフの評価
-- **id**: `tenshoku-ep6-hyouka`
-- Mid-term assessments. Miyazaki gives Seiichi a technically adequate but creatively hollow score. Says: 「あなたの菓子は正確です。でも誰かのためになっていない。」Seiichi doesn't understand at first. Goes home and bakes for Yumi — not for practice, for the first time. She cries a little over a tart. He asks if it's good. She says 「食べていい？」and eats a second piece.
-- **Grammar focus**: ～に違いない (interpreting the chef's criticism), ～というのは (defining: この言葉というのは何か), indirect criticism in formal instructional register, ～てみる (Yumiのために作ってみた), pastry technical vocabulary
+### Ep 2: 決意と嵐
+**id**: `tenshoku-ep2-ketsui-to-arashi`
 
-### Ep 7: さやかとコンビニ前で
-- **id**: `tenshoku-ep7-sayaka-combini`
-- 11:45 PM outside convenience store near school. Sayaka and Seiichi eat onigiri on the curb after a long evening session. She tells him — without being asked — that she failed her music school audition twice before stopping. He doesn't offer comfort; she doesn't want any. She asks what he actually wanted to do at 22. He says he doesn't remember. She says that's probably not true. Final line: he says his 22-year-old self wanted a small shop. He says it to the parking lot. Sayaka says「なるほどね」and opens another onigiri.
-- **Grammar focus**: ～はずだった (what was supposed to happen), ～ないわけではない (double hedge Seiichi uses), casual speech: contracted forms (じゃん/でしょ/かな), ～てよかった (retrospective), late-night casual register vs. Seiichi's rigid style
+**plot**: 勇介は妻の美咲に転職の意思を打ち明ける。美咲は反対こそしないが、ローンや蓮の学費を理由に「もう少し現実を見てほしい」と冷静に釘を刺す。週末、父の義雄に電話で伝えると激しい怒りを買い、「恥をかかせるな」と一方的に電話を切られる。それでも勇介は会社に退職届を提出し、来春の専門学校入学を決める。
 
-### Ep 8: 春の終わりに
-- **id**: `tenshoku-ep8-haru-no-owari`
-- Graduation. No hotel pastry job — was offered one but turned it down (hours = never seeing Yumi). Instead: asked a small neighborhood café if they'll buy two items per week as a trial. Not the dream exactly. Might be better. Mortgage is still real. Tamura's offer occasionally visits him at 3 AM. Final image: kitchen at 6 AM, before Yumi wakes, making something for a stranger who will eat it without knowing his name. He finds this sufficient.
-- **Grammar focus**: ～とは限らない (夢通りになるとは限らない), ～ことになった (decision that arrived), ～ながら (不安を感じながら前に進む), ～でも～でもない (ambiguous resolution), small business terms, seasonal imagery
-- **Reviewer note (transition)**: Between Ep 6 (creatively hollow) and Ep 8 (café deal), the turnaround must feel earned. In Ep 7, Seiichi's admission about wanting a small shop is the creative/emotional turning point — writers should tie the café decision back to this moment, even obliquely.
+**grammar focus**:
+- ～はずだ「これだけ貯金があれば、一年間は大丈夫なはずだ。」（確信・根拠）
+- ～てみる「一度本気でやってみなければ、後悔するだけだ。」（試みへの意志）
+- ～ばよかった「もっと早く決めればよかった。」（過去への後悔）
+- ～なければならない「家族を養わなければならないのはわかっている。」（義務の自覚）
 
-## Reviewer Notes (APPROVED)
-- Seiji (Ep 4): ambivalent stance, both emotions simultaneously, do not resolve
-- ～に違いない appears in Ep 2 and Ep 6 — vary the context/register; don't make it feel like a repeated grammar drill
-- Ep 7→8 transition: café deal should feel connected to Seiichi's midnight admission about the small shop
+**emotional beat**: 橋を燃やす覚悟。恐怖と解放感が同時に押し寄せる。一歩踏み出した足はもう引けない。
+
+---
+
+### Ep 3: 粉だらけの初日
+**id**: `tenshoku-ep3-kondarake-no-shonichi`
+
+**plot**: 専門学校の初日。勇介は18〜23歳の同級生に囲まれ、完全に浮いた存在になる。基礎実習でバターの「ポマード状」が作れず、講師の澤田に「手が冷たい人間には向いていないかもしれませんね」と皮肉を言われる。クラスメートの千夏だけが「最初は誰でもそうだよ」と声をかけてくれる。帰宅して美咲に「やっぱり向いていないかも」と弱音を吐くが、蓮の「パパならできる」の一言で立ち直る。
+
+**grammar focus**:
+- ～ながら「不安を感じながらも、教室の扉を開けた。」（同時進行・逆接）
+- ～ておく「明日の実習のために、レシピを読んでおいた。」（準備・前置き）
+- ～らしい「この学校は本当に厳しいらしい。」（伝聞）
+- ～てきた「少しずつ、基礎が身についてきた気がする。」（変化の累積）
+
+**emotional beat**: 最初の挫折。でも帰る場所がある安心感。転職した現実が初めて体に刻まれる夜。
+
+---
+
+### Ep 4: 父の沈黙
+**id**: `tenshoku-ep4-chichi-no-chinmoku`
+
+**plot**: 貯金が予想より早く減り始め、美咲がデザインの仕事を増やすと言い出す。勇介は感謝と申し訳なさで胸が痛い。そんな中、義雄から突然「東京に行く」と連絡が入る。孫の蓮に会いたいというのが名目だが、実際は息子の様子を確かめに来たのだ。義雄は勇介の専門学校のノートや実習用エプロンを黙って見るが、何も言わない。夕食の場は緊張の沈黙が続き、翌朝義雄は何も言わずに帰ってしまう。
+
+**grammar focus**:
+- ～てしまう（意図しない結果）「貯金が思ったより早く減ってしまった。」
+- ～かどうか「父が本当に認めてくれるかどうか、わからない。」（不確かさ）
+- ～ため「家族のために、もっと頑張らなければならないと思った。」（目的・原因）
+- ～し（理由の列挙）「貯金も減ってきたし、美咲に負担もかけているし、正直つらい。」
+
+**emotional beat**: 父と子の不器用な愛情。言葉にならない葛藤。沈黙こそが最大の対話。
+
+---
+
+### Ep 5: 初めて売れた日
+**id**: `tenshoku-ep5-hajimete-ureta-hi`
+
+**plot**: 学校の実習成果発表会で、勇介のタルトタタンが審査員の澤田から「素材の扱い方に個性がある」と評価される。千夏から「あなた、センスあるよ」と初めて本気の言葉をもらう。発表会の余り物を蓮に持ち帰ると「世界一おいしい」と言われ、勇介は初めて涙をこらえる。その夜、美咲に「ここまで来られたのは、お前のおかげだ」と伝える。
+
+**grammar focus**:
+- ～そうだ（様態）「今日の澤田先生は、何か言いたそうな顔をしていた。」
+- ～という（引用・命題）「『素材の個性を大切にしろ』という言葉が、頭に残っている。」
+- ～ようになる（変化の結果）「少しずつ、自分の手が信用できるようになってきた。」
+- ～のに（感慨・逆接）「こんなに不器用なのに、諦めないでいられるのはなぜだろう。」
+
+**emotional beat**: 小さな達成感。涙が出るほどの嬉しさ。初めて「来てよかった」と思える夜。
+
+---
+
+### Ep 6: クリスマスの赤字
+**id**: `tenshoku-ep6-kurisumasu-no-akaji`
+
+**plot**: 学校の課外プロジェクトで近所のカフェにクリスマスケーキを納品する機会を得る。勇介は張り切りすぎて原価計算を誤り、10個のケーキで3000円の赤字を出してしまう。千夏に「パティシエは芸術家じゃなくて商売人でもある」と厳しく言われ、現実の厳しさを痛感する。しかし、カフェのオーナーから「また頼みたい。今度はちゃんと値段を計算して」と言われ、次への希望が生まれる。
+
+**grammar focus**:
+- ～てしまう（失敗・後悔）「原価を間違えて、赤字を出してしまった。」
+- ～ていただく「カフェのオーナーに、また注文していただけることになった。」（謙譲・感謝）
+- ～だけ「今は、一歩ずつ進むだけだ。」（限定・割り切り）
+- ～ばよかった（後悔）「もっと早く計算の勉強をしておけばよかった。」
+
+**emotional beat**: 夢と現実の衝突。それでも次の扉が開く。プロの世界の重さを初めて実感する。
+
+---
+
+### Ep 7: 父の告白
+**id**: `tenshoku-ep7-chichi-no-kokuhaku`
+
+**plot**: 義雄が突然脳梗塞で入院する。勇介は実習を休んで帰省する。回復した義雄はベッドの上で、かつて自分も画家になりたかったが父親に反対されて諦めた過去を初めて打ち明ける。「お前の話を聞いて、若い頃の自分を思い出した。だから怒った」と言い、泣き崩れる義雄の手を勇介は握る。父子の和解。義雄は翌日から「うまいケーキを食わせてくれ」と言い始める。
+
+**grammar focus**:
+- ～てきた（経緯・積み重ね）「ずっと黙ってきたけど、本当はお前を応援したかった。」
+- ～はずだ（推量・確信）「親は子どもに、自分と同じ後悔をさせたくないはずだ。」
+- ～さえ（強調・極端な例示）「あの頃は、夢という言葉さえ口にできなかった。」
+- ～まで「定年まで、ずっとそのことを考えていた。」（時間的終点）
+
+**emotional beat**: 世代を超えた後悔と和解。一番の反対者が一番の理解者に。言葉にならなかったものが、ようやく言葉になる夜。
+
+---
+
+### Ep 8: 春の開店
+**id**: `tenshoku-ep8-haru-no-kaiten`
+
+**plot**: 専門学校を修了した勇介は、澤田の紹介で知人のカフェに週3日のパティシエ見習いとして採用される。最初の出勤日の朝、スーツではなくコック服を着て玄関に立つ勇介を見て、蓮が「パパ、かっこいい」と言う。美咲は「行ってらっしゃい」と静かに微笑む。エピローグで、義雄から「今度の日曜に行ってもいいか」とメッセージが届く。まだゴールではない。でも春が来た。
+
+**grammar focus**:
+- ～ことにする（決断・選択の宣言）「ここで働くことにした。それが今の私の答えだ。」
+- ～ようになる（最終的な変化・総括）「自分の手で何かを作ることが、こんなに幸せだとは知らなかった。ようやく、そう思えるようになった。」
+- ～てきた（積み重ねの総括）「一年かけて、少しずつここまで来た。」
+- ～という（自己定義）「私はパティシエという仕事を、選んだ。」
+
+**emotional beat**: 終わりではなく、始まりの春。静かな達成と、続く旅への期待。派手なハッピーエンドではなく、地に足のついた一歩。
+
+---
+
+## Reviewer Notes
+
+### Continuity Risks
+- **財政状況のトラッキング**: Ep2で退職→Ep4で貯金減少→Ep6で赤字納品と、経済的緊張を段階的に高める設計になっている。各話で貯金残高や美咲の仕事量に関する具体的言及を一貫させること。数字を出す場合は話をまたいで矛盾しないよう注意。
+- **父・義雄の態度変化**: Ep2で激怒→Ep4で沈黙（内心では揺れている）→Ep7で告白・和解という3段階の変化。Ep4の「沈黙」が単なる怒りの継続に見えないよう、細かな行動（孫への優しさ、ノートをそっと触るなど）で内面の揺れを示すこと。
+- **千夏との関係**: あくまで友人・同志の関係として維持すること。Ep3で声をかけ→Ep5で本音の評価→Ep6で厳しい指摘、と役割が機能している。恋愛要素に傾かないよう注意。
+- **蓮の描写**: 8歳の子どもとして自然な言葉遣いと行動を保つこと。時には怖い・さびしいという感情も見せるとリアルになる。「応援団長」キャラクターが押しつけがましくなりすぎないよう注意。
+
+### Grammar Distribution Concerns
+- **～てしまう**がEp1・Ep2・Ep4・Ep6の4話に登場する。後悔・意図しない結果・完了など意味が異なるため、各話で意図的に使い分けること。同じエピソード内で複数回使う場合は異なる意味で使用すること。
+- **～ようになる**がEp1・Ep5・Ep8の3話に配置されている。変化の結果を示すこの文型は物語の転換点に置かれており、Ep8での使用が最も重みを持つ。前の2回と意味が重複しないよう注意。
+- **～ばよかった**がEp2とEp6の両方に登場する。Ep2は人生全体への後悔、Ep6は実務スキルへの後悔と視点を変えることで差別化できている。これを維持すること。
+- **Ep7は文法密度が高い**: ～てきた・～はずだ・～さえ・～まで の4パターンを使用するが、いずれも義雄の告白シーンという感情的に重いシーンで自然に使える文型。セリフの中に埋め込むことで不自然な詰め込みを避けること。
+- **未使用の目標文型**: ～ていただく（Ep6のみ）、～かどうか（Ep4のみ）、～ため（Ep4のみ）など一話のみに配置された文型は、対応エピソードで必ず自然な形で使えているか確認すること。
+
+### Character Consistency Issues
+- 勇介は「内向的だが頑固」という性格設定。一度決めたら揺らがない芯の強さと、人前では感情を出せない不器用さを両立させること。Ep5で涙をこらえる描写はこの性格に合致している。
+- 美咲は「賛成でも反対でもない現実主義者」として始まるが、Ep5・Ep8で徐々に感情的サポートに傾く。この変化を明示的に描くシーンをEp5とEp7の間に設けると説得力が増す（Ep6で美咲視点の描写を入れると良い）。
+- 澤田先生は「口が悪いが公平」な人物。Ep3の皮肉とEp5の評価が矛盾しないよう、Ep3でも技術への批判（愛情からの厳しさ）であることを示すこと。
+
+---
 
 ## Writing Guidelines
-- Mix plain form narrative with keigo dialogue in formal contexts
-- Keigo is front-loaded (Eps 1-2); casual speech increases toward Ep 7
-- Adult emotional stakes; avoid melodrama — quiet precision over dramatic declarations
-- N3 grammar should arise naturally from the narrative, not feel inserted
+
+### Sentence Complexity
+- 1文の目安：15〜30文字。短文と複文を交互に使い、単調にならないようにする。
+- 複文では接続助詞（ので・のに・から・が・けど）を積極的に使う。3つ以上の節をつなぐ場合は読点（、）で区切ること。
+- 会話文は短く、地の文は中程度の長さを目安とする。
+- 段落は4〜6文を目安。長い段落は避け、場面転換には空行を入れる。
+
+### Kanji Usage
+- N3〜N2レベルの漢字を中心に使用する。N1以上の難しい漢字には必要に応じてルビを振る（例：脳梗塞（のうこうそく））。
+- 日常的に使われる漢字（家族・仕事・学校・料理関連）はルビなしで使用可。
+- 固有名詞（人名・地名・店名）は初出時にのみルビを振る。
+- カタカナ語（パティシエ・バター・タルトタタンなど）はカタカナ表記を維持し、過度に和訳しない。
+
+### Register Mix
+- **地の文**: 常体（だ・である調）を基本とする。勇介の内面描写は特に常体で書く。
+- **会話文**: 登場人物の関係性と年齢に応じてレジスターを変える。
+  - 勇介 → 美咲：親しい夫婦なので基本的に常体・くだけた表現（「そうだよな」「わかってる」）
+  - 勇介 → 父・義雄：やや丁寧（「わかっています」「そうですか」）
+  - 勇介 → 澤田先生：敬体（「はい」「ありがとうございます」「教えていただけますか」）
+  - 千夏 → 勇介：フランクな常体（「田中さん、それ違う」「ちゃんと覚えておいてよ」）
+  - 蓮の言葉：子どもらしい短い言葉（「パパ、すごい！」「おいしい！」）
+- 義雄は古い言葉遣い（「そんなことでどうする」「情けない」）を時折使う。
+- 学校の授業や実習シーンでは技術用語（生地・焼き加減・火加減・ポマード状・折り込む）を自然に使うこと。
+
+### Target Word Count
+- 各エピソードの目安：1,000〜1,400文字（地の文 + 会話文の合計）
+- 会話文の割合：全体の30〜45%程度を目安にすること。多すぎると軽くなり、少なすぎると読みにくくなる。
+- N3学習者が辞書なしで80%以上理解できることを目指す。難しい表現は前後の文脈から意味が推測できるよう配置する。
+- 各話の末尾に「次話への引き」（次のエピソードへの伏線や余韻）を1〜2文で入れること。
