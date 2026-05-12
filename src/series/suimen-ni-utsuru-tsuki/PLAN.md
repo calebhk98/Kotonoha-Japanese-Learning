@@ -19,7 +19,7 @@
 - **id**: `suimen-ep2-sakana`
 - Ryōta calls unexpectedly; they meet at a bar in Koenji they used to frequent in their thirties. Conversation drifts from architecture to aging to a documentary Ryōta saw about deep-sea fish that live without light. Makoto listens more than speaks. On the train home he watches his own reflection in the dark window — cannot be certain which side of the glass is which. Home: shoes still on, standing in the dark entryway.
 - **Literary technique**: Dialogue rendered with extreme economy — what is said fills half a page; narration of what is NOT said, what Makoto observes in Ryōta's face, is dense. Mastery of 間 as narrative space. Reflection motif (window, water, glass) introduced.
-- **Grammar focus**: 〜をよそに (interior life proceeding while conversation flows around him), 〜に至っては, 〜かねない, reported speech with という embedded deeply in relativization
+- **Grammar focus**: 〜をよそに (interior life proceeding while conversation flows around him), 〜に至っては, 〜といえども (concessive: "even Ryōta, who knows him well, cannot reach him"), reported speech with という embedded deeply in relativization
 - **Thematic**: Introduces central image — reflection that can't confirm which side is real.
 
 ### Ep 3: 冬の海辺で
@@ -41,14 +41,14 @@
 - **id**: `suimen-ep5-chichi`
 - Clearing a storage closet: Makoto finds his father's old German-Japanese technical dictionary. Father was an engineer who never learned enough German to use it — bought in a moment of aspiration he never fulfilled. Episode alternates: Makoto leafing through the dictionary in the present; memories of his father in a register close to classical 回想文 — imperfect, reconstructed, uncertain. Father emerges as a man who also lacked words for what he felt, left behind objects and silences instead of language. Makoto realizes his vocation — translation — may have been an attempt to answer his father's silence with fluency. He places the dictionary on his own desk.
 - **Literary technique**: Classical 回想 mode with 〜たものだ and 〜たことがある for memory's grammar. The dictionary as object-correlative — the thing that holds what the person couldn't say.
-- **Grammar focus**: 〜ものを, 〜ていたかもしれない (counterfactual memory), 〜てはじめて, 〜ことなしに, archaic 〜べき in reflective passages
+- **Grammar focus**: 〜ものを (regret over what cannot be unsaid/undone), 〜ないまでも (father's aspiration: even if he could not master German, at least…), 〜ことなしに (nothing passes without leaving a trace), 〜がゆえに (precisely because he had no words, he left objects), archaic 〜べき in reflective passages
 - **Thematic**: The revelation that restructures the entire preceding arc. Father's dictionary = physical anchor for what Ep 3's memory only glimpsed. Everything — the translation, the stalled marriage, the winter beach — is retroactively legible.
 
 ### Ep 6: 水面に映る月
 - **id**: `suimen-ep6-tsuki`
 - Translation finished and submitted. Evening walk along the small river near their house — something he used to do and stopped, for no reason he tracked. The moon is reflected in the water. He watches it for a long time. His wife texts: do you want dinner? He replies: almost home. Episode ends in the kitchen — Yuka at the stove, Makoto sitting at the table — ordinary domestic co-presence described with the same exactitude and quiet strangeness as everything before. Nothing is resolved. The moon was not real. The reflection was not the moon. Both were worth watching.
 - **Literary technique**: Return of all series images (reflection, glass, water, margin) in register of earned simplicity — shorter sentences, more direct, counterpoint to earlier density. 余白 in action: what is not written carries as much weight as what is. Final paragraph ends on an image, not a statement.
-- **Grammar focus**: 〜にすぎない (without resignation), 〜というものは (philosophical generalization, softened), 〜とはいえ, 体言止め as episode's final mode
+- **Grammar focus**: 〜にほかならない (the reflection is nothing other than the moon — and yet), 〜をもって (with this evening, something concludes — not drama, just closure), 〜てやまない in a single, quiet final instance (what he has always wanted, without knowing the words for it), 体言止め as episode's final mode
 
 ## Reviewer Notes (APPROVED)
 - Eps 3 and 5 both involve father memory: differentiate — Ep 3 has a fleeting sensory impression; Ep 5 is anchored by the physical dictionary object. Give Ep 3's memory a different sensory form (voice, gesture, phrase — NOT an object).

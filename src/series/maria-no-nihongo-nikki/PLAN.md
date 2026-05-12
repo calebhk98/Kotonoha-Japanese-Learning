@@ -59,10 +59,49 @@
   - Do NOT use ～てくれました (e.g. 「たなかさんが てつだってくれました」) — くれる/あげる/もらう as auxiliary giving-verbs are N4. Instead, Maria describes what Tanaka-san did directly: 「たなかさんは おちゃを もってきました。」or 「たなかさんは やさしかったです。」
   - いただきます is fine as a mealtime expression (N5 set phrase); do NOT use いただく as a humble verb form (e.g. 「いただきました」meaning "I humbly received") — that nuance is N4.
 
-## Reviewer Notes (APPROVED)
-- Chen Min in Ep3: make clear he is a one-time encounter, do NOT set up future meetings
-- Ep4: food-ordering language is incidental; main focus is preference expressions (～がすきです)
-- Keep all vocabulary genuinely N5 (common everyday words, basic kanji only: 日月人大小山川 etc.)
+## Reviewer Notes (APPROVED — updated after curriculum review 2026-05-12)
+
+### What was fixed in this review pass
+
+**CRITICAL fixes (N4+ grammar removed or quarantined):**
+
+1. **Ep 3 — ～までどうやっていきますか removed.** "どうやって" is N4. Replaced with ～はどこですか which is N5 and fits the scene (Maria asks a station attendant). Writer caution added directly to the episode note.
+
+2. **Ep 6 — おせわになりました removed.** This is a keigo set phrase above N5. Replaced with ありがとうございます + よろしくおねがいします (both N5 set phrases). Writer caution added.
+
+3. **Ep 6 — ～てくれました removed from grammar focus.** The giving/receiving auxiliary verbs (くれる/あげる/もらう) are N4. Writers are directed to describe Tanaka-san's actions directly instead (「たなかさんは ～ました。」). Writer caution added with example alternatives.
+
+4. **Ep 6 — いただきます scoped clearly.** Permitted only as a mealtime set phrase (N5); writers warned NOT to use いただく as a humble verb form (N4).
+
+**IMPORTANT fixes (grammar gaps, distribution, continuity):**
+
+5. **～てください added to Ep 4.** This core N5 pattern was missing from all six episodes. Added as a natural moment where Yui shows Maria something at the office.
+
+6. **～たい added to Ep 6.** Another core N5 pattern with no home. Added to Maria's journal voice in the culminating episode, which is tonally appropriate (「にほんごで かきたいです。」).
+
+7. **Ep 4 — coworker-to-friend gap addressed.** The jump from "coworker" to "invites to ramen" had no bridging context. Added a one-line setup instruction for writers (Yui has helped Maria with something mundane at the office during the week).
+
+8. **Ep 1 — grammar overload flagged and softened.** Numbers 1-31 deprioritized to background; writers warned not to foreground all five particles in one scene. Particles are series-wide; Episode 1 should not feel like a grammar drill.
+
+9. **Register rules made explicit in Ep 4 note.** The writing guidelines mentioned casual register "from Ep 4 with Yui" but the episode note didn't reflect this. Added explicit register instruction (Yui may drop to plain form; Maria stays in ます/です).
+
+10. **Ep 3 continuity note added.** Maria arriving 22 minutes late on day one should be acknowledged briefly in Ep 4 so the world feels continuous.
+
+### What writers must watch
+
+- **N4 danger zones in this series**: giving/receiving verbs (くれる/あげる/もらう), て-form conditionals (～たら/～ば/～と), potential form (～られる/～える), passive, keigo verbs, comparatives with より/ほど.
+- **Allowed N5 te-forms**: te-form for sequence only (Verb-て、Verb-て…). Not て-conditionals.
+- **ている is N5** but keep it to simple progressive (いま たべています). Do not use ている for state/result (まどが あいています) — that nuance risks confusion at N5 even though the form is technically N5.
+- **ごぼう (Ep 5)**: fine as a plot device. Do not test comprehension on it. Writers should gloss it in context (Okada-san holds it up — the visual makes the word learnable).
+- **Chen Min (Ep 3)**: ONE-TIME only. Mentioned in Cast, Ep 3, and here. Do not introduce him in later episodes under any pretext.
+- **Casual register**: Yui only, Ep 4 onward. Okada-san stays in polite slow speech. Tanaka-san speaks slowly/simply but stays polite.
+
+### Remaining concerns (need human judgment)
+
+- **Missing N5 patterns**: ～ている as progressive is touched in Ep 5 (りょうりしています) but never as a focus. No episode covers question words comprehensively (だれ/なに/どこ/いつ/なぜ/どれ/どの) — they appear incidentally but a short moment in Ep 2 or 3 could anchor them. If the series extends beyond 6 episodes, these deserve dedicated focus episodes.
+- **No episode covers numbers+counters deeply**: Ep 1 mentions numbers 1-31; Ep 2 mentions ひとつ/ふたつ. Neither makes this a focus. If counters (～まい/～ほん/～さつ) matter for this series, a short market or shopping scene in a hypothetical Ep 7 would be the place.
+- **Ep 2 emotional beat unlabeled**: The episode has a clear small-victory arc (panic → success at egg aisle → treats herself) but no formal "Emotional beat" label. Recommend adding one for consistency, so writers know to honor the emotional layer: *Overwhelm → small competence → self-reward*.
+- **Ep 3 and Ep 5 also lack emotional beat labels.** Same recommendation.
 
 ## Writing Guidelines
 - Sentences: short and clear (AはBです。AがBをします。)

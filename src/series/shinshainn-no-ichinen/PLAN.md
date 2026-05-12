@@ -50,7 +50,7 @@ Age 23. Another new employee in a different team (sales support). Started the sa
 - **plot**: Keita is asked to draft his first business email to an external vendor. He rewrites it eleven times, sends it to Sakamoto for approval, and receives it back with twelve tracked corrections and no explanation. He stays late studying keigo email templates. Hayakawa Misuzu, working late nearby, notices and shows him one practical trick: copy the phrasing from a previous email in the sent folder. A small but genuine kindness.
 - **grammar focus**:
   - ～なければならない "must do" — 敬語を正しく使わなければならない。
-  - ～ていただく "receive the favor of" (humble request) — ご確認いただけますでしょうか。
+  - ～ていただく "receive the favor of" (humble request) — ご確認いただけますか。
   - ～かどうか "whether or not" — この表現が正しいかどうか、わからなかった。
   - ～ようになる "come to be able to" — 少しずつメールが書けるようになった。
 - **emotional beat**: The specific shame of not knowing how to do something everyone else seems to find automatic. The first moment of warmth from Hayakawa.
@@ -95,7 +95,7 @@ Age 23. Another new employee in a different team (sales support). Started the sa
 
 ### Ep 6: 残業と台風
 - **id**: `shinshainn-ep6-zangyou-to-taifuu`
-- **plot**: Late September. A major typhoon is forecast to hit Tokyo on a Friday. A client deadline won't move. Four people from Keita's team end up staying until 11pm while the wind presses against the office windows. Eguchi orders delivery ramen and eats at his desk without comment. Daiki falls asleep at his keyboard for seven minutes and wakes up pretending it didn't happen. Keita finishes his section first and, without being asked, starts proofreading Daiki's.
+- **plot**: Late September (six months in). A major typhoon is forecast to hit Tokyo on a Friday. A client deadline won't move. Four people from Keita's team end up staying until 11pm while the wind presses against the office windows. Eguchi orders delivery ramen and eats at his desk without comment. Daiki falls asleep at his keyboard for seven minutes and wakes up pretending it didn't happen. Keita finishes his section first and, without being asked, starts proofreading Daiki's.
 - **grammar focus**:
   - ～ながら (again, harder usage) — 台風の音を聞きながら、資料を仕上げた。
   - ～ておく "prepare in advance / do for later" — 明日のために確認しておいた。
@@ -166,7 +166,7 @@ Episodes 1–3 should keep sentences relatively short and direct — Keita is st
 Target N3-appropriate kanji throughout. Furigana should be provided on first use of any compound with N2 or harder kanji (e.g. 配布リスト, 評価面談). Core workplace vocabulary (会議、資料、上司、部長、係長) should appear without furigana by episode 3, as Keita has had time to learn it.
 
 ### Register mix
-Workplace scenes use polite-form Japanese (です／ます調) with occasional keigo (～ていただく, ～でございます). Casual scenes — primarily the lunch in episode 4, Daiki's hallway conversations, and the lobby moment in episode 8 — use plain form with natural contractions and sentence-final particles (ね、よ、な). Internal narration (Keita's thoughts) uses plain form throughout. The shift between registers should feel natural, not jarring; avoid switching registers mid-scene unless the character is deliberately code-switching.
+Workplace scenes use polite-form Japanese (です／ます調) with keigo forms at N3 level (～ていただく, ～させていただく, ～いたします). Keigo flows in one direction: Keita (and other subordinates) use humble/respectful forms when speaking TO superiors (Sakamoto, Eguchi); superiors respond in plain-polite or neutral-polite forms, not keigo — this directionality must be maintained consistently. The very formal `～でございます` may appear in quoted email text as a recognition target, but should not be presented as a production target for N3 learners. Casual scenes — primarily the lunch in episode 4, Daiki's hallway conversations, and the lobby moment in episode 8 — use plain form with natural contractions and sentence-final particles (ね、よ、な). Internal narration (Keita's thoughts) uses plain form throughout. The shift between registers should feel natural, not jarring; avoid switching registers mid-scene unless the character is deliberately code-switching.
 
 ### Target word count
 - Episodes 1–3: 600–750 Japanese words (shorter; more description, less dialogue)

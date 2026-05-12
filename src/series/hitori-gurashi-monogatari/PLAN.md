@@ -62,10 +62,35 @@
 - **Grammar focus**: ～ようになった (できるようになった/分かるようになった — reflecting on change), ～てきた (慣れてきた/楽しくなってきた — gradual change), reflection vocabulary (気がする/思い返すと/あの頃/成長), mixing past narrative with present-tense realization
 - **Emotional beat**: Not triumph, not crisis — honest accounting. More herself than she expected. Comfortable ambiguity.
 
-## Reviewer Notes (APPROVED)
-- Ep 5: clarify welcome party timing — add "belated" or change the social event type
-- Ep 7's ～ようになった echoes Ep 2's ～ようになる — this is INTENTIONAL callback; writers should use it as deliberate spiral review, not avoid it
-- Kaori (Ep 3): brief mention in one other episode recommended to avoid feeling purely functional
+## Reviewer Notes (APPROVED — post-review edits applied)
+
+### CRITICAL issues fixed in this edit pass
+
+**Ep 7 title and timeline (FIXED):** Original title was 三か月目 but this is episode 7 in a month-by-month series. "Month 3" directly contradicts episodes 1–6 and would confuse readers tracking the story chronologically. Title and id changed to 七か月目 / `hitori-ep7-nanakagetsu-me`. The emotional content (looking back at the first-night to-do list, gradual settled confidence) is equally or more earned at month 7 than month 3. If a future editor wants the reflection arc to peak at month 3, the episode should be moved to position 3–4 and the later episodes renumbered — not left at episode 7 with a month-3 label.
+
+**～かどうか unassigned (FIXED):** This N4 key pattern (listed in Writing Guidelines) appeared in zero episode grammar plans. Assigned to Ep 6 with natural narrative motivation: Kenji expressing uncertainty about his qualification exam (「試験に受かるかどうか分からない」). Writers should treat Ep 6 as the canonical ～かどうか introduction episode.
+
+**～ばよかった unassigned (FIXED):** This N4 key pattern (listed in Writing Guidelines) had no dedicated episode. It was buried inside a complex combined form in Ep 3's example (「説明してもらえばよかった」) but never foregrounded. Ep 3 grammar focus updated to make ～ばよかった explicit as a standalone regret pattern (「聞けばよかった」/「もっと早く帰ればよかった」), distinct from but in the same episode as ～ていただく/～てもらう, which fits naturally: an episode about overwork and regret is the right home for this pattern.
+
+### IMPORTANT issues fixed in this edit pass
+
+**Ep 3: ～かもしれない removed from grammar focus (FIXED):** ～かもしれない is N5, not N4. It is fine to use it naturally in dialogue in any episode, but it should not be listed as a focus grammar point for an N4 series episode. Removed. The episode's N4 content (～ていただく, ～てもらう, ～ばよかった) is now clearly N4-level.
+
+**Ep 3: ～てもらえばよかった complexity note added (FIXED):** The combined form 「説明してもらえばよかった」 merges ～てもらう (N4) with ～ばよかった (N4) into a structure that in practice tests closer to N3. Writers are instructed to introduce ～てもらう in a simpler construction first (e.g. 「教えてもらった」) within the same episode before using the conditional form.
+
+**Ep 6: ～たい/～たいと思っている removed from grammar focus (FIXED):** ～たい is N5. Like ～かもしれない, it may appear naturally in dialogue but should not be foregrounded as the episode's N4 teaching content. Replaced by ～かどうか (see above).
+
+### MINOR issues — not edited, flagged for writers
+
+**Ep 5: Welcome party timing — writer warning (NOT CHANGED):** The episode note already contains a clear warning. Writers must choose one of the two options given: (a) frame it explicitly as a "belated department welcome party" (遅めの歓迎会) with a line of in-story justification, e.g. a busy project delayed it; or (b) replace the social trigger entirely with a team dinner or client mixer that has the same emotional function. Do NOT write the scene as if a welcome party five months after joining is unremarkable without explanation. The emotional beat (hobby-panic → ceramics studio) is unchanged by either option.
+
+**Ep 2 ～ようになる / Ep 7 ～ようになった — INTENTIONAL spiral callback:** The reuse is deliberate. Ep 2 introduces the pattern in present/recent context (「自分で作るようになった」); Ep 7 deploys it retrospectively across the whole arc (「できるようになった」「分かるようになった」). Writers should treat this as a designed spiral review moment and may add a light narrative callback — Natsuki noticing she used to say this word about small things and now it applies to something larger. Do not "fix" the repetition.
+
+**Kaori (係長) — additional episode mention:** Kaori appears substantively only in Ep 3. One brief mention in another episode (e.g. Ep 5 or Ep 7: Kaori nodding at Natsuki in the hallway, or Natsuki noting what Kaori said in a meeting) would prevent her feeling purely functional. This is a recommendation, not a requirement.
+
+**～てもらう not listed in Writing Guidelines key patterns:** The pattern appears in Ep 3 grammar focus but is absent from the Writing Guidelines key N4 pattern list. Writers should be aware it is intentionally present in the series. Consider adding it to the list if Writing Guidelines are revised.
+
+**Kanji usage check:** Episodes should maintain ~60–70% N5/N4 kanji. Ep 3 and Ep 7 are the most vocabulary-dense; editors should check these two episodes first in copy-editing. The workplace vocabulary cluster in Ep 3 (報告書/係長/締め切り/残業代) should have furigana provided for 締め切り and 残業代 at minimum, as these are likely N3 reading-level compounds.
 
 ## Writing Guidelines
 - Target 2-3 clause compound sentences as the norm; single-clause for emotional emphasis

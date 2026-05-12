@@ -12,7 +12,7 @@
 ## Cast
 
 ### 村上 沙織（むらかみ さおり）、32歳
-**役割**: 主人公。北関東の地方紙「上毛日報」社会部記者。  
+**役割**: 主人公。北関東の地方紙「上毛新報」社会部記者。  
 **性格**: 粘り強く、正義感が強い一方で、感情を内側に押し込む癖がある。上司に逆らうのは苦手だが、事実に直面すると曲げられない芯がある。一人暮らし、コーヒー依存症。  
 **物語上の機能**: 読者の視点人物。調査の進展と個人的な代償を両方体現する。
 
@@ -100,7 +100,7 @@
 - ～さえ～ば: 「この文書さえ公開できれば、すべての疑惑が裏付けられる。」
 - ～というものだ: 「情報源を守ることは、ジャーナリズムの基本というものだ。」
 - ～にわたって: 「この不正は、数年にわたって組織的に行われていた。」
-- ～に先立って: 「記事掲載に先立って、田原議長にコメントを求める必要がある。」  
+- ～に際して: 「記事掲載に際して、田原議長にコメントを求める必要がある。」  
 **emotional beat**: 倫理の核心。「真実を伝える義務」と「人を守る責任」が真正面からぶつかる。
 
 ---
@@ -152,11 +152,11 @@
 | ～さえ～ば | 5 |
 | ～というものだ | 5, 7 |
 | ～にわたって | 5 |
-| ～に先立って | 5 |
+| ～に際して | 5 |
 | ～とはいえ | 6 |
 | ～に対して | 6 |
 
-**Coverage**: 22 of 22 target N2 patterns distributed across 7 episodes. Several high-frequency patterns (～にもかかわらず, ～によって, ～からには, ～というものだ) recur across multiple episodes for reinforcement.
+**Coverage**: 22 N2 patterns distributed across 7 episodes. Several high-frequency patterns (～にもかかわらず, ～によって, ～からには, ～というものだ) recur across multiple episodes for reinforcement. Note: ～に際して replaces the original ～に先立って (which is N1); ～に際して is confirmed N2 (appears in Shin Kanzen Master N2 Unit 4).
 
 ---
 
