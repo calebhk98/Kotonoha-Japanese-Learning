@@ -178,7 +178,7 @@ Prioritize everyday workplace vocabulary over N3 test vocabulary lists — words
 
 ---
 
-## Reviewer Notes
+## Reviewer Notes (APPROVED)
 
 ### Workplace register concerns
 - Keigo can become formulaic very quickly. Resist the temptation to fill scenes with stock phrases (お世話になっております, よろしくお願いいたします) without context — learners need to see keigo used in meaningful situations, not as decoration.

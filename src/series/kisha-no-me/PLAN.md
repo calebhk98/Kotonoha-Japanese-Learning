@@ -188,7 +188,7 @@
 
 ---
 
-## Reviewer Notes
+## Reviewer Notes (see also: Reviewer Notes — APPROVED below)
 
 ### Plot Logic Risks
 
