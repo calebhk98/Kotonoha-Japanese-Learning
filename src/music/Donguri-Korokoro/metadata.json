@@ -2,9 +2,10 @@
   "id": "Donguri-Korokoro",
   "title": "どんぐりころころ (Donguri Korokoro — The Rolling Acorn)",
   "type": "music",
-  "description": "A delightful Taisho-era children's song about a round acorn that rolls into a pond. A friendly loach fish invites it to play, and they have a wonderful time together — but then the little acorn misses its mountain and starts to cry, leaving the loach in a muddle. The story teaches children about homesickness and the kindness of friendship.",
+  "description": "A beloved Taisho-era children's song about a round acorn that rolls into a pond. A friendly loach fish invites it to play, and they enjoy a wonderful time together — but the little acorn misses its mountain and starts to cry, leaving the loach in a muddle. Published 1921; considered one of Japan's three greatest children's songs. Two charming verses with simple, vivid vocabulary ideal for N5 learners.",
   "level": "N5",
-  "tags": ["童謡", "Taisho period", "autumn", "nature", "children's song", "animals", "story song"],
-  "sourceUrl": "https://www.worldfolksong.com/songbook/japan/doyo/dongurikorokoro.htm",
-  "license": "Public Domain (Lyrics by 青木存義, music by 梁田貞; published Taisho era, early 20th century — copyright expired)"
+  "tags": ["童謡", "children's song", "Taisho era", "Taisho period", "autumn", "nature", "animals", "story song"],
+  "sourceUrl": "https://ja.wikisource.org/wiki/%E3%81%A9%E3%82%93%E3%81%90%E3%82%8A%E3%81%93%E3%82%8D%E3%81%93%E3%82%8D",
+  "license": "Public Domain (lyrics: 青木存義 d. 1935, music: 梁田貞 d. 1959 — both copyrights expired)",
+  "mediaUrl": "https://www.youtube.com/watch?v=tTQVpAGfvtw"
 }
