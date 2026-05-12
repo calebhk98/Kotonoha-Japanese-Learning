@@ -1,55 +1,212 @@
 # Series Plan: 記者の目
 
+## Series Metadata
+- **id**: `kisha-no-me`
+- **title**: 記者の目
+- **description**: 地方紙の記者・村上沙織は、地元の土地開発をめぐる汚職疑惑を追ううちに、組織の圧力と個人の良心の間で引き裂かれていく。真実を報じることの意味と代償を問う、全7話の調査報道ドラマ。
+- **level**: n2
+- **tags**: [investigative-journalism, corruption, regional-japan, workplace, ethics, drama]
+
+---
+
 ## Cast
-- **坂本涼子 (Sakamoto Ryoko)**, 34 — Staff reporter, Kita-Shinshu Shinbun. 10 years local journalism. Precise, patient, methodical. Private arrogance: convinced she can be objective about people she loves. Wrong about this. Divorced; ex-husband works in city planning. Runs every morning.
-- **宮下健一 (Miyashita Kenichi)**, 58 — Editor-in-chief. Former star reporter; now presiding over a paper losing 30 subscribers a week. Admires Ryoko's instincts and fears them. Believes a dead newspaper serves no one. The series' central moral obstacle — never a villain.
-- **福島誠 (Fukushima Makoto)**, 41 — City council member, third term. Came up through teachers' union; still talks like someone who believes things. First person to give Ryoko a usable tip. She will spend the series deciding whether it was a gift, a trap, or both. Has a daughter with expensive chronic illness.
-- **桐島万里子 (Kirishima Mariko)**, 29 — Junior reporter assigned as trainee in Ep 2. Grew up in the city. Grandfather is a local construction contractor. Talented, enthusiastic, has information she doesn't know is information. Arc: the violence of becoming a professional in a place you grew up.
-- **土屋良平 (Tsuchiya Ryohei)**, 67 — Retired civil engineer, 32 years on public infrastructure. Grows vegetables, answers his landline. Knows where the irregular designations came from. Contacts Ryoko not for justice but because he's dying of pancreatic cancer (6 months) and wants to feel less ashamed. Dry, sardonic.
-- **坂本慎二 (Sakamoto Shinji)**, 37 — Ryoko's ex-husband. City planning, road development section. Not a bad person. Signed documents he should have questioned because he dislikes friction. Still has feelings for Ryoko.
+
+### 村上 沙織（むらかみ さおり）、32歳
+**役割**: 主人公。北関東の地方紙「上毛日報」社会部記者。  
+**性格**: 粘り強く、正義感が強い一方で、感情を内側に押し込む癖がある。上司に逆らうのは苦手だが、事実に直面すると曲げられない芯がある。一人暮らし、コーヒー依存症。  
+**物語上の機能**: 読者の視点人物。調査の進展と個人的な代償を両方体現する。
+
+### 小池 英二（こいけ えいじ）、54歳
+**役割**: 社会部デスク（編集長代理）。  
+**性格**: かつては鋭い調査記者だったが、今は「現実的な判断」を優先する。沙織を守ろうとする気持ちと、組織を守ろうとする本能が常に葛藤している。  
+**物語上の機能**: 障害であり、理解者でもある。沙織が組織の論理と衝突するたびに登場する。
+
+### 須田 裕樹（すだ ゆうき）、29歳
+**役割**: 社会部の後輩記者・同僚。  
+**性格**: 明るく要領がいいが、深みに欠ける。沙織に憧れており、助けたい気持ちはあるが、リスクには及び腰。  
+**物語上の機能**: 対比役。沙織の孤立を際立たせると同時に、後半で予想外の行動をとる。
+
+### 田原 誠一（たはら せいいち）、61歳
+**役割**: 上毛市議会議長。疑惑の中心人物。  
+**性格**: 表向きは温厚な地域の名士。実際には長年の人脈と根回しで動く老練な政治家。直接手を汚さず、常に「グレー」を保つ。  
+**物語上の機能**: 対立軸。顔を見せるほど捕まえにくくなるタイプの悪。
+
+### 藤野 摂子（ふじの せつこ）、47歳
+**役割**: 市の都市整備課・課長補佐。内部告発者。  
+**性格**: 真面目で几帳面。長年の不正を目撃してきたが、家族への影響を恐れて沈黙してきた。沙織との出会いが彼女を変える。  
+**物語上の機能**: 核心情報の保有者。物語の後半で最も大きなリスクを引き受ける人物。
+
+### 黒沢 浩之（くろさわ ひろゆき）、38歳
+**役割**: 不動産会社「東和地建」の営業部長。  
+**性格**: 野心的で口が上手い。上には従順、下には圧力をかける。自分が単なる駒であることに薄々気づいている。  
+**物語上の機能**: 中間管理職の共犯者。沙織が接触する際の「入り口」であり、後半で動揺を見せる。
+
+---
 
 ## Episodes
 
-### Ep 1: 小さな違和感
-- **id**: `kisha-ep1-fuiteki`
-- Ryoko attends routine city council session on proposed Route 152 extension. Notices the eminent-domain parcel map has quietly changed since the previous draft — three plots now designated for acquisition belong to shell companies formed in the past 18 months. Says nothing in the press room. That night pulls land registry records. Episode ends: she finds a name she recognizes.
-- **Grammar focus**: Formal bureaucratic/legal register (用地取得/都市計画法/仮登記/取得手続き), ～に際して, ～を踏まえて, ～に基づき, nominalizations in narration (「気になったのは～という点だった」), formal passive in document excerpts
-- **Emotional beat**: Procedural, quiet. The journalism happens in the pauses.
+### Ep 1: 白紙の土地
+**id**: `kisha-ep1-hakushi-no-tochi`  
+**plot**: 沙織は市の広報資料を整理中に、農業振興地域の指定解除が異例の速さで承認された区画を発見する。現地を訪れると、すでに更地になっており、境界杭に「東和地建」のシールが貼られている。気になりながらも確証はなく、記事にするには証拠が足りないと判断し、ひとまず調査を続ける決意をする。  
+**grammar focus**:
+- ～に基づいて: 「農業振興地域の指定解除は、法律に基づいて審査されるはずだ。」
+- ～に関して: 「この土地の所有権移転に関して、記録が見当たらない。」
+- ～に違いない: 「これほど速く許可が下りるとは、何か裏があるに違いない。」
+- ～にすぎない: 「今のところ、これは偶然の一致にすぎないかもしれない。」  
+**emotional beat**: 静かな違和感。嵐の前の静けさ。沙織が「これは何かある」と感じる最初の瞬間。
 
-### Ep 2: 新人と地図
-- **id**: `kisha-ep2-shinjin`
-- Mariko joins, assigned human-interest angle on highway project — families whose land will be acquired. Interviews elderly farmer who mentions, without emphasis, that a man from the city came to see him 2 years before any official notification, asking if he'd consider selling. Ryoko reads Mariko's draft and realizes the visit predates the route decision itself. Miyashita tells Ryoko to be careful. She's not sure if this is advice or a warning.
-- **Grammar focus**: Contrast between Mariko's earnest direct dialogue and Ryoko's guarded internal prose; reported speech with nuance (～とおっしゃっていました vs. ～と言っていた in narration), ～にもかかわらず, ～わけにはいかない, vocabulary of verification (裏を取る/情報源/確認を取る), Miyashita's dialogue: grammatically requests, functionally orders
-- **Reviewer note**: Seed a reference to Mariko's grandfather's construction business in THIS episode — just a passing detail she mentions to Ryoko ("my grandfather's firm does subcontracting for the city...") so Ep 5's revelation doesn't feel like a coincidence.
+---
 
-### Ep 3: 土屋老人の庭
-- **id**: `kisha-ep3-tsuchiya`
-- Ryoko drives 2 hours to interview Tsuchiya in his vegetable garden. Over an afternoon he explains — circuitously, having rehearsed and then decided not to — how a standard engineering report was amended at the request of an unnamed city official to shift the route slightly south, making three private plots suddenly valuable. Gives her a photocopy. Will NOT go on record. Says: she'll find someone who will.
-- **Grammar focus**: Long, structurally complex sentences in Tsuchiya's dialogue (older formal register), subordinate clauses stacked 2-3 deep, classical conjunctions (～ものの/～とはいえ/～に至っては), infrastructure vocabulary (路線決定/軟弱地盤調査), indirect expression of guilt without using the word, Ryoko's interior shifts to shorter sentences when startled
-- **Note**: Tsuchiya's illness revealed late in episode — this changes the moral texture of what she's receiving from him.
+### Ep 2: 名簿の欠片
+**id**: `kisha-ep2-meibo-no-kakera`  
+**plot**: 沙織は情報公開請求で入手した審議会議事録に、委員名簿の一部が黒塗りされていることに気づく。市議会の公開データを調べると、田原議長が審議会の「特別顧問」に就いていた事実が浮かぶ。小池デスクに相談すると「証拠が薄い、もう少し固めろ」と返される。沙織は単独で東和地建の登記情報を掘り始める。  
+**grammar focus**:
+- ～によって: 「情報公開請求によって入手した文書に、不自然な黒塗りがあった。」
+- ～をめぐって: 「この土地の利用計画をめぐって、議会内で何らかの調整が行われた形跡がある。」
+- ～とは限らない: 「黒塗りがあるからといって、必ずしも不正があるとは限らない。」
+- ～ものの: 「公開資料は入手できたものの、肝心の部分は読み取れなかった。」  
+**emotional beat**: 手ごたえと焦り。壁に当たるたびに別の糸口が見える、調査の醍醐味と苛立ちが交錯する。
 
-### Ep 4: 名前
-- **id**: `kisha-ep4-namae`
-- The name on the amendment authorization is her ex-husband Shinji's. She sits with this 3 days without writing anything. Visits him under pretext of returning a book owed 2 years. Conversation is about the book. Then she asks about the amendment, gently, as if she knows less than she does. He tells her a partial truth. She recognizes it as partial. Episode ends without resolution — she leaves, walks to the river, keeps walking.
-- **Grammar focus**: Sustained subtext — dialogue means something different from what it says, conditionals used evasively (～とすれば/～ないとも言い切れない), ～をめぐって in narration describing unspoken conflict, vocabulary of restraint (平静を装う/内心では/気取られないよう), narration notices objects and weather rather than interiority when tension peaks
-- **Reviewer note**: Keep Ryoko's internal register explicit enough to scaffold N2 learners. The subtext should be legible through narration even when dialogue is opaque.
+---
 
-### Ep 5: 桐島の祖父
-- **id**: `kisha-ep5-mariko-sofu`
-- Mariko, deepening her human-interest reporting independently, interviews her own grandfather for a color piece about contractors facing displacement. He mentions — proudly — a subcontracting arrangement he was offered early, before the route was finalized. He doesn't understand what he just said. Mariko does. She sits in her car outside his house for 40 minutes, then calls Ryoko and tells her everything.
-- **Grammar focus**: Grandfather's dialogue in warm regional flavor (lexically distinct, not full dialect), ～かねない and ～かねる (Mariko's internal deliberation), vocabulary of family loyalty vs. professional duty (身内/恩義/職業倫理), Ryoko's phone response is 6 sentences — formally correct, none of them telling Mariko what to do
+### Ep 3: 声にならない証言
+**id**: `kisha-ep3-koe-ni-naranai`  
+**plot**: 沙織は都市整備課の前任職員に接触するが、「もう関わりたくない」と断られる。偶然の再会を装って藤野摂子と話す機会を得るが、藤野は緊張した様子で「その件は私には分かりません」と言い残して去る。しかしその夜、沙織のもとに差出人不明のメッセージが届く。添付されたファイルには、決裁書類の一部らしき画像があった。  
+**grammar focus**:
+- ～にもかかわらず: 「明らかに知っているにもかかわらず、彼女は何も言おうとしなかった。」
+- ～に反して: 「予想に反して、最初に動いたのは沙織が接触を諦めかけた人物だった。」
+- ～からすると: 「彼女の反応からすると、ただの一般職員ではないと思われる。」
+- ～としては: 「記者としては、匿名の情報源に頼ることへの葛藤は常につきまとう。」  
+**emotional beat**: 孤独な期待。誰かが助けようとしているかもしれない——その可能性が沙織を奮い立たせる。
 
-### Ep 6: 宮下の判断
-- **id**: `kisha-ep6-miyashita`
-- Ryoko brings everything to Miyashita. He reads the documents for a long time without speaking. Then asks three questions about sourcing. Fourth question: has she thought about what happens to the paper if the city pulls public notice advertising? She says yes. He asks if she's thought about the 32 people on staff. Long scene. He does NOT kill the story. He does NOT tell her to run it. He tells her to get one more source on record.
-- **Grammar focus**: Editorial deliberation vocabulary (掲載判断/名誉毀損リスク/公益性), ～に際しての判断として/～という観点から, Miyashita's sourcing challenges modeled on real editorial standards, complex conditionals (もし～であるとするならば～ということになりかねない), narration describes the photograph of Miyashita's younger self on the desk — a reporter, not an editor
+---
 
-### Ep 7: 掲載
-- **id**: `kisha-ep7-keisai`
-- Tsuchiya agrees to go on record after Ryoko tells him honestly: without him the story can't run, and without the story nothing changes. Piece runs Tuesday, above the fold. Episode covers the 48 hours after: Shinji's call (she doesn't pick up; later listens to the voicemail), Mariko's grandfather's silence, Fukushima issuing statement calling for independent investigation (which Ryoko notes is itself strategic), city pulling advertising. Final beat: a reader letter from a woman whose father tried to report the same thing 15 years ago and was told he was confused.
-- **Grammar focus**: News prose style in article excerpt (full journalistic register: ～とみられる/～の疑いがある/関係者によると), then tonal shift to Ryoko's private voice; ～にもかかわらず as structural beat (what changed and what didn't), ～をめぐって, institutional response vocabulary (調査委員会/説明責任/情報公開請求)
-- **Reviewer note**: ～にもかかわらず also in Ep 2. In Ep 7 use it in narration about the institutional response (something happened, and yet). In Ep 2 use it in Ryoko's thinking about the tip. Keep contexts distinct.
+### Ep 4: 圧力の形
+**id**: `kisha-ep4-atsuryoku-no-katachi`  
+**plot**: 沙織が特集記事の下書きを小池に見せると、翌日、社長室から「地域経済への影響を考慮してほしい」という非公式の要請が入る。同時に、沙織の取材先だった元職員から「もう話せない」と連絡が来る。須田は「大丈夫か」と声をかけてくれるが、深入りしない。沙織は記事を一時保留にせざるを得ないが、藤野との接触を密かに続ける。  
+**grammar focus**:
+- ～からには: 「記者である以上、知った事実を黙っているわけにはいかない。」
+- ～だけでなく: 「これは一企業の問題だけでなく、行政の構造的な腐敗につながっている。」
+- ～ばかりか: 「取材を止めるよう求められたばかりか、情報源への圧力まで加わった。」
+- ～次第: 「これ以上の証拠が集まり次第、すぐに記事化に動く。」  
+**emotional beat**: 怒りと孤立。初めて「これは自分一人の戦いかもしれない」と感じる回。
 
-## Reviewer Notes (APPROVED with minor notes — all addressed above)
-- Mariko's grandfather connection: seeded in Ep 2 (brief mention of family contracting business)
-- ～にもかかわらず in Ep 2 (Ryoko's thinking) and Ep 7 (institutional narration): distinct contexts
+---
+
+### Ep 5: 文書の重さ
+**id**: `kisha-ep5-bunsho-no-omosa`  
+**plot**: 藤野が沙織に直接会い、保管していた決裁書類の原本コピーを渡す。そこには田原議長の直筆サインと、東和地建への事前情報漏洩を示す日付の矛盾があった。しかし藤野は「これを使ったら、私の家族がどうなるか分からない」と打ち明ける。沙織は「必ず守る」と言いたいが、その言葉が嘘になる可能性を知っている。記事を書くべきか、藤野を守るべきか。  
+**grammar focus**:
+- ～さえ～ば: 「この文書さえ公開できれば、すべての疑惑が裏付けられる。」
+- ～というものだ: 「情報源を守ることは、ジャーナリズムの基本というものだ。」
+- ～にわたって: 「この不正は、数年にわたって組織的に行われていた。」
+- ～に先立って: 「記事掲載に先立って、田原議長にコメントを求める必要がある。」  
+**emotional beat**: 倫理の核心。「真実を伝える義務」と「人を守る責任」が真正面からぶつかる。
+
+---
+
+### Ep 6: 掲載と沈黙
+**id**: `kisha-ep6-keisai-to-chinmoku`  
+**plot**: 沙織は藤野の同意を得た上で、証拠を匿名加工して記事を掲載する。反響は大きく、全国紙が後追い取材を始める。しかし田原議長は「事実無根」と否定し、東和地建は法的手段をほのめかす。社内では小池が「よくやった」と言いながら、上層部のプレッシャーで沙織を社会部から外す人事を進める。須田は初めて上司に異議を唱える。  
+**grammar focus**:
+- ～にもかかわらず: 「証拠を突きつけられたにもかかわらず、議長は全面否定を続けた。」
+- ～とはいえ: 「記事は掲載されたとはいえ、問題の核心はまだ誰も処罰されていない。」
+- ～に対して: 「社長の決定に対して、須田が初めて声を上げた。」
+- ～によって: 「圧力によって沙織が異動させられることは、取材への報復に他ならない。」  
+**emotional beat**: 勝利と喪失。正しいことをしたのに、代償が伴う。苦くて複雑な達成感。
+
+---
+
+### Ep 7: それでも書く
+**id**: `kisha-ep7-soredemo-kaku`  
+**plot**: 異動先の文化部で沙織は雑務をこなす日々を送る。一方、検察が田原議長周辺の内偵を始めたというニュースが流れる。藤野から短いメッセージが届く——「ありがとう」の一言。須田は社会部に残り、沙織の後を継いで調査を続けている。沙織は手帳に次の取材テーマを書き込む。彼女の目はすでに次の「白紙の土地」を見ている。  
+**grammar focus**:
+- ～からには: 「記者である以上、どこに配属されても取材をやめるつもりはない。」
+- ～にもかかわらず: 「異動を命じられたにもかかわらず、沙織の中で何かが変わっていた。」
+- ～というものだ: 「権力に屈しないことが、ジャーナリズムの本質というものだ。」
+- ～としては: 「記者としては、これで終わりではなく始まりだと信じるしかない。」  
+**emotional beat**: 静かな決意。ハッピーエンドではなく、「それでも続ける」という選択の肯定。正義の完全な勝利よりも重い終わり方。
+
+---
+
+## Grammar Distribution Summary
+
+| Pattern | Episodes |
+|---|---|
+| ～に基づいて | 1 |
+| ～に関して | 1 |
+| ～に違いない | 1 |
+| ～にすぎない | 1 |
+| ～によって | 2, 6 |
+| ～をめぐって | 2 |
+| ～とは限らない | 2 |
+| ～ものの | 2 |
+| ～にもかかわらず | 3, 6, 7 |
+| ～に反して | 3 |
+| ～からすると | 3 |
+| ～としては | 3, 7 |
+| ～からには | 4, 7 |
+| ～だけでなく | 4 |
+| ～ばかりか | 4 |
+| ～次第 | 4 |
+| ～さえ～ば | 5 |
+| ～というものだ | 5, 7 |
+| ～にわたって | 5 |
+| ～に先立って | 5 |
+| ～とはいえ | 6 |
+| ～に対して | 6 |
+
+**Coverage**: 22 of 22 target N2 patterns distributed across 7 episodes. Several high-frequency patterns (～にもかかわらず, ～によって, ～からには, ～というものだ) recur across multiple episodes for reinforcement.
+
+---
+
+## Writing Guidelines
+
+### Register and Tone
+- **Register**: 普通体（だ・である調）をベースとし、地の文は新聞的な硬さを持ちつつも、主人公の内面描写では自然な口語感覚を混ぜる。会話文は各キャラクターの立場・年齢・感情状態を反映した個別のスタイルを持たせること（田原議長：丁寧で計算高い語り口、藤野：敬語多用だが声に震えがある、須田：砕けた口語）。
+- **Journalistic vocabulary to incorporate**: 情報公開請求、議事録、決裁書類、登記情報、内偵、告発、圧力、証拠固め、裏付け、取材源（情報源）、掲載、後追い取材、コメントを求める、事実無根、法的手段
+- **Sentence structure**: 単文の連打を避け、従属節と主節を組み合わせた複合文を積極的に使う。受身形・使役形・間接話法を自然に組み込む。「～という事実」「～ということ」「～かどうか」などの名詞節を多用して情報を積み重ねる文体にする。
+
+### Word Count Target
+- 各エピソード：**500〜650語の日本語テキスト**（地の文＋会話文の合計）
+- 文数の目安：35〜50文
+- 段落数：6〜9段落（各段落4〜8文程度）
+- 構成の目安：導入（100語）→展開1（150語）→展開2（150語）→山場（100語）→結び（50〜100語）
+
+### Complexity Markers for N2 Level
+- 一文の平均語数：15〜22語
+- 助詞の連続や複合助詞（～にもかかわらず、～に基づいて等）を各エピソード3〜4か所使用
+- 漢字語彙比率：50〜60%（音訓の混合、N2〜N1境界の語彙を含む）
+- 敬語・謙譲語の対比：会話シーンで意図的に使い分ける
+- 逆接・譲歩・条件などの複雑な論理関係を文中で明示する
+
+### Content Guidelines
+- 各エピソードは自己完結しつつ、前後のエピソードへの伏線・回収を1か所以上含める
+- 一般名詞の固有名詞化（「議長」「デスク」「文書」等）を通じて、読者が場面に没入できる具体性を持たせる
+- 感情描写は「感じた」「思った」の多用を避け、行動・身体反応・情景描写で内面を示す
+
+---
+
+## Reviewer Notes
+
+### Plot Logic Risks
+
+1. **内部告発者の動機のタイミング**: 藤野摂子がEp3で動き始める理由が弱いと感じられる可能性がある。執筆時に「なぜ今なのか」をさりげなく補足すること（例：異動の辞令が出た、別の同僚が処分された等）。
+
+2. **証拠の法的有効性**: 藤野が「コピー」を渡す設定では、法的証拠能力について読者が疑問を持つ可能性がある。物語上は「報道の証拠」として扱い、「法的証拠」との区別をEp5内で軽く言及するとリアリティが増す。
+
+3. **田原議長の描写バランス**: 「顔を見せるほど捕まえにくい」設定は巧みだが、Ep1〜3で登場が少なすぎると読者が実在感を持てない。Ep2かEp3で議長が別の文脈で登場するシーンを入れると効果的。
+
+4. **沙織の異動の論理**: Ep6で社内の異動が起きるが、日本の地方紙の慣行として「処罰的人事異動」の現実感を裏付けるディテールを入れること。読者によっては唐突に感じる可能性がある。
+
+5. **解決の曖昧さ**: Ep7はあえて「不完全な正義」で終わる設計だが、「結局どうなったのか」を求める読者が不満を感じるリスクがある。検察の動きをほのめかすことでEp7の「続きは現実に委ねる」感覚を担保している——この曖昧さは意図的なものと注記すべき。
+
+### Grammar Distribution Concerns
+
+1. **～にもかかわらず の反復**: Ep3・6・7に登場する。意図的な反復学習設計だが、執筆時に文のリズムが単調にならないよう、文中の位置（文頭・文中・文末近く）を変えることを推奨。
+
+2. **Ep4 の文法密度**: ～からには、～だけでなく、～ばかりか、～次第の4パターンが集中している。文法的に「盛り込みすぎ」な印象を与えないよう、会話文と地の文に分散させ、一段落に一パターン以上置かないようにすること。
+
+3. **～に対して のEp6 単独配置**: このパターンは汎用性が高いため、Ep4かEp5の草稿段階で自然に入れられる場所があれば追加しても良い。強制的に詰め込む必要はない。
+
+4. **サ変動詞・複合動詞との相性**: ～に基づいて・～に関して・～をめぐってはサ変動詞と相性が良く、ニュース文体になじみやすい。記者が内部文書を読む・分析するシーンで使うと語彙と文法が自然に噛み合う。

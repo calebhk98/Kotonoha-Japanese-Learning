@@ -1,305 +1,64 @@
 # Series Plan: 駅の北口で
 
-## Series Metadata
-- **id**: `eki-no-kitaguchi-de`
-- **title**: 駅の北口で
-- **description**: ある地方駅の北口、午後7時43分。六人の人間がそれぞれの理由で同じ場所に立つ。駅だけが変わらない。人生だけが交差する。
-- **level**: n1
-- **tags**: [literary, character-study, anthology, slice-of-life, station, urban, N1-grammar]
-
----
+## Structural Conceit
+All six episodes share an anchor: **7:43 PM, October 17th, the north exit of Nishi-Ogikubo Station**. Each episode follows one character before, during, and after their passage through that point. Episodes can be read in any order, but the recommended sequence below is designed so each episode retroactively illuminates something glimpsed in a previous one. No character understands the full picture. That is the point.
 
 ## Cast
-
-### 1. 桐島 朔（きりしま さく）、42歳
-**職業**: 高校国語教師（定時制）  
-**今の人生**: 離婚から三年。元妻が引き取った娘とは月一度しか会えない。授業に情熱を注ぐことで空洞を埋めているが、夜の帰り道はいつも長く感じる。  
-**その夜の理由**: 教え子の一人、夜間部の生徒・雨宮が数週間無断欠席している。最後に「北口で待ってる」とだけ書いたメモを机に残していった。朔は待つことしかできない。
-
-### 2. 村瀬 奈緒（むらせ なお）、29歳
-**職業**: フリーランスのウェブデザイナー  
-**今の人生**: 三年間付き合った恋人に先月別れを告げられた。仕事は順調だが、アパートに帰るのが怖い。夜になると手が止まる。  
-**その夜の理由**: 元恋人から「大事な話がある」とメッセージが届いた。北口で会おうと指定された。やり直したいのか、それとも荷物の返却なのか——彼女にはまだわからない。
-
-### 3. 堂本 義雄（どうもと よしお）、67歳
-**職業**: 定年退職した元・鉄道会社員（この駅で30年勤めた）  
-**今の人生**: 妻に先立たれて二年。子供たちは遠方にいる。毎日の散歩がルーティンになっている。時間だけが余っている。  
-**その夜の理由**: 特に用はない。ただ、この駅の北口に夕暮れ時に立つと、現役時代の自分に会えるような気がする。今夜も来てしまった。
-
-### 4. 林 美玲（はやし みれい）、23歳
-**職業**: 看護師一年目（市内の総合病院勤務）  
-**今の人生**: 夜勤明けと日勤の繰り返しで体は限界に近い。先輩からの圧力、ミスへの恐怖、患者の死——すべてが蓄積している。誰にも言えない。  
-**その夜の理由**: 夜勤明け直後、着替えもせず病院を飛び出してきた。北口のベンチに座っているとなぜか泣けないでいられる。泣いたら壊れそうだから。
-
-### 5. 秋山 渉（あきやま わたる）、35歳
-**職業**: 地方新聞記者（社会部）  
-**今の人生**: 十年追いかけた地域の産廃不法投棄問題がついに記事になる——はずだったが、上層部の圧力で掲載を止められた。怒りと無力感の中にいる。  
-**その夜の理由**: 情報源だった内部告発者の男性から「今夜北口で最後の話をしたい」と連絡が来た。男性は転勤で県外に去る。証拠は握りつぶされた。
-
-### 6. 田所 恵（たどころ めぐみ）、51歳
-**職業**: 駅近くの小さな洋食屋の女将  
-**今の人生**: 夫が遺した店を一人で切り盛りして十一年。息子は東京で就職し帰ってこない。常連客が少しずつ減っている。店を続ける理由を探している。  
-**その夜の理由**: 閉店後、売上帳を締めた後の習慣で北口のあたりを歩く。今夜は息子から「店を畳んで上京しないか」とメッセージが来ていた。返事を考えながら歩いている。
-
----
-
-## Cross-Episode Cameo Map
-
-| カメオ登場する人物 | 登場するエピソード | カメオの様子（短く・名前なし） |
-|---|---|---|
-| 村瀬 奈緒（Ep 2） | Ep 1（朔の話）で登場 | 北口の柱のそばで携帯を握りしめて立っている若い女性として一瞬映る |
-| 堂本 義雄（Ep 3） | Ep 2（奈緒の話）で登場 | ベンチに静かに座っている老人として描写される。奈緒は目に入らない |
-| 林 美玲（Ep 4） | Ep 3（義雄の話）で登場 | 白衣のまま改札を出てきた若い女性が早足でベンチへ向かうのを義雄が目にする |
-| 秋山 渉（Ep 5） | Ep 4（美玲の話）で登場 | ベンチのそばで立ったまま電話をしている男性として一瞬見える |
-| 田所 恵（Ep 6） | Ep 5（渉の話）で登場 | エプロンを外しながら北口を歩いている中年女性として渉の視野の端をよぎる |
-| 桐島 朔（Ep 1） | Ep 6（恵の話）で登場 | 改札の前でじっと誰かを待っているスーツ姿の男性として恵が通りすぎる |
-
----
+- **七瀬凪 (Nanase Nagi)**, 34 — Copy editor at a publishing house. Brilliant at other people's sentences. Is on her way to meet a man she has been seeing 4 months and has just decided to stop seeing, though she hasn't told herself why.
+- **奥村俊夫 (Okumura Toshio)**, 67 — Retired civil servant (administered city parks 35 years). Passes through the north exit every Tuesday evening after calligraphy class, taking a longer route home than necessary. Wife died 3 years ago.
+- **林蒼太 (Hayashi Sōta)**, 22 — University senior who deferred job-hunting. Waiting at the exit pillar for a friend who won't come — the friend has texted a cancellation Sōta hasn't checked yet.
+- **陳美玲 (Chin Meirin)**, 41 — Taiwanese-Japanese restaurant owner. Two streets north of the station. Returning from a supplier meeting that went badly. Thinks in two languages simultaneously.
+- **桐嶋瑠璃 (Kirishima Ruri)**, 29 — Visual artist. Returning from a gallery that rejected her proposal without reading past page one. Has architectural drawings under her arm.
+- **矢野健司 (Yano Kenji)**, 55 — Salaryman. Same company 30 years. Passed over for the final expected promotion — learned this today in a 3-minute meeting. Standing at the north exit because he cannot bring himself to go home. Holding a convenience store bag with a bottle of sake he probably won't open.
 
 ## Episodes
 
----
-
-### Ep 1: 北口で待つということ（POV: 桐島 朔）
-**Story ID**: `kitaguchi-ep1-kiri-matsu`
-
-**あらすじ**:
-定時制高校の国語教師・朔は、三週間音沙汰のなかった教え子・雨宮から「北口で待ってる」というメモを受け取り、7時43分に北口へ向かう。待ちながら、朔は雨宮との会話を反芻し、自分が教師として——あるいは父親として——何ができたか、何をしなかったかを問い続ける。柱のそばに若い女性が携帯を握って立っているのが目に入るが（奈緒）、意識は向かない。やがて雨宮が現れる。彼は何も言わずに朔の隣に立つだけだ。それで十分だった。
-
-**カメオ**: 奈緒（Ep 2）が北口の柱のそばで携帯を握りしめて立っている若い女性として一瞬描写される。朔の視点には入るが、思考は教え子に戻る。
-
-**文法フォーカス**:
-
-1. **～ずにはいられない**
-   - 例文: 「雨宮の名を呼んだ教室の静けさを、朔は何度も思い返さずにはいられなかった。」
-   - ニュアンス: 感情や衝動に抗えない状態を表す。主語の意志に反して行為が起こる感覚が強く、後悔・強迫的な繰り返しを描写するのに適する。文語的。
-
-2. **～てやまない**
-   - 例文: 「彼は生徒たちが言葉を愛してやまないようになることを願ってやまなかった。」
-   - ニュアンス: 感情の継続・止まない状態。「～てやまない」は希求・感情動詞に付き、深く持続する感情を格調高く表現する。日常会話より書き言葉・内省的文体に向く。
-
-3. **～にほかならない**
-   - 例文: 「待つことは、まだ信じているということにほかならない。」
-   - ニュアンス: 「それ以外の何物でもない」という強い断定。論理的な帰結や確信を述べる際に使う。朔が自分の行動の意味を自問自答する場面で有効。
-
-4. **～をおいて**
-   - 例文: 「この北口をおいて、雨宮と話せる場所はなかった。」
-   - ニュアンス: 「それ以外にはない」という唯一性の強調。「～をおいてほかにない」の形も頻出。場所・人・時を唯一のものとして提示する。
-
-**感情的な核**: 待つことの無力感と、それでも待つことが愛情の表れであるという静かな確信。
-
----
-
-### Ep 2: 返事の重さ（POV: 村瀬 奈緒）
-**Story ID**: `kitaguchi-ep2-nao-henji`
-
-**あらすじ**:
-元恋人に「大事な話がある」と呼び出された奈緒は、7時43分の北口に立ち、来るはずの人を待ちながら自分の三年間を振り返る。ベンチに老人が静かに座っているのが見える（義雄）。奈緒には彼が何者かはわからない。元恋人はなかなか来ない。待つうちに奈緒は気づく——もうやり直したくないのは、彼ではなく自分の方かもしれない、と。元恋人が現れた瞬間、奈緒は先に口を開く。
-
-**カメオ**: 義雄（Ep 3）が北口のベンチに黙って座っている老人として描写される。奈緒は「誰かを待っているのか、それとも何も待っていないのか、わからない」と内心で思う。
-
-**文法フォーカス**:
-
-1. **～をきっかけに**
-   - 例文: 「あの一言をきっかけに、奈緒は自分の感情の輪郭を初めて意識した。」
-   - ニュアンス: ある出来事が転換点・契機になることを示す。「～を機に」より口語的だが書き言葉でも自然。回想シーンで因果の起点として機能する。
-
-2. **～ないまでも**
-   - 例文: 「謝ってくれないまでも、一言くらい連絡をくれてもよかった。」
-   - ニュアンス: 理想には届かなくても、最低限これくらいは、という落差・妥協を表す。批判や不満を婉曲に表現するのに使われ、内省的モノローグと相性がよい。
-
-3. **～がゆえに**
-   - 例文: 「好きであったがゆえに、別れが遅くなったにすぎない。」
-   - ニュアンス: 「～だからこそ」の文語的・論理的な言い方。感情の逆説（愛しているゆえに傷つく、など）を格調高く述べる場面に適する。
-
-4. **～にもまして**
-   - 例文: 「以前にもまして、一人でいることが苦ではなくなっていた。」
-   - ニュアンス: 「それ以上に、それ以前より」という比較の強調。自己変容を描写する際に時間的な成長・変化を明示できる。
-
-**感情的な核**: 別れを恐れていたはずが、待つうちに別れを自分で選ぶ強さを発見する。
-
----
-
-### Ep 3: 職員番号0041（POV: 堂本 義雄）
-**Story ID**: `kitaguchi-ep3-yoshio-shokuin`
-
-**あらすじ**:
-元鉄道員の義雄は今夜も北口に来る。かつて自分が案内した改札、自分が磨いたベンチ、自分が数えた乗降客——今は誰も彼を知らない。白衣のまま飛び出してきた若い女性（美玲）が早足でベンチへ向かうのを義雄は目にし、声をかけようとして、やめる。彼女は泣いていないのに、泣いている顔をしていた。義雄は自分が妻を看取った夜のことを思い出す。この駅がいつも彼を待っていてくれた、と気づく。
-
-**カメオ**: 美玲（Ep 4）が白衣のまま改札から出てきて、早足でベンチへ向かう若い女性として義雄の視点で捉えられる。義雄は「病院帰りだろうか」と思うだけで、深入りしない。
-
-**文法フォーカス**:
-
-1. **～ならでは**
-   - 例文: 「夕暮れ時のホームの匂いは、この駅ならではのものだった。」
-   - ニュアンス: 「そのものにしかない、特有の」という唯一性の賞賛・感慨を表す。場所・人・時代への愛着を語るのに最適で、郷愁的なトーンと合う。
-
-2. **～に至る**
-   - 例文: 「駅員として三十年勤め、定年を迎えるに至るまで、義雄はこの改札を何万回とくぐった。」
-   - ニュアンス: ある結果・状態に達するまでの経緯を示す。長い時間軸の回想を一文で収める際に有効。「～するに至った経緯」のように原因の説明にも使える。
-
-3. **～ことなく**
-   - 例文: 「彼は一度も職場を無断で休むことなく、定年の日を迎えた。」
-   - ニュアンス: 「～しないで、最後まで」という持続的な否定。義雄の誠実な職業人生を描写するのに合う。文語的で書き言葉に映える。
-
-4. **～にたえない**
-   - 例文: 「妻のいない家に帰ることは、今も感慨にたえないものがあった。」
-   - ニュアンス: 「～に耐えられない」という感情の重さを表す。「感慨にたえない」「遺憾にたえない」のような慣用的な形で書き言葉に頻出。強い感情の抑制的な表現として機能する。
-
-**感情的な核**: 忘れられた場所に戻り、それでも自分がここに属していたと静かに確認する。孤独ではなく、充足。
-
----
-
-### Ep 4: 泣かない夜（POV: 林 美玲）
-**Story ID**: `kitaguchi-ep4-mirei-nakanai`
-
-**あらすじ**:
-夜勤明けに病院を飛び出した美玲は、白衣のまま北口のベンチに座る。患者の死、先輩の叱責、自分のミス——全部を抱えたまま座っている。そばで男性が電話をしている（渉）。声は聞こえない。美玲は看護師になった理由を思い出そうとして、うまく思い出せない。そのとき、ある患者が最期に言った言葉が不意によみがえる。「よく来てくれたね」——彼女はその人のために来ていたのだ、とわかる。
-
-**カメオ**: 渉（Ep 5）がベンチのそばで立ったまま電話をしている男性として一瞬現れる。美玲は「仕事の電話だろうか」と思うだけで、関心を向けない。
-
-**文法フォーカス**:
-
-1. **～を余儀なくされる**
-   - 例文: 「突然の人員不足により、美玲は三連続の夜勤を余儀なくされた。」
-   - ニュアンス: 外部の力によって望まない選択を強いられること。主体の意志が否定されている状況を述べるのに使う。受け身的な文体で組織・状況への批判的ニュアンスを含む。
-
-2. **～ないではいられない**
-   - 例文: 「あの患者の顔が浮かぶたびに、自分を責めないではいられなかった。」
-   - ニュアンス: 「～ずにはいられない」と同義だが、やや口語的・感情的なトーンが強い。内省・後悔の繰り返しを自然に表現できる。
-
-3. **～をもって**
-   - 例文: 「誠意をもって向き合うことが、看護師としての最低限の姿勢だと思っていた。」
-   - ニュアンス: 「～を手段・方法・態度として」の意。手段・資格・時点（「本日をもって」）と複数の用法があるが、ここでは態度・姿勢を表す用法。格式があり内省に向く。
-
-4. **～かたわら**
-   - 例文: 「患者の記録を書くかたわら、美玲は廊下の音に耳を澄ませていた。」
-   - ニュアンス: 「～しながら、並行して」の意。主な行為の傍らで別のことをしている状態を示す。仕事の描写に組み込むと自然に職業的な密度が出る。
-
-**感情的な核**: 泣けないことへの恐れが、泣かなくても続けられるという発見に変わる夜。
-
----
-
-### Ep 5: 証言は消えない（POV: 秋山 渉）
-**Story ID**: `kitaguchi-ep5-wataru-shogen`
-
-**あらすじ**:
-記事を握りつぶされた記者・渉は、内部告発者の男性と北口で最後の対話をする。告発者は「もう無理だ」と言い、去っていく。渉は一人残り、十年分の記録が無駄になる現実と向き合う。エプロンを外しながら歩く中年女性（恵）が視野の端をよぎる。渉は、記事にならなくても「聞いた」という事実は消えない、と思う。書かれなかった言葉も、記者の中に残る。
-
-**カメオ**: 恵（Ep 6）がエプロンを外しながら北口を歩いている中年女性として渉の視野をよぎる。「夜でも働いている人がいる」と渉は思うだけ。
-
-**文法フォーカス**:
-
-1. **～をよそに**
-   - 例文: 「市の沈黙をよそに、汚染は静かに広がり続けていた。」
-   - ニュアンス: 「～を無視して、～に構わず」。他者の感情・状況を顧みないで何かが進行することを批判的に描写する際に使う。不正や無関心を告発する文章に効果的。
-
-2. **～いかんによって**
-   - 例文: 「上層部の判断いかんによって、十年分の証言が葬り去られる。」
-   - ニュアンス: 「～の内容・結果次第で」。条件の帰趨が一点に委ねられているという緊張感を出す。組織・権力の決定に依存している状況を描くのに向く。
-
-3. **～ならいざしらず**
-   - 例文: 「小さなミスならいざしらず、これは組織的な隠蔽だ。」
-   - ニュアンス: 「それならともかく、それならまだしも」の意。許容できるラインを示しつつ、現実はそれを超えていると強調する。告発的・批判的な文章に合う。
-
-4. **～を踏まえて**
-   - 例文: 「これまでの取材を踏まえて、渉は一枚の覚書に事実だけを書き留めた。」
-   - ニュアンス: 「～を基礎・根拠として踏まえた上で」。前提となる情報や経験を土台に行動・判断する際に使う。論理的で落ち着いた語調を出す。
-
-**感情的な核**: 怒りと無力感の先に、記憶することそのものが抵抗であるという静かな決意。
-
----
-
-### Ep 6: 閉店の前に（POV: 田所 恵）
-**Story ID**: `kitaguchi-ep6-megumi-heiten`
-
-**あらすじ**:
-閉店後の北口を歩く恵は、息子からの「店を畳め」というメッセージを頭の中で反芻している。夫が遺した店、常連の減った座席、それでも毎朝仕込みをする自分——何のために続けているのか。改札前でじっと誰かを待っているスーツ姿の男性（朔）をちらりと見る。恵は十一年前、店を売ろうとした夜のことを思い出す。あの夜も北口を歩いていた。戻る気になったのは、明かりの点いた店を見たからだった。今夜もまだ戻れる。
-
-**カメオ**: 朔（Ep 1）が改札の前でじっと誰かを待っているスーツ姿の男性として恵の視点でちらりと捉えられる。「待ち合わせだろうか」と思うだけで恵は通り過ぎる。
-
-**文法フォーカス**:
-
-1. **～とあれば**
-   - 例文: 「常連のお客さんのためとあれば、閉店後でも席を作る気になれた。」
-   - ニュアンス: 「～という状況・理由があれば」。特定の条件のもとで例外的な行動をいとわないという姿勢を示す。人情・義理を語る場面で自然に機能する。
-
-2. **～にほかならない**（シリーズ内二度目だが別エピソード・別文脈で使用）
-   - 例文: 「店を続けることは、夫への返事にほかならなかった。」
-   - ニュアンス: Ep 1と同語だが、ここでは恵の夫への想いという異なる文脈で使う。シリーズ全体の統一感を出す意図的な再使用。
-
-3. **～ことにかけては**
-   - 例文: 「ハンバーグのソースを作ることにかけては、この町で誰にも負けない自信があった。」
-   - ニュアンス: 「その分野・点においては」という得意・特化を示す表現。自負心や職人気質の描写に合う。誇りと愛着を軽やかに表現できる。
-
-4. **～てやまない**（シリーズ内二度目だが別文脈）
-   - 例文: 「恵は夫が愛してやまなかったこの駅前の景色を、今も同じ目で見ていた。」
-   - ニュアンス: ここでは故人の感情を「愛してやまなかった」と回顧する形で使い、継承・連続のテーマを出す。
-
-**感情的な核**: 続ける理由は最初から自分の中にあった——北口の灯りの前で、恵はそれを取り戻す。
-
----
-
-## Reviewer Notes
-
-### カメオ登場の扱いについて（執筆者への警告）
-
-**最重要**: カメオはナレーション上で「別エピソードの登場人物」として説明してはならない。読者が連作を読み進める中で「あ、あの人だ」と気づく体験が核心。
-
-- カメオの人物は**名前を出さない**。
-- POV人物の思考に**1〜2文以上割かない**。一瞬の知覚として処理し、すぐに主人公の内面に戻る。
-- カメオの人物は**POV人物と会話・目線を交わさない**。すれ違うか、視野の隅にいるか、背中を向けているかにとどめる。
-- 各エピソードで「7時43分」は**必ず登場**させること。時刻の一致がシリーズの骨格である。時刻を前後させない。
-- カメオ人物の服装・持ち物は各エピソードの本篇と矛盾しないこと（例: 美玲は白衣のまま、恵はエプロンを外している）。
-
-### クロスエピソードの整合チェックリスト
-
-| チェック項目 | 確認 |
-|---|---|
-| 全エピソードで時刻は「7時43分」か | 要確認 |
-| カメオ人物は名前なし・1〜2文以内か | 要確認 |
-| カメオ時の服装・状態が他Epと矛盾しないか | 要確認 |
-| カメオ人物とPOV人物が会話していないか | 要確認 |
-| 各エピソードが独立して完結しているか | 要確認 |
-
----
+### Ep 1: 終止符の打ち方
+- **id**: `kitaguchi-ep1-nagi`
+- Nagi walks from office to station, revising a breakup she hasn't delivered — turning words over in her professional mind, editing her own feelings for clarity the way she edits manuscripts. At 7:43 she passes through and sees briefly a man standing at the pillar (Sōta — no name given). The episode ends at the izakaya where she meets her boyfriend and delivers the ending she has prepared. It doesn't feel like she imagined. The correct sentence rarely does.
+- **Literary technique**: The professional register (copy-editing) as sustained metaphor. Nagi's interior monologue structured like her editorial process — strikethroughs, reconsiderations, margin notes. Formal conjunction-heavy prose that enacts her over-articulation.
+- **Grammar focus**: 〜に即して, 〜とでも言うべき, 〜ずにはおかない, dense literary apposition, embedded rhetorical questions inside relative clauses
+
+### Ep 2: 公園の設計図
+- **id**: `kitaguchi-ep2-toshio`
+- Okumura makes his weekly detour, calligraphy bag in hand. The episode: a gentle archaeological survey of his memory — benches he approved, a fountain proposal he rejected, a cherry tree planted because he happened to be in a good mood. At 7:43 he exits the north gate, pauses, sees a young woman with architectural drawings under her arm (Ruri — no name given). He almost says something. Does not. Goes home and makes dinner for one and eats at the table where two people used to sit.
+- **Literary technique**: Spatial memory — the walk as a map of a life. Each object triggers a memory rendered in the same calm administrative prose as his working self. Classical 〜たものだ for memory's grammar. Narration never sentimentalizes; the accumulation of plain facts is where emotion lives.
+- **Grammar focus**: 〜にわたって, 〜ことなく, 〜ようものなら, 〜てやまない, extended 〜たり〜たり for rhythm of routine
+
+### Ep 3: 既読のつかない夜
+- **id**: `kitaguchi-ep3-sota`
+- Sōta stands at the pillar reading Dazai on his phone — or pretending to read. Actually watching his battery percentage and thinking about his future. His friend's cancellation sits unread. The episode: counterpoint between the Dazai passage he's ostensibly reading (fictional pastiche in the style — NOT actual quotation) and Sōta's own interior. At 7:43 a woman hurries past (Nagi), then an older man nods in his direction (Okumura) — he nods back automatically and then thinks: what was that. Episode ends with him finally reading the cancellation and not minding, and not understanding why he doesn't mind.
+- **Literary technique**: Embedded literary quotation (pastiche) as interior counterpoint. The fictional Dazai text gradually blurs with Sōta's own interior until the boundaries are uncertain. Youth interiority without condescension.
+- **Grammar focus**: 〜をよそに (cancellation sitting unread while he thinks of other things), 〜にすぎないとわかっていながら, 〜がてら, conditional 〜としたら in extended hypothetical chains
+- **Note**: The "Dazai" text is a fictional pastiche — do NOT quote actual Dazai. Write 2-3 sentences in Dazai's literary style.
+
+### Ep 4: 二つの言語で泳ぐこと
+- **id**: `kitaguchi-ep4-meirin`
+- Meirin makes her way back from the supplier meeting, carrying a heavier tote than expected, thinking in code-switching Japanese — a sentence beginning in Japanese, turning in Mandarin, resolving in a third thing that is neither. The episode: formally adventurous — the narration itself shifts between Japanese prose registers (keigo, casual, slightly rougher spoken style) to render her interior code-switching. The supplier questioned whether her fusion menu was "authentic." At 7:43 she passes through and notices a man in a suit standing very still holding a convenience store bag (Kenji). She thinks: he looks like someone who forgot where he was going. She does not stop. Her kitchen is waiting.
+- **Literary technique**: Code-switching rendered typographically and syntactically. Japanese prose incorporates loan-word rhythms, slightly off-register constructions, moments of lexical searching (なんというか/つまり/あの——). No actual non-Japanese text.
+- **Grammar focus**: 〜もさることながら, 〜はおろか/〜に至っては (supplier's bad faith), 〜とはいえ, 〜だからこそ
+
+### Ep 5: 余白の使い方
+- **id**: `kitaguchi-ep5-ruri`
+- Ruri arrives at the north exit from the gallery, sits on the low wall because she's not ready to walk anywhere yet. The episode: an artist's interior — she processes rejection not with narrative but with observation. Cataloguing the visual texture of the exit, the October light, the way an old man almost said something to her before deciding not to (Okumura — now retroactively illuminated). She spreads one rejected drawing across her knees and looks at it for the first time in weeks as if it belongs to someone else. Then she rolls it up and starts walking north.
+- **Literary technique**: Painter's eye translated into prose. Sentences structured around visual composition (foreground/background, light/shadow, negative space). 余白 as both literal artistic term and structuring principle.
+- **Grammar focus**: 〜ながら (sustained simultaneous action and observation), 〜につれて (quality of attention changing), 〜てはじめて (delayed recognition), 〜得る (literary sense of possibility)
+- **Reviewer note (resolution)**: The drawing should NOT be described as "better than she thought" in a positive realization. It should simply be looked at — neutrally, as something belonging to someone else. The reader may read hope into it; Ruri herself does not conclude anything. The episode ends with her walking north, drawing rolled up, no verdict delivered.
+
+### Ep 6: 北口の灯り
+- **id**: `kitaguchi-ep6-kenji`
+- Kenji stands at the north exit, convenience store bag, unable to make himself go home. Episode: thirty years of work rendered in six pages of still prose — not with bitterness but with confused exhaustion. He watches people exit: a young woman with drawings (Ruri), a woman who walks very fast thinking hard (Nagi), a young man at the pillar reading his phone (Sōta), a woman with a heavy bag who glances at him (Meirin), an old man who nods (Okumura). He does not know any of them. He takes the sake out of the bag, looks at it, puts it back. Calls his wife: almost home. Episode ends with the north exit light on the pavement, the October warmth, the ordinary miracle of people going home.
+- **Literary technique**: Accumulative narration — the other five characters listed without identification, their appearances constituting accidental community. Prose achieves simplicity through subtraction: shortest episode, most paratactic, least ornamented. Every image earned by the preceding five episodes. Reader sees what Kenji cannot: he is not alone.
+- **Grammar focus**: 〜というものだ (resigned philosophical generalization), 〜ほかない/〜しかない (grammar of no choice, not desolately), 〜にほかならない (gentle revelation), final 体言止め — nouns, light, warmth, the north exit
+- **Reviewer note (convergence)**: Add ONE brief situational anchor for why all six characters are at the north exit at 7:43 — e.g., the platform gate was briefly closed due to a slow train, creating a brief bottleneck that delayed everyone by 2-3 minutes. One sentence in Kenji's narration is enough. This prevents the convergence from feeling contrived.
+
+## Reviewer Notes (NEEDS REVISION — both fixes addressed above)
+1. ✅ Ruri (Ep 5): resolution SOFTENED — drawings simply looked at, no positive verdict
+2. ✅ Convergence anchor (Ep 6): one-sentence situational delay added to Kenji's episode
 
 ## Writing Guidelines
-
-### 文体・レベルについて
-
-- **目標文字数**: 日本語本文 650〜800字/エピソード（プラン上は要約のみ。実際の本文執筆時に達成する）
-- **文体**: 一人称または三人称限定視点の文学的内省体。主人公の内面描写が中心。
-- **漢字**: N1レベルの語彙・漢字を積極的に使用する（例: 逡巡、悄然、嗚咽、諦観、漸く）。
-- **文の複雑さ**: 単文の羅列は避け、接続助詞・連体修飾節・倒置を組み合わせた複合文を基本とする。
-- **感情の扱い**: 直接的な感情語（「悲しかった」）より、行動・感覚・記憶の描写で感情を示す。
-
-### 7時43分の使い方
-
-時刻はエピソードの核である。「7時43分に駅の北口に立つ」という状況は全員共通だが、その時刻への言及の仕方はキャラクターごとに変える（例: 義雄は時刻を確認しない・体感で知っている / 美玲は時計を見ていない / 渉はスマホの時刻を確認する）。
-
-### カメオの執筆技法
-
-カメオは読者への「ご褒美」として機能させる。書き方の原則:
-
-1. POV人物の感覚器官（目・耳）が捉えたものとして記述する
-2. 解釈・説明を加えない（「看護師だろう」程度の推測はOK）
-3. カメオの後は必ずPOV人物の内面に即座に戻る
-4. カメオを「意味ある偶然」として強調しない。むしろ「ただそこにいた」という偶然性を大切にする
-
-### 文法パターンの配置
-
-各エピソードに4つのN1文法パターンを割り当てているが、強調表示や注釈は**本文中に入れない**。物語の流れの中で自然に使用し、学習者は文脈から意味を推測できるようにする。文法注釈は教材用の付録として別立てにすること。
-
-### シリーズ全体の22個のN1文法パターン分配
-
-| エピソード | 文法パターン |
-|---|---|
-| Ep 1（朔） | ～ずにはいられない、～てやまない、～にほかならない、～をおいて |
-| Ep 2（奈緒） | ～をきっかけに、～ないまでも、～がゆえに、～にもまして |
-| Ep 3（義雄） | ～ならでは、～に至る、～ことなく、～にたえない |
-| Ep 4（美玲） | ～を余儀なくされる、～ないではいられない、～をもって、～かたわら |
-| Ep 5（渉） | ～をよそに、～いかんによって、～ならいざしらず、～を踏まえて |
-| Ep 6（恵） | ～とあれば、～にほかならない（再）、～ことにかけては、～てやまない（再） |
-
-※Ep 6での再使用は意図的（シリーズ統一感・テーマの反響）。執筆者は別文脈での使用であることを意識すること。
+- N1 literary prose: complex where complexity earns its keep; shorter, harder when the moment is clear
+- Practice 間 — the meaningful pause, the unsaid thing, the sentence ending on an image
+- The Dazai text in Ep 3 is FICTIONAL PASTICHE, not an actual quotation
+- Each episode should have at least one sentence a native reader might pause over for pleasure
+- Target ~6 pages of Japanese literary prose per episode

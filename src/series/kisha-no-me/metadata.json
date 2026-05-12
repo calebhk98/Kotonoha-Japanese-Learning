@@ -1,1 +1,9 @@
-{"id":"kisha-no-me","title":"記者の目","description":"A regional newspaper journalist begins pulling on a thread about irregular land transactions near a proposed highway extension — and discovers the corruption implicates people she respects. A slow-burn investigative arc about what it costs to tell the truth in a community where everyone knows everyone.","level":"n2","tags":["mystery","journalism","social-issues","morality","regional-japan","workplace","investigative","n2","series"]}
+{
+  "id": "kisha-no-me",
+  "title": "記者の目",
+  "type": "series",
+  "description": "地方紙の記者・村上沙織は、地元の土地開発をめぐる汚職疑惑を追ううちに、組織の圧力と個人の良心の間で引き裂かれていく。真実を報じることの意味と代償を問う、全7話の調査報道ドラマ。",
+  "level": "n2",
+  "tags": ["investigative-journalism", "corruption", "regional-japan", "workplace", "ethics", "drama"],
+  "dateAdded": "2026-05-12"
+}

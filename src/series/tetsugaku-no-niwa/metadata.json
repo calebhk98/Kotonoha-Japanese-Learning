@@ -1,1 +1,20 @@
-{"id":"tetsugaku-no-niwa","title":"哲学の庭","description":"Five people with no prior connection attend a monthly philosophy discussion circle in a Kyoto second-hand bookshop. Each carries a private question they have not asked aloud before. Over seven sessions, conversations force each to reckon with whether they actually believe what they think they believe.","level":"n2","tags":["philosophical","dialogue","kyoto","community","ethics","intellectual","character-study","n2","series"]}
+{
+  "id": "tetsugaku-no-niwa",
+  "title": "哲学の庭",
+  "type": "series",
+  "description": "京都の古書店の奥座敷に毎月集まる六人の素人哲学者たち。死・自由・記憶・義務・美・言語・幸福をめぐる議論が、それぞれの日常に静かな波紋を広げていく全七話の連作。",
+  "level": "n2",
+  "tags": [
+    "philosophy",
+    "kyoto",
+    "slice-of-life",
+    "discussion",
+    "intellectual",
+    "character-driven",
+    "ethics",
+    "community",
+    "n2",
+    "series"
+  ],
+  "dateAdded": "2026-05-12"
+}

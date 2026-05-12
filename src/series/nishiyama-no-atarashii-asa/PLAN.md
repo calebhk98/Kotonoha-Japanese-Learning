@@ -31,14 +31,16 @@
 ### Ep 3: はじめての りょうり
 - **id**: `nishiyama-ep3-cooking`
 - Haruko has painting class Thursday evenings — Hiroshi makes dinner alone for the first time in his adult life. Asks Kobayashi-san for advice. Kobayashi teaches him to make miso soup step by step in the kitchen. Burns the tofu once, doesn't burn it a second time. Haruko comes home, says it's good. He writes the recipe in a small notebook.
-- **Grammar focus**: Kitchen/cooking vocabulary (なべ/みそしる/とうふ/ねぎ/だし), sequential instructions with て-form (きって/いれて/わかして/まぜて), quantity (すこし/たくさん/ちょっと), ～てください/～てみます, ～になりました (it became), taste adjectives (からい/あまい/しおからい/うまい)
+- **Grammar focus**: Kitchen/cooking vocabulary (なべ/みそしる/とうふ/ねぎ/だし), sequential instructions with て-form (きって/いれて/わかして/まぜて), quantity (すこし/たくさん/ちょっと), ～てください/～てみます, よくなりました / できました (use completed-action forms instead of change-of-state ～になりました, which is N4), taste adjectives (からい/あまい/しおからい/おいしい)
+- **N4 REMOVED**: ～になりました replaced with よくなりました / できました; うまい (casual/masculine register) replaced with おいしい (polite, gender-neutral)
 - **Note**: て-form sequences should stay SHORT (max 2-3 steps at once) to stay genuinely N5.
 - **Emotional beat**: He built bridges but nearly cries over miso soup. The question of why he never cooked before sits in the room with him.
 
 ### Ep 4: さきさんの かふぇ
 - **id**: `nishiyama-ep4-cafe`
 - Hiroshi has walked past the café 3 weeks. Goes in on a rainy afternoon. Saki makes coffee without asking — she's watched him walk past. They talk about the town, the rain, why people leave cities late in life. Hiroshi is more honest than intended: 「しごとがおわって、わたしはだれですか。よくわかりません。」
-- **Grammar focus**: Café/drink vocabulary (コーヒー/おちゃ/ケーキ/あたたかい/つめたい), weather (あめ/くもり/はれ/かぜ/さむい/あたたかい), expressing reason (～から — しずかだからすきです), ～たいです, ～とおもいます/よくわかりません, conversational connectors (そうですね/そうですか/なるほど)
+- **Grammar focus**: Café/drink vocabulary (コーヒー/おちゃ/ケーキ/あたたかい/つめたい), weather (あめ/くもり/はれ/かぜ/さむい/あたたかい), expressing reason (～から — しずかだからすきです), ～たいです, よくわかりません / わかりません, conversational connectors (そうですね/そうですか)
+- **N4 REMOVED**: ～とおもいます is N4; replace with simpler forms — e.g. 「わかりません。」「よくわかりません。」「そうですね。」to express Hiroshi's uncertainty. なるほど removed (conversational but can read as condescending; そうですか is safer at N5).
 - **Note**: Weather language here is conversational context, not a teaching point repeat of Ep 2's seasons. Keep distinct.
 - **Emotional beat**: The real answer about why he moved slips out. Saki refills his coffee without comment.
 
@@ -52,13 +54,46 @@
 ### Ep 6: こばやしさんの え
 - **id**: `nishiyama-ep6-painting`
 - Kobayashi invites Hiroshi to see his watercolors — small paintings of the town, done over 8 years of retirement. Hiroshi has no vocabulary for art. Stands in front of a painting of the hill behind the community garden and says only: 「きれいですね。」 Kobayashi says when he first retired he didn't know how to do anything slowly either. Asks if Hiroshi wants to try. Episode ends: Hiroshi holds a brush, makes something not good, Kobayashi says 「もういちど」and Hiroshi asks quietly if he can come back next week.
-- **Grammar focus**: Art/color vocabulary (え/いろ/あか/あお/みどり/そら/やま/かわ), expressing admiration (きれいですね/すごいですね/いいですね), time past (～まえ/むかし/はちねんまえ), trying new things (～てみます/～てみませんか), ～になりました/すこしわかりました, simple comparison: AはBよりすきです ONLY (do NOT introduce どちらのほうが)
+- **Grammar focus**: Art/color vocabulary (え/いろ/あか/あお/みどり/そら/やま/かわ), expressing admiration (きれいですね/すごいですね/いいですね), time past (～まえ/むかし/はちねんまえ), trying new things (～てみます/～てみませんか), すこしわかりました/できました
+- **CRITICAL N4 REMOVED**: AはBよりすきです uses より (comparative), which is N4 grammar. Do NOT include any comparative forms (より/のほうが/どちら) in this series. To express preference, use ～がすきです / ～はいいですね only.
 - **Emotional beat**: The question costs him something. He asks it anyway.
 
-## Reviewer Notes (APPROVED WITH MINOR CONDITIONS)
-- Ep 3: て-form sequences max 2-3 steps; stay genuinely N5
-- Ep 5: remove any specific count for names ("knows six names" → just "knows what their names were"); include Haruko in the walk-home scene with at least one line
-- Ep 6: comparison grammar = AはBよりすきです ONLY; do NOT introduce どちらのほうが question form
+## Reviewer Notes (CURRICULUM REVIEW — 2026-05-12)
+
+### Issues Fixed Directly in This Plan
+
+**CRITICAL — fixed:**
+- Ep 6: `AはBよりすきです` removed. `より` is N4 comparative grammar, not N5. No comparative forms (より/のほうが/どちら) should appear anywhere in this series. Ep 6 grammar focus updated to preference expression via ～がすきです / ～はいいですね only.
+
+**IMPORTANT — fixed:**
+- Ep 3: `～になりました` removed. Change-of-state grammar (に+なる) is N4. Replaced with よくなりました (already grammatical for "became good/better" using standard adjective past) and できました (completed-action). Writers: do not reintroduce ～になりました to express transformation; use できました or simple past adjective forms.
+- Ep 3: `うまい` removed from taste adjectives. It is casual/masculine register and conflicts with the polite-register requirement. Replaced with おいしい throughout.
+- Ep 4: `～とおもいます` removed. This is N4 grammar. Hiroshi's uncertainty must be expressed with N5-safe forms: わかりません, よくわかりません, そうですね as a hedge. The quoted line `「しごとがおわって、わたしはだれですか。よくわかりません。」` is already correct and should be kept as-is.
+- Ep 4: `なるほど` removed from connectors. Replace with そうですか or repeat そうですね.
+
+**MINOR — noted, not changed:**
+- Ep 1: `～にすんでいました` (past progressive) is upper-N5/borderline N4. Acceptable in a self-introduction context since it is among the most commonly taught forms, but writers should not build on this pattern. Keep it contained to one natural line.
+
+### Writers Must Watch
+
+1. **No comparatives.** `より`, `のほうが`, `どちら` questions — all N4. Preference = ～がすきです only.
+2. **No ～とおもいます.** Express opinion/uncertainty as わかりません, そうですね, or silence.
+3. **No ～になりました for change of state.** Use できました, よくなりました, or restructure the sentence.
+4. **Register.** All dialogue ます/です. No うまい, ぞ, ぜ, or masculine sentence-final particles. Ishikawa-san's dialect flavor = sentence-final variation only (e.g., ～ずら, ～だに) — one or two instances per episode maximum, always comprehensible from context.
+5. **て-form sequences** (Ep 3 cooking instructions): max 2-3 steps per sentence. Never chain 4+ steps.
+6. **Kanji discipline.** Only the listed basic joyo set. Anything not on the list must be hiragana.
+7. **Haruko**: must have at least one line in Ep 5 (satisfied in current plan). Ep 6 does not require her — she is at painting class, which is consistent.
+
+### Remaining Concerns (Human Attention)
+
+- **Ep 1 past progressive**: `～にすんでいました` left in place. If the series is used in a strict N5 curriculum (no borrowing from N4), writers should rephrase to `とうきょうにいました。むかしのいえです。` or similar pure-N5 equivalent. Flagged but not mandatory to fix.
+- **Ishikawa's dialect**: the plan says "occasional Nagano dialect words" and Writing Guidelines add a brief warning. Consider adding one concrete example of acceptable vs. unacceptable dialect usage so writers have a reference point — e.g., ～ずら (acceptable) vs. full Nagano pitch-accent restructuring (not acceptable).
+- **Ep 4 café line**: `「しごとがおわって、わたしはだれですか。よくわかりません。」` — `だれ` for self-identity is literary rather than conversational. It is emotionally effective and grammatically correct at N5 (だれ = who). Keep it; just ensure writers understand this is an intentional literary moment, not a model for everyday usage.
+
+### Previously Noted Conditions (from original plan, still valid)
+- Ep 3: て-form sequences max 2-3 steps — confirmed in grammar focus note.
+- Ep 5: no specific count for names learned; Haruko included in walk-home scene — confirmed in episode note.
+- Ep 6: どちらのほうが not introduced — upgraded to full ban on all comparatives (see above).
 
 ## Writing Guidelines
 - Sentences: short and clear (AはBです。AがBをします。)

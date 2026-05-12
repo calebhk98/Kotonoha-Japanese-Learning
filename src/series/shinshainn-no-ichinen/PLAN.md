@@ -83,7 +83,7 @@ Age 23. Another new employee in a different team (sales support). Started the sa
 
 ### Ep 5: ミスの始末
 - **id**: `shinshainn-ep5-misu-no-shimatsu`
-- **plot**: Six months in. Keita sends an internal data summary to the wrong distribution list — it goes to fifteen people outside his team including two managers in another department. He notices the mistake twenty minutes after sending. He tells Sakamoto immediately, who walks him through exactly how to send a correction and apology email. Matsumoto, who made a similar mistake two months ago, sends him a short message: 「大丈夫。ちゃんと謝れば、みんな忘れるよ。」
+- **plot**: Five months in (early September). Keita sends an internal data summary to the wrong distribution list — it goes to fifteen people outside his team including two managers in another department. He notices the mistake twenty minutes after sending. He tells Sakamoto immediately, who walks him through exactly how to send a correction and apology email. Matsumoto, who made a similar mistake two months ago, sends him a short message: 「大丈夫。ちゃんと謝れば、みんな忘れるよ。」 Her own week has been rough — a report she filed had a calculation error that accounting flagged — but she doesn't mention it.
 - **grammar focus**:
   - ～てしまう (again, with different nuance) — 間違ったメールを送ってしまった。
   - ～ばよかった "should have done" — 送る前に確認すればよかった。

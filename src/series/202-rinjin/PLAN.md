@@ -1,69 +1,283 @@
 # Series Plan: 202号室の隣人たち
 
+## Series Metadata
+- **id**: `202-rinjin`
+- **title**: 202号室の隣人たち
+- **description**: 大阪のとあるアパートに暮らす住人たちの、交わりそうで交わらない日常を描く連作。毎話、別の住人の視点から建物の日々が映し出される。
+- **level**: n3
+- **tags**: [slice-of-life, osaka, apartment, multiple-pov, adult, n3, relationships, urban-life]
+
+---
+
 ## Cast
-- **坂本春子 (Sakamoto Haruko)**, 68 — Room 101, ground floor. Widowed 6 years. Manages the building's informal flower bed (nobody asked, nobody stops her). Uses keigo habitually even with neighbors — sometimes mistaken for coldness. Arc: waited so long for people to leave her alone she doesn't know what to do when someone pays attention.
-- **中田亮 (Nakata Ryō)**, 29 — Room 202. Remote worker, data analysis. Lived here 8 months, knows no one's name. Not unfriendly — very good at being invisible. Immaculate room. Same 4 meals on rotation. Quietly, specifically lonely in the way hardest to name.
-- **キム・ジウン (Kim Ji-un)**, 32 — Room 203. Korean national, 3 years in Japan. Works at Korean restaurant. Japanese is excellent, accented, occasionally more formal than native speakers in casual contexts — she's aware of this and finds it funny. Building is the most permanent place she's lived. Has complicated feelings about this.
-- **田辺浩 & 田辺美智子 (Tanabe Hiroshi & Michiko)**, 44/42 — Room 301. Married 17 years. Son moved out last year. Hiroshi: construction management. Michiko: teaches piano from home (the building's most discussed feature). Functional and fond; in a long middle passage of marriage where words don't come quickly.
-- **伊藤蓮 (Itō Ren)**, 20 — Room 102. First-year university student, first time living alone. Has never successfully done his own laundry. Loud at wrong hours, apologizes immediately. Leaves bicycle in wrong place. Effortfully trying to become a functional adult.
-- **野村リリア (Nomura Riria)**, 38 — Room 201. Single, works at city social welfare office. Knows a great deal about isolation professionally; moderately isolated herself. Has noticed the building has a posture. Finds it interesting anthropologically because it's easier than finding it sad. Has 3 unheard voicemails from her sister.
+
+### 1. 田中 誠一（たなか せいいち）— 201号室
+- **年齢**: 58歳
+- **職業**: 元工場勤務、現在は無職（早期退職）
+- **性格**: 口数が少なく頑固だが、根は真面目で義理堅い。昔気質の職人気質。
+- **現在の悩み**: 退職後に何をすべきかわからず、毎日の目的を失いつつある。妻に先立たれてから三年、孤独に慣れようとしているが、なかなかできない。
+- **建物での役割**: 他の住人との接点は少ないが、廊下で挨拶を欠かさない。ゴミ出しルールを守ることに異様に熱心。
+
+### 2. 森川 あゆみ（もりかわ あゆみ）— 202号室
+- **年齢**: 31歳
+- **職業**: フリーランスのWebデザイナー
+- **性格**: 明るくてフットワークが軽い反面、人との深い関係を避けがち。表面上は社交的。
+- **現在の悩み**: 仕事の依頼が減り、収入が不安定になってきた。同世代の友人が次々と結婚・出産する中で、自分の生き方に迷い始めている。
+- **建物での役割**: シリーズの中心的な存在（タイトルの「202号室」）。他の住人の動向に自然と気づく観察者でもある。
+
+### 3. キム・ジュノ（김준호）— 203号室
+- **年齢**: 26歳
+- **職業**: 大阪の韓国料理店でアルバイトをしながら日本語学校に通う留学生
+- **性格**: 好奇心旺盛で人懐っこい。日本語は日常会話レベルだが、表現の細かなニュアンスを掴もうと常に努力している。
+- **現在の悩み**: ビザの更新と進路（日本で就職するか帰国するか）に悩んでいる。孤独ではないが、本音を話せる人間関係がまだ少ない。
+- **建物での役割**: 住人の中で最も外向きで、あゆみや他の住人に話しかける機会が多い。
+
+### 4. 橘 律子（たちばな りつこ）— 301号室
+- **年齢**: 44歳
+- **職業**: 小学校の教師（担任）
+- **性格**: 責任感が強く、几帳面。仕事には誠実だが、自分のことを後回しにしすぎる傾向がある。
+- **現在の悩み**: 学校でのトラブル（保護者対応の難しさ）と、離婚して一人で暮らし始めたことへの戸惑い。新しい生活を作り直している最中。
+- **建物での役割**: 上の階から見えない存在感を持ち、廊下での会話や郵便受けの前でのやり取りで他の住人と接点を持つ。
+
+### 5. 松本 健太（まつもと けんた）— 102号室
+- **年齢**: 23歳
+- **職業**: 新卒で入社した中小企業の営業職（1年目）
+- **性格**: 素直で人が良いが、自己主張が苦手。誰に対しても「すみません」と言ってしまう。
+- **現在の悩み**: 職場になじめず、毎日がしんどい。上司に怒られることが多く、仕事を辞めるかどうか真剣に考えている。
+- **建物での役割**: 最も目立たない住人だが、細かな場面で他の住人の生活に触れる。
+
+### 6. 野口 幸子（のぐち さちこ）— 101号室
+- **年齢**: 72歳
+- **職業**: 退職済み（元看護師）
+- **性格**: おせっかいで賑やかだが、人の気持ちを敏感に察知する。独り言が多い。
+- **現在の悩み**: 健康への不安（足が弱くなってきた）と、子どもたちが遠くに住んでいて連絡が少ないという寂しさ。でも弱音は吐かない。
+- **建物での役割**: 建物の「記憶」のような存在。住人の変化に最もよく気づき、さりげなく気にかけている。
+
+---
 
 ## Episodes
 
-### Ep 1: 管理人からの手紙
-- **id**: `202-ep1-kanrinin-tegami`
-- Renovation letter from management company arrives: owner considering renovations requiring possible temporary relocation. Letter is vague, bureaucratic, alarming. Each resident receives it and does something different. We meet all six in short interlocking scenes orbiting the same piece of paper.
-- **Grammar focus**: Bureaucratic/formal written Japanese (～につきまして/～予定でございます/～ご確認ください), inference (～ということは/～に違いない/～かもしれない), ～場合は～ (conditional), contrast of formal letter vs. casual resident reactions
-- **Emotional beat**: How different people handle anxiety. Haruko reads it twice and makes tea. Ryō files it and goes back to his screen. Ji-un translates it and calls a friend. Ren can't find his dictionary. Riria identifies three possible readings and chooses the most generous.
+### Ep 1: 退職した男のゴミ出し
+- **POV character**: 田中 誠一（201号室）
+- **id**: `rinjin-ep1-gomi-dashi`
+- **Episode title**: 退職した男のゴミ出し
+- **Plot**: 誠一は退職して三ヶ月が経った火曜日の朝、いつも通りゴミを出しに行く。ゴミ捨て場で分別を守っていないゴミを見つけ、黙って分けなおす。その帰りに初めてキム・ジュノと廊下で顔を合わせ、ぎこちない挨拶を交わす。部屋に戻ってから、工場で働いていた頃の記憶が断片的によみがえり、今の自分が何者なのかを静かに問いかける。
+- **Grammar focus**:
+  - ～てしまう（分けてしまった / やってしまう）：意図せずしてしまった行動、止められない習慣
+  - ～ようになる（最近、眠れるようになった）：状態の変化の過程
+  - ～ながら（考えながら廊下を歩く）：二つの動作の同時進行
+  - ～はずだ（こんなに暇なはずじゃなかった）：期待と現実のズレ
+  - 例文: 「誰かが分けてくれるはずだと思っていたが、結局、自分でやってしまった。」
+- **Emotional beat**: 静かな虚無感。誰かの役に立ちたいという本能が、ゴミの分別という小さな行為に滲み出る。
 
-### Ep 2: 101号室の花壇
-- **id**: `202-ep2-haruko-kadan`
-- Haruko's episode. Ren's bicycle blocks her flower bed — again. She doesn't bang on his door. Moves the bicycle herself and goes inside with a feeling she can't name. Later, Ren leaves a note on her door with a bad drawing of a flower in the corner (he writes 日 instead of 花 by accident). She doesn't reply. She keeps the note. Ren never knows.
-- **Grammar focus**: ～のに (frustrated contrast), ～てしまう (動かしてしまった — doing something despite yourself), older-generation keigo in inner monologue (she thinks to herself in formal register as habit), letter/note-writing (Ren's: casual, imperfect, oddly formal in places), ～ながら (水をあげながら考えた)
-- **Note on Korean lines (Ep 3)**: When Ji-un "slips into Korean" in Episode 3, DO NOT write actual Korean text. Use narration to describe the slip: e.g., 「気がつくと、韓国語で話していた。」or indicate through her awareness. This keeps the text fully in Japanese for learners.
+---
 
-### Ep 3: 203号室の夜
-- **id**: `202-ep3-jiun-no-yoru`
-- Ji-un's episode. Video-calling her mother in Seoul; late and tired. Slips into Korean for a full minute mid-sentence before noticing (narrate this, don't write Korean text). Call ends; building quiet. She can hear Michiko practicing piano upstairs — something slow she doesn't know the name of. She leaves her window open.
-- **Grammar focus**: ～てしまう (slipping into something unintentionally), ～ようになった (gradual change: 日本語で夢を見るようになった), telephone register, ～とともに (時間とともに日本語が自分の言葉になっていった), homesickness/language vocabulary
-- **Reviewer note (piano seed)**: In THIS episode (Ep 3), plant the detail that Ji-un leaves her window open when she hears Michiko's piano. This seeds the moment in Ep 7 when Michiko brings her the sheet music — Michiko noticed the open window.
+### Ep 2: デザイナーの締め切り前夜
+- **POV character**: 森川 あゆみ（202号室）
+- **id**: `rinjin-ep2-shimekiri-mae`
+- **Episode title**: デザイナーの締め切り前夜
+- **Plot**: あゆみは深夜、クライアントからのフィードバックに悩みながらパソコンの前にいる。集中できず、SNSで友人の結婚報告を見てしまい気が散る。深夜二時に洗濯機を回そうとしてルールを思い出してやめる。翌朝早く洗濯室に行くと野口幸子と鉢合わせ、思いがけない会話から少し気持ちが軽くなる。
+- **Grammar focus**:
+  - ～ておく（洗濯しておくつもりだった）：事前の準備・予定していた行動
+  - ～てみる（試しにデザインを変えてみた）：試みる行動
+  - ～ことにする（今日は早く寝ることにした）：自分で下した決断
+  - ～かどうか（このまま続けるかどうか、迷っている）：二択の迷い
+  - 例文: 「明日の朝に洗濯しておくことにした。でも、それがいいかどうか、わからなかった。」
+- **Emotional beat**: 社会の「ふつう」から外れているような焦りと、それでも今日をやり過ごす静かな意志。
 
-### Ep 4: 田辺夫妻の土曜日
-- **id**: `202-ep4-tanabe-doyo`
-- Hiroshi and Michiko's episode. Saturday with no particular event — which turns out to be full of small events. Michiko has a student in the afternoon. Hiroshi fixes a cabinet drawer that's been broken for 3 months. They eat lunch separately by accident. Both feel odd about it. In the evening Hiroshi says something that is almost an apology for something unspecified; Michiko accepts it in the same register.
-- **Grammar focus**: ～一方で (his day vs. hers, structural contrast), implicit communication between longtime partners, ～てある (引き出しを直してある — state from deliberate action), ～かどうか (言うべきかどうか), long-marriage vocabulary, ～ものだ (昔はよく二人で～したものだ)
-- **Reviewer note (piano awareness seed)**: Include a brief mention that Michiko hears her upstairs window open during evening practice — or that she notices the window across the courtyard. This is the seed for her giving Ji-un the sheet music in Ep 7.
+---
 
-### Ep 5: 亮と宅配便
-- **id**: `202-ep5-ryo-takuhaibin`
-- Ryō's episode. He's not home when a package arrives. Haruko signs for it. He comes home to a note in careful formal handwriting: 「お荷物をお預かりしております。101号室 坂本」He stands at her door 2 minutes before knocking. She makes tea he didn't ask for. They sit in almost-silence for 11 minutes. He goes home with his package and a container of leftover nikujaga he also didn't ask for.
-- **Grammar focus**: Keigo in unexpected neighbor interaction, ～ていただく/～てくださる (giving/receiving), ～てしまう (Haruko making tea before he can decline) — DIFFERENT context from Eps 2 and 3; DO NOT repeat the same nuance, ～わけではない (「お礼を言いたいわけではないが、なぜか長居した」)
-- **Note**: ～てしまう appears in Eps 2, 3, and this episode. Writers for Ep 5 MUST use it in a distinct way — here it's Haruko's automatic hospitality overriding Ryō's ability to politely decline. Not frustration, not accident — compulsive generosity.
+### Ep 3: 日本語の壁
+- **POV character**: キム・ジュノ（203号室）
+- **id**: `rinjin-ep3-nihongo-no-kabe`
+- **Episode title**: 日本語の壁
+- **Plot**: ジュノは日本語学校のスピーチ発表で失敗し、落ち込んで帰ってくる。エレベーターで田中誠一と乗り合わせ、うまく話せないもどかしさを感じる。夜、アルバイト先の店長（韓国人）から「日本語は時間がかかるよ」と言われ、少し救われる。部屋で韓国語の日記に、大阪に来てよかったと思う瞬間のことを書く。
+- **Grammar focus**:
+  - ～らしい（日本人らしい自然な表現ができない）：らしさ・典型的な様子
+  - ～ていただく（先生に発音を直していただいた）：丁寧な受け身の恩恵表現
+  - ～てきた（少しずつ話せるようになってきた）：変化の継続・経緯
+  - ～さえ（意味さえわかれば使えるのに）：強調・限定の逆接
+  - 例文: 「日本語らしい表現は、先生に教えていただくだけでは身につかないらしい。」
+- **Emotional beat**: 言語の壁の向こう側に何があるのかを信じようとする、若者の粘り強さ。
 
-### Ep 6: リリアの観察
-- **id**: `202-ep6-riria-kansatsu`
-- Riria's episode. She has noticed over the past month: Haruko and Ryō now exchange nods at the mailbox. Ji-un and Ren time laundry at the same hour, apparently by accident. Tanabes' piano runs later on weekends. She knows what social isolation looks like, and what its slow ending looks like. Episode ends: she has 3 unheard voicemails from her sister. She listens to them after we leave her.
-- **Grammar focus**: Observation and inference (～らしい/～ようだ/～に見える), ～ことから (このことから何かが変わり始めていると感じた), ～ずにはいられない, ～てきた (変わってきた)
-- **Reviewer note (grammar density)**: This episode was flagged as risking N2 density. KEEP Riria's observations in plain, clear N3 Japanese. NO stacked subordinate clauses. Her professional vocabulary should be limited to a few key terms (孤立/つながり/変化). The narration style should feel observational, not academic.
+---
 
-### Ep 7: 廊下で
-- **id**: `202-ep7-roka-de`
-- Ensemble episode. Almost entirely dialogue. Second-floor hallway, Tuesday evening, 40 minutes. One by one residents pass through: Ren asks Ji-un how to say something; Ji-un asks Ryō about the wifi; Ryō mentions to Haruko that the flower bed looks better; Michiko brings down a piano piece for Ji-un saying she noticed her window open during practice. Nobody planned any of this.
-- **Grammar focus**: Casual multi-party conversation management, ～て form as connective tissue in spontaneous speech, shifting politeness levels as social negotiation, ～って (casual quotation/topic-raising), mixed registers as people calibrate to each other
+### Ep 4: 先生の秋
+- **POV character**: 橘 律子（301号室）
+- **id**: `rinjin-ep4-sensei-no-aki`
+- **Episode title**: 先生の秋
+- **Plot**: 律子は保護者から苦情の電話を受けた帰宅後、疲れ果ててソファに倒れ込む。郵便受けを取りに行くとあゆみと顔を合わせ、何気ない会話の中で「大変そうですね」と言われる。その一言が思いのほか胸に刺さる。夜、離婚前に住んでいた家のことを少しだけ考え、今の部屋に少しずつ慣れてきた自分に気づく。
+- **Grammar focus**:
+  - ～なければならない（明日も学校に行かなければならない）：義務・必要性
+  - ～ため（子どものために働いているのに、なぜこんなに苦しいのか）：目的・原因
+  - ～のに（頑張っているのに、うまくいかない）：逆接の嘆き・不満
+  - ～ばよかった（もっと早く相談すればよかった）：後悔の表現
+  - 例文: 「もっと早く誰かに話せばよかったのに、なぜか言えなかった。」
+- **Emotional beat**: 強くいなければならないというプレッシャーと、誰かに「大変だったね」と言ってもらいたいという切実さ。
 
-### Ep 8: 管理会社からの返事
-- **id**: `202-ep8-kanri-henji`
-- The management company writes again: renovation will be minor, no relocation necessary. Same day as first letter. This time: Ren shows it to Haruko. Ji-un and Ryō discuss it in the hallway. Riria texts her sister that evening. The building is the same. The people are not quite the same. Nobody announces this.
-- **Grammar focus**: ～とは限らない (assumed worry turned out wrong), ～てよかった (relief), ～ことになった (echoing Ep 1's formal language in warmer context), ～ようになった (each character's small shift)
-- **Final image**: The flower bed, which has one new plant. Nobody asks whose it is. Ryō bought it because it was near the convenience store exit. He left it there without knocking.
+---
 
-## Reviewer Notes (NEEDS REVISION — all fixed in this plan)
-1. ✅ Ep 6 grammar density REDUCED — plain observational N3, no stacked clauses
-2. ✅ Korean-line handling: narrate the slip in Japanese, no actual Korean text
-3. ✅ Piano awareness seed: planted in Ep 3 (Ji-un's window) AND Ep 4 (Michiko notices window during practice)
-4. ✅ ～てしまう in Eps 2, 3, 5: all three usages are now distinct (frustration, unintentional slip, compulsive hospitality)
+### Ep 5: 新人営業マンの月曜日
+- **POV character**: 松本 健太（102号室）
+- **id**: `rinjin-ep5-shinjin-getsuyoubi`
+- **Episode title**: 新人営業マンの月曜日
+- **Plot**: 健太は月曜の朝、出勤前に玄関先で靴を磨きながら会社に行きたくないと思っている。廊下で野口幸子に「顔色悪いね」と言われ、ドキリとする。職場では上司に叱られ、帰宅後に部屋で仕事を辞めることを真剣に考える。夜遅く、コンビニへの帰り道でジュノと会い、互いの事情をほとんど知らないまま缶コーヒーを並んで飲む。
+- **Grammar focus**:
+  - ～し（つらいし、疲れたし、もう限界だ）：複数の理由・感情の列挙
+  - ～だけ（やるだけやってみた）：範囲の限定・精一杯の努力
+  - ～そうだ（辞めそうな気がする）：様態・外見からの推量
+  - ～という（「辞表」という言葉が頭を離れない）：定義・呼称・引用
+  - 例文: 「頑張っているだけじゃ足りないし、もう限界だという気がした。」
+- **Emotional beat**: 若者の閾値のぎりぎりにいる感覚。でも人と並んでいると、何かが少し緩む。
+
+---
+
+### Ep 6: 七十二歳の朝ごはん
+- **POV character**: 野口 幸子（101号室）
+- **id**: `rinjin-ep6-shichijuni-no-asa`
+- **Episode title**: 七十二歳の朝ごはん
+- **Plot**: 幸子は毎朝、窓から通りを眺めながら一人で朝ごはんを食べる。この日、足の痛みがいつもより強く、医者に行くべきか迷う。廊下に出ると誠一が新聞を取りに来ていて、初めてゆっくり話す機会を持つ。会話の中で誠一が料理をしないことがわかり、幸子は余った味噌汁を持っていくことを「勝手に」決める。
+- **Grammar focus**:
+  - ～ようになる（最近、遠くが見えにくくなってきた）：変化の経過
+  - ～てしまう（ついお節介を焼いてしまう）：無意識・止められない行動（Ep1の用法と区別すること：ここは「自分のくせ」への苦笑交じりの自覚）
+  - ～はずだ（若い頃はもっと元気なはずだった）：期待と現実のズレ
+  - ～ながら（テレビを見ながら、昔のことを考える）：同時進行
+  - 例文: 「余った味噌汁を持っていくつもりはなかったが、気がつくとやってしまっていた。」
+- **Emotional beat**: 年を取ることへの諦めと、それでも誰かに必要とされたいという願い。小さな親切が双方向に働く。
+
+---
+
+### Ep 7: 隣の音
+- **POV character**: 森川 あゆみ（202号室）※再登場
+- **id**: `rinjin-ep7-tonari-no-oto`
+- **Episode title**: 隣の音
+- **Plot**: あゆみは壁越しにジュノの部屋から聞こえる韓国語の歌声に気づき、最初は少しうるさいと感じる。しかし数日後、その声が聞こえなくなったことが気になり始める。廊下でジュノに声をかけると、帰国するかもしれないと打ち明けられる。あゆみは何も言えなかったが、翌日、手書きのメモを郵便受けに入れる。「いたほうがいい、と思う人がいます」という一言だけ。
+- **Grammar focus**:
+  - ～てきた（ここで暮らしてきた時間 / 少しずつ気になってきた）：経験の蓄積・変化の継続
+  - ～ことにする（日本に残ることにするかもしれない）：決断の表明
+  - ～のに（もっと話せばよかったのに）：後悔・逆接（Ep4と区別：ここは自分自身への後悔であり他者への怒りではない）
+  - ～かどうか（伝えるかどうか、迷った）：迷いの表現
+  - 例文: 「伝えるかどうか迷ったが、結局、手紙を書くことにした。」
+- **Emotional beat**: 気づいたら大切になっていた存在。声に出せない気持ちを、紙に乗せる。
+
+---
+
+### Ep 8: 二月の廊下
+- **POV character**: 田中 誠一（201号室）※再登場
+- **id**: `rinjin-ep8-nigatsu-no-rouka`
+- **Episode title**: 二月の廊下
+- **Plot**: 誠一は気づけばアパートの住人たちの顔と名前を覚えていた。健太が出勤する音、あゆみが深夜に作業している明かり、幸子が毎朝窓を開ける音。この日、律子の郵便受けに不在通知が三日分溜まっているのを見つけ、ぼんやりと心配する。夕方、全員がたまたまエントランスに揃う瞬間があり、誰かが「寒いですね」と言う。誠一は小さく笑う。それだけで、十分だった。
+- **Grammar focus**:
+  - ～ていただく（皆に気にかけていただいていた、と気づいた）：恩恵の受け取り・気づきの表現
+  - ～てきた（少しずつ、ここが家になってきた）：経緯の継続（Ep3と比較：Ep3はジュノ個人の成長、ここは誠一が「場所」に根を下ろす変化）
+  - ～ため（誰かのそばにいるために、ここにいる）：目的
+  - ～し（静かだし、少し寂しいし、でもまあいい）：列挙・余情
+  - 例文: 「静かだし、少し寂しいし、それでも、ここが少しずつ家になってきた。」
+- **Emotional beat**: 孤独だと思っていた男が、知らないうちに「住人」になっていた。物語全体の収束点。
+
+---
+
+## Reviewer Notes
+
+### POV切り替えのリスク
+
+1. **声のトーンの均一化に注意**: 6人のキャラクターは年齢・職業・国籍が大きく異なる。誠一（58歳・寡黙）とジュノ（26歳・留学生）の語り口が同じになると説得力が失われる。誠一の語りは短文・体言止め多め、ジュノの語りは日本語の誤りを自覚した内省的表現を織り交ぜるのが有効。
+
+2. **Ep2とEp7どちらもあゆみPOV**: 再登場する場合、Ep2からの心理的変化が読み取れるよう、使う語彙・思考パターンに微妙な成長を入れること。Ep7のあゆみはEp2より他者に対して一歩踏み出せる人物として描く。ただし「成長した」と明言しない。行動で示す。
+
+3. **同じシーンを別POVで描く際の整合性**: Ep1（誠一とジュノの廊下での挨拶）はEp3でジュノ視点からも触れられる。両者の認識のズレ（誠一は「ぎこちない外国人」と感じ、ジュノは「怖そうなおじさん」と感じた）を意図的に管理すること。人物描写が矛盾しないよう、シリーズ担当ライターはEp1とEp3を両方確認すること。
+
+4. **幸子のおせっかいが押しつけに見えないよう**: 幸子はEp2、5、6に関与するが、描き方によっては押しつけがましくなる。本人の視点（Ep6）では彼女の不安や孤独を見せることで、行動に必然性を持たせる。他の住人のエピソードで幸子が登場する場合は「ありがたいが少し疲れる」という距離感を自然に入れること。
+
+5. **律子の孤立感の維持**: 律子はEp4のみのPOVだが、Ep7・Ep8で名前や気配が言及される。会話量が少ない分、郵便受け・靴・部屋の明かりなどの間接的描写で存在感を維持すること。Ep8で律子の郵便受けに不在通知が溜まっているという描写は、彼女が「まだ大変な時期にいる」ことを示す重要なディテールなので削除しないこと。
+
+6. **～てしまう の複数使用（Ep1・Ep2・Ep6）**: 三つのエピソードで ～てしまう が登場するが、ニュアンスを必ず変えること。
+   - Ep1: 習慣的・止められない行動（ゴミを分けてしまう）
+   - Ep2: 誘惑に負ける（SNSを見てしまう）
+   - Ep6: くせ・無意識の親切心（お節介を焼いてしまう）
+   各エピソードのライターは他のエピソードの用例を確認し、同じニュアンスにならないようにすること。
+
+7. **ジュノの日本語レベルの一貫性**: ジュノが登場する全エピソードで、彼の日本語習熟度を一定に保つこと。うまくなりすぎず（N3学習者が「なるほど、さすがですね」と流暢に返すのは不自然）、下手すぎず（すべての発話が片言になるのも過剰）。目安: 会話は問題なく成立するが、微妙なニュアンスや冗談は取りこぼすことがある。
+
+### キャラクターの出演・一貫性チェックポイント
+
+| キャラ | POV回 | 登場エピソード | 注意点 |
+|--------|-------|--------------|--------|
+| 誠一 | Ep1, Ep8 | Ep1, Ep3, Ep6, Ep8 | 「頑固だが根は優しい」が表面に出すぎないよう。無口な人間の感情は行動で示す |
+| あゆみ | Ep2, Ep7 | Ep2, Ep4, Ep7 | Ep2→Ep7で他者への関心が育っていく弧を意識する |
+| ジュノ | Ep3 | Ep1, Ep3, Ep5, Ep7 | 日本語の習熟度を一定に保つ |
+| 律子 | Ep4 | Ep4, Ep7, Ep8 | 感情を抑えたキャラ。内面の語りは豊かに、外面の言動は少なめ |
+| 健太 | Ep5 | Ep5, Ep8 | 一番「普通の若者」。特別な言語スタイルなし。読者の入り口になる |
+| 幸子 | Ep6 | Ep2, Ep5, Ep6, Ep8 | 語りは大阪弁のニュアンスを軽く入れると個性が出る（「〜やで」「〜やん」を控えめに） |
+
+---
 
 ## Writing Guidelines
-- Each episode foregrounds ONE resident; others appear only obliquely or in passing
-- N3 grammar should feel organic to the situation; keigo in Ep 5 neighbor interaction, bureaucratic Japanese framing Eps 1 and 8
-- Michiko's piano appears as ambient detail in Eps 3, 4, 6 before becoming explicit in Ep 7
+
+### 対象レベルと文体
+
+- **JLPT N3レベル**: 中級者（JLPT N4修了、N3学習中）が辞書を適度に参照しながら読める難易度。
+- 1エピソードあたりの目標文字数: **900〜1,200字**（日本語本文）
+- 文の長さ: 1文あたり20〜35字を基本とする。50字を超える文は原則として避け、必要な場合は読点で区切る。
+
+### 漢字使用方針
+
+- N3〜N4レベルの常用漢字を中心に使用する。
+- N2以上と思われる漢字（例: 憂鬱、諦念、逡巡）は使用しないか、ひらがなで書く。
+- 固有名詞（地名・人名）には初出時にふりがなを振る。
+- 動詞の活用形はひらがな多めで書く（例: 「走っていた」「考えてしまった」）。
+
+### 文体・敬体の混在
+
+- 地の文（ナレーション）は**常体（だ・である調）**で統一する。
+- 会話文は登場人物の年齢・関係性に応じて変える:
+  - 誠一・幸子: 語尾が短く、古めかしいイントネーションを意識（「そうか。」「知らんかった。」）
+  - あゆみ・健太: 普通の口語（「〜じゃないかな」「〜だよね」）
+  - ジュノ: 丁寧体多め、少し硬め（「〜ですね」「〜だと思います」）
+  - 律子: 丁寧かつ控えめ（「〜かもしれません」「〜でしょうか」）
+- 内面独白は常体。地の文と混在する場合は改行で区別する。
+
+### N3文法の使用方針
+
+- 各エピソードで3〜4つのN3文法事項を自然に埋め込む。詰め込みすぎない。
+- 同じ文法は連続した2文で繰り返さない。
+- 文法が「教材くさい」文にならないよう、文脈の必然性を先に設計してから文法を当てはめる。
+- 各エピソードの冒頭または末尾に「この話で使われる主な文法」を学習者向けの補足として入れてよい（物語本文の外に）。
+
+### N3文法の全シリーズ分布（計画）
+
+| 文法 | 割り当てエピソード |
+|------|--------------------|
+| ～ようになる | Ep1, Ep6 |
+| ～てしまう | Ep1, Ep2, Ep6（各エピソードで別ニュアンス） |
+| ～はずだ | Ep1, Ep6 |
+| ～らしい | Ep3 |
+| ～ながら | Ep1, Ep6 |
+| ～ておく | Ep2 |
+| ～てみる | Ep2 |
+| ～ことにする | Ep2, Ep7 |
+| ～ていただく | Ep3, Ep8 |
+| ～なければならない | Ep4 |
+| ～かどうか | Ep2, Ep7 |
+| ～ばよかった | Ep4 |
+| ～てきた | Ep3, Ep7, Ep8 |
+| ～そうだ（様態） | Ep5 |
+| ～という | Ep5 |
+| ～ため | Ep4, Ep8 |
+| ～のに | Ep4, Ep7 |
+| ～し | Ep5, Ep8 |
+| ～だけ | Ep5 |
+| ～さえ | Ep3 |
+
+### 場面描写のガイドライン
+
+- 各エピソードに「建物の共有スペース」が最低一度登場すること（廊下、エントランス、洗濯室、郵便受け、ゴミ捨て場など）。これがシリーズの「縫い目」になる。
+- 季節の描写を入れる（大阪の気候を意識）。Ep1〜3は秋、Ep4〜6は冬前、Ep7〜8は冬本番。
+- 食べ物・飲み物の描写は生活感を出す有効な手段として積極的に使う（誠一のお茶、幸子の味噌汁、ジュノのキムチ鍋の匂い、健太の缶コーヒーなど）。
+
+### 禁止事項
+
+- 劇的な事件（事故、犯罪、病気の発覚など）は避ける。このシリーズは「静かな日常」の積み重ねで成立する。
+- キャラクターの問題を解決しすぎない。各エピソードの終わりに「小さな変化」はあっていいが、完全な解決は最終話（Ep8）でも起きない。人生は続く。
+- 過度に説明的な地の文（「〜というのは、〜という意味で、〜だからである」）は避ける。描写で示す。
+- 各エピソードに無関係のキャラクターを詰め込まない。1話あたり最大3人が登場する程度にとどめる（POVキャラ＋1〜2人）。

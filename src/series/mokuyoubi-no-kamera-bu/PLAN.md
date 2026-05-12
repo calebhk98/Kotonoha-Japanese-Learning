@@ -1,5 +1,12 @@
 # Series Plan: 木曜日のカメラ部
 
+## Series Metadata
+- **id**: `mokuyoubi-no-kamera-bu`
+- **title**: 木曜日のカメラ部
+- **description**: Five office workers form an accidental photography club that meets every Thursday. A quiet, character-driven series about what happens when coworkers give each other an unusual kind of attention.
+- **level**: N4
+- **tags**: slice-of-life, workplace, photography, friendship, Kyoto
+
 ## Cast
 - **中村りょうた (Nakamura Ryota)**, 28 — De-facto organizer; design dept. Earnest, intense about photography, bad at reading the room. Club was his idea; proud and terrified it will fall apart.
 - **上田さくら (Ueda Sakura)**, 31 — Accounts dept; oldest in club. Dry humor, observant, initially most skeptical. Only joined because Thursdays were too empty. Her photos are unexpectedly tender.
@@ -29,7 +36,7 @@
 
 ### Ep 4: 写真展
 - **id**: `kamera-ep4-shashinten`
-- Ryota proposes entering a small local photo exhibition — three photos each, submitted as a club. Not everyone is enthusiastic. Yuki worries her people-photos need permission. Sakura worries hers are too personal. Group has its first real argument — uncomfortable and meaningful. They submit anyway.
+- Ryota proposes entering a small local photo exhibition — three photos each, submitted as a club. Not everyone is enthusiastic. Yuki worries her people-photos need permission from the subjects. Sakura worries hers are too personal to show at work. The concrete trigger for the argument: Ryota, without asking, selects the group's submission lineup himself and announces it by email. Takuya and Sakura object — not to the photos, but to being decided for. Yuki stays quiet and everyone knows she agrees. The argument is about autonomy, framed as being about photo choice. They resubmit with everyone's input. They submit anyway.
 - **Grammar focus**: ～なければならない (permissions: 許可をもらわなければならない), ～かどうか (uncertainty: 出してもいいかどうか), expressing disagreement politely (～はどうかと思いますが/でも/～じゃないでしょうか), exhibition vocabulary (応募/出展/審査/締め切り)
 - **Reviewer note**: Give the argument a SPECIFIC concrete trigger — photo selection conflict, cost of entry, who gets to pick which photos. Without a concrete trigger the conflict feels manufactured.
 
@@ -42,7 +49,8 @@
 ### Ep 6: 結果発表
 - **id**: `kamera-ep6-kekka-happyo`
 - Exhibition results: the club won nothing. Ryota more upset than he admits. Sakura's photo receives a written comment from one judge — not a prize, just one sentence. She reads it twice in the bathroom before telling anyone. Group goes out drinking, takes bad karaoke photos of each other.
-- **Grammar focus**: ～はずだった (what was expected), ～てよかった (worthwhile despite outcome), consolation language (残念だったね/でも/次は/気にしないで), casual social vocabulary (居酒屋/乾杯/お疲れ/一杯)
+- **Grammar focus**: ～と思っていた (what was expected/hoped for: 賞をもらえると思っていた — N4 replacement for ～はずだった which is N3), ～てよかった (worthwhile despite outcome), consolation language (残念だったね/でも/次は/気にしないで), casual social vocabulary (居酒屋/乾杯/お疲れ/一杯)
+- **Reviewer note (grammar)**: ～はずだった was in the original draft — it is N3 and has been replaced with ～と思っていた for N4 compliance. Writers may use ～はずだ (non-past, N4) sparingly in dialogue, but the past-failure form ～はずだった must be avoided throughout the series.
 
 ### Ep 7: 来週も木曜日
 - **id**: `kamera-ep7-raishuu-mo-mokuyoubi`
@@ -51,12 +59,22 @@
 - **Emotional beat**: The drama is in the absence of drama. Five people stand outside the kissaten from Ep 1. Nobody photographs the moment. Takuya almost does, then puts his phone away.
 
 ## Reviewer Notes (APPROVED)
-- Sakura/Takuya dynamic (Ep 3): don't deepen it further in Eps 6-7 beyond warm camaraderie — it's established but doesn't need payoff
-- Ep 4 argument: writers MUST give it a concrete trigger (photo selection, cost, permission issue)
-- Ep 5: Hiroshi's backstory at surface level only — N4 register
-- ～てしまった in Ep 3 AND Ep 5: writers must vary the usage context
+
+### Resolved in this review pass
+- **Ep 4 argument trigger** — now specified in episode body: Ryota selects submission lineup unilaterally by email; argument is about autonomy framed as photo choice. Trigger is concrete. Writer note in episode body supersedes the original vague instruction.
+- **～はずだった (Ep 6)** — identified as N3-level grammar; replaced with ～と思っていた in the grammar focus. See Ep 6 reviewer note for detail.
+
+### Standing writer warnings
+- **Sakura/Takuya dynamic (Ep 3)**: don't deepen it further in Eps 6-7 beyond warm camaraderie — it's established but doesn't need payoff.
+- **Ep 5: Hiroshi's backstory at surface level only** — N4 register. Do not have him elaborate on complex emotions about parenting vs. passion. Simple fact: he had a camera, he put it away. The reader can do the emotional math.
+- **～てしまった appears in Ep 3 AND Ep 5** — writers must vary the usage context so it functions as progression, not repetition. Ep 3 usage: plan disrupted by weather (external, low-stakes). Ep 5 usage: something that happened in life, no strong regret overtone (personal, low-key). Do not write both instances the same way.
+- **～はずだった is N3 — do not use it anywhere in this series.** Use ～と思っていた or ～つもりだった for past expectation. ～はずだ (present expectation, N4) is acceptable in dialogue only.
+- **～てみたら (Ep 2)** — keep this as simple past discovery ("I tried it and..."), not as hypothetical conditional. The hypothetical conditional reading shades toward N3. Writers should anchor it with a concrete antecedent (e.g., 撮ってみたら、思ったよりよく撮れた).
+- **Keigo depth**: workplace dialogue should use ～ていただく and ～なければならない only where natural. Don't force formal keigo patterns — this club is informal. The register tension (office-polite vs. Thursday-casual) is a feature, not a bug; let it shift naturally across episodes.
 
 ## Writing Guidelines
-- Compound sentences: 2-3 clauses as norm; single-clause for emotional emphasis
-- ~60-70% kanji from N5/N4 lists; hiragana fallback for N3+
-- Mix plain form (narrative, inner monologue) and polite form (workplace dialogue, first interactions)
+- **Sentence length**: 2-3 clauses as the norm; single-clause for emotional emphasis; 4+ clauses only in explanatory dialogue (e.g., Hiroshi explaining composition). Never more than 4 clauses in any sentence.
+- **Vocabulary density**: ~60-70% kanji from N5/N4 lists; hiragana fallback for N3+ kanji. Per-episode vocabulary list (grammar focus section) is the ceiling, not a checklist — not every focus item must appear.
+- **Register mixing**: plain form for third-person narration and inner monologue; polite form (～ます/～です) for dialogue in the first two episodes; allow plain-form dialogue to emerge naturally from Ep 3 onward as characters relax with each other.
+- **Emotional content**: show through action and concrete detail, not abstract vocabulary. Characters do not say 寂しい — they order a second coffee. N4 emotional vocabulary is fine; N3+ psychological vocabulary (孤独感, 自己嫌悪, etc.) must be avoided.
+- **Photography vocabulary** is content-specific and not constrained to JLPT frequency — use domain vocabulary freely, gloss it in the text or notes where unfamiliar.

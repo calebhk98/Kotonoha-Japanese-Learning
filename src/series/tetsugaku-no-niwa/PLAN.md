@@ -1,54 +1,199 @@
 # Series Plan: 哲学の庭
 
+## Series Metadata
+- **id**: `tetsugaku-no-niwa`
+- **title**: 哲学の庭
+- **description**: 京都の古書店の奥座敷に毎月集まる、哲学が好きな六人の素人たち。死・自由・記憶・義務・美・言語・幸福といった問いを中心に、議論の波紋が参加者それぞれの日常に静かに広がっていく。
+- **level**: n2
+- **tags**: [philosophy, Kyoto, slice-of-life, discussion, intellectual, character-driven]
+
+---
+
 ## Cast
-- **西尾文恵 (Nishio Fumie)**, 52 — Bookshop owner/host. Read everything; holds opinions loosely. Studied philosophy at Doshisha 2 years, dropped out to help family. Facilitates without appearing to steer (which means she steers precisely). Private question: does a life built around others' ideas still count as a life of the mind? Health issues (keep vague; revealed only in Ep 7 when she announces she's closing the shop — foreshadow obliquely in Eps 4-5).
-- **村田朔太郎 (Murata Sakutaro)**, 38 — High school ethics teacher, ex-corporate lawyer. Left law over a case he found indefensible — and won. Intellectually rigorous, socially awkward. Prepares for conversations like depositions. Startled when people don't follow his arguments.
-- **上田彩香 (Ueda Ayaka)**, 25 — Aesthetics grad student at Kyoto University. Dissertation: ethics of restoration art (Ship of Theseus applied to cultural heritage). Joined expecting to correct amateurs; has been consistently humbled. Can change her mind mid-sentence, which she sees as a virtue.
-- **河合哲夫 (Kawai Tetsuo)**, 64 — Retired surgeon. 30 years cardiothoracic surgery. Empiricist: truth is what holds up under pressure. Attends because wife suggested he find something to do with his mind. Is afraid of what he thinks about when not busy: he removed life support from a patient once, with family consent, and still dreams about it.
-- **陳玲玲 (Chén Línglíng)**, 43 — Taiwanese-Japanese architect, Kyoto resident. Specializes in restoring traditional machiya. Arrived in Japan at 22, never quite decided to stay. Thinks about belonging. Private question: can an outsider have cultural obligations? Her Japanese is formally precise — more so than most native speakers in the room.
-- **長谷川浩二 (Hasegawa Koji)**, 31 — Freelance translator (Japanese-English academic philosophy/literary). Processes the world through quotation; has to be pushed to say what he actually thinks. Citing sources is partly intellectual habit, partly defense. By Ep 5 someone calls him on it directly.
+
+### 1. 村瀬 誠一（むらせ せいいち）
+- **年齢**: 62歳
+- **職業**: 元高校倫理教師、現在は非常勤講師
+- **参加の動機**: 定年後も「哲学を生活の中で考えたい」という思いから、教室ではなく対等な立場で議論できる場を探していた。
+- **性格**: 物知りで語りたがり。話が長くなりがちで若い世代に遠慮なく割り込む。しかし誠実で、自分の間違いはきちんと認める。サークルの非公式な「まとめ役」。
+
+### 2. 岡崎 真帆（おかざき まほ）
+- **年齢**: 34歳
+- **職業**: フリーランスのグラフィックデザイナー
+- **参加の動機**: 仕事での創作について「美とは何か」を自分なりに考えたかった。友人から偶然この会を紹介された。
+- **性格**: 直感的で鋭い。理屈より感覚で話すが、その感覚がしばしば議論の核心を突く。感情が顔に出やすく、退屈すると露骨に他のことを考え始める。
+
+### 3. 辻 浩二（つじ こうじ）
+- **年齢**: 45歳
+- **職業**: 葬儀社の社員（現場担当）
+- **参加の動機**: 死を毎日のように扱う仕事をしているうちに、「自分は死を理解しているのか」という問いが拭えなくなった。
+- **性格**: 寡黙で観察眼が鋭い。発言は少ないが、一言ひとことに重みがある。感情を表に出さない分、稀に見せる動揺が他のメンバーに強く刺さる。
+
+### 4. 林 奈々（はやし なな）
+- **年齢**: 27歳
+- **職業**: 大学院生（社会学専攻）
+- **参加の動機**: 学術的な議論に疲れ、専門用語なしで哲学を話せる場を求めた。論文の外で思考を解放したかった。
+- **性格**: 批判的思考が染みついており、前提を問い直すのが癖。時に議論を壊しすぎるが、本人は自覚していない。裏では繊細で、自分が傷つけた相手を後から気にする。
+
+### 5. 桑原 文子（くわばら ふみこ）
+- **年齢**: 53歳
+- **職業**: 古書店「ことば堂」の店主（会の開催場所の提供者）
+- **参加の動機**: 長年の読書人として、本の外の議論に好奇心があった。自分の店が「場」になることへの静かな誇り。
+- **性格**: 温かく包容力がある。議論が険しくなったとき、茶や菓子を出しながら場を和らげる。しかし内心は誰より鋭く、発言するときは的確で短い。
+
+### 6. 中村 悠太（なかむら ゆうた）
+- **年齢**: 22歳
+- **職業**: フリーター（就職活動中）
+- **参加の動機**: 就活に行き詰まり、「なぜ働くのか」という問いから哲学に辿り着いた。インターネットで「ことば堂の哲学の会」を見つけた。
+- **性格**: 素直で好奇心旺盛。経験が少ないぶん既成概念に縛られず、無邪気な質問が議論を意外な方向に転がすことがある。年上に萎縮しやすいが、徐々に発言が増えていく。
+
+---
 
 ## Episodes
 
-### Ep 1: 最初の夜
-- **id**: `tetsugaku-ep1-hajimari`
-- First session. Handwritten notice in shop window for 3 months; six people show up, one leaves after 20 minutes and is never mentioned again. The group loosely decides to meet monthly. Someone proposes a question for next session: what is the difference between a rule you follow because you must and a rule you follow because you should? Murata immediately wants to formalize. Ayaka immediately wants to problematize the formalization.
-- **Grammar focus**: Distinct registers per character in opening dialogue (Murata's formal precision, Ayaka's academic register + enthusiasm, Kawai's terseness, Lingling's formal courtesy, Hasegawa's quotation reflex), ～をめぐって (framing discussion topics), nominalizations (強制されることと納得することの違い), Fumie's facilitation language as model of N2 hedged assertion
+### Ep 1: 死を語る夜
+- **Theme**: 死（死とは何か、なぜ恐ろしいのか）
+- **Story ID**: `tetsugaku-ep1-shi-wo-kataru`
+- **Plot**: 第一回の集まりで、辻が「私は毎日遺体に接しているのに、自分の死が怖い」と打ち明けたことから議論が始まる。村瀬はエピクロスの「死は我々に関係しない」論を持ち出し、林はその論理の穴を突く。悠太の「でも残された人が悲しむじゃないですか」という素直な一言が議論を「死者の視点」から「生者の視点」へ転換させる。会が終わった後、辻は一人でいつもより長く帰り道を歩く。
+- **Grammar Focus**:
+  - ～というものだ：「死とは、経験できないというものだ」（death is, by its very nature, something one cannot experience）
+  - ～に違いない：「彼は何かを隠しているに違いない」→ 辻が口数少ない理由を林が推測する場面で使用
+  - ～にすぎない：「それは言葉の定義にすぎない、と村瀬は言った」
+  - ～とは限らない：「死が恐ろしいとは限らない、という考え方もある」
+- **Emotional Beat**: 静かな驚き。死を「仕事」としていた辻の脆さが初めて見える。
 
-### Ep 2: 船の話
-- **id**: `tetsugaku-ep2-fune`
-- Ayaka brings the Ship of Theseus via her dissertation — framed through her work: if every wooden element of a machiya is gradually replaced with identical reproductions, when does it stop being the original? Lingling, whose firm does exactly this, becomes unexpectedly terse. By the end, the question has migrated to identity: is a person entirely changed by experience still the same person?
-- **Grammar focus**: Cultural heritage vocabulary (文化財/真正性/修復/オリジナリティ), ～に際して (marking transition point of change), philosophical conditionals (～と見なす/～として扱う), Lingling's responses grow shorter as conversation becomes personal — grammar of withdrawal (short sentences, formal hedges)
-- **Note**: Lingling doesn't explain why she's reacting. Fumie notices. Ayaka doesn't.
+---
 
-### Ep 3: 正しいことと正しいこと
-- **id**: `tetsugaku-ep3-futatsu-no-seigi`
-- Murata arrives with a "clean thought experiment": you can tell the truth or protect someone — sometimes you can't do both. He intends to work through professional ethics without admitting why. Kawai responds with a clinical case, also technically anonymized, also clearly personal. Group realizes simultaneously that everyone is working through something real in the language of hypotheticals. Fumie asks: does it count as honesty if you tell the truth but arrange it so no one asks the right questions?
-- **Grammar focus**: Language of ethical reasoning (義務論/功利主義/結果責任), hypothetical construction (～とすれば～になる/～と仮定した場合), ～かねない and ～ざるを得ない as markers of moral entrapment, reported thought (～と自分に言い聞かせる), Fumie's closing question uses ～ということになりはしないか
+### Ep 2: 自由という重さ
+- **Theme**: 自由（自由意志と責任の関係）
+- **Story ID**: `tetsugaku-ep2-jiyuu-no-omosa`
+- **Plot**: 就職活動を続ける悠太が「選べるのに選べない感じ」を話したことで、自由意志の議論に火がつく。真帆は「デザインも選択の連続なのに、なぜ自分の人生は選べないと感じるのか」と問い、村瀬はサルトルの「実存は本質に先立つ」を引用する。林は「そもそも選択の前提条件が平等ではない」と社会構造の問題を持ち出し、場が一時紛糾する。会の後、悠太は初めて自分の意志で一社の選考を辞退する。
+- **Grammar Focus**:
+  - ～からには：「選んだからには、責任を取るべきだという話になった」
+  - ～によって：「自由の意味は、人によって大きく異なる」
+  - ～に反して：「期待に反して、彼は内定を断った」
+  - ～ものの：「選ぶ自由はあるものの、何を選べばいいかは誰も教えてくれない」
+- **Emotional Beat**: 抑えた焦燥。悠太の一歩が小さくても確かに見える。
 
-### Ep 4: 外からの目
-- **id**: `tetsugaku-ep4-soto-no-me`
-- Lingling brings a question: do people who come from outside a culture have the right — or the obligation — to say when they think that culture is making a mistake? Kawai: obviously yes, expertise doesn't care about origin. Hasegawa quotes Herder on cultural relativism. Murata argues for a procedural answer. Ayaka realizes mid-conversation that her dissertation is entirely about this applied to objects rather than people. Lingling listens and says at the end she's not sure she agrees with any of them, including herself.
-- **Grammar focus**: Cultural identity vocabulary (所属感/外部者/当事者性/文化的義務), ～にもかかわらず in Lingling's formulation of the contradiction she lives, reported speech for multiple philosophical positions while keeping speaker's stance ambiguous, ～という立場から (positionality marker)
-- **Note**: Begin hinting at Fumie's health obliquely in this episode — she seems tired, or deflects a question about her plans, without explaining.
+---
 
-### Ep 5: 引用の裏側
-- **id**: `tetsugaku-ep5-inyou`
-- Hasegawa prepares an extended meditation on what Simone Weil wrote about attention as a moral act. Midway through, Kawai interrupts — politely, unmistakably — and asks Hasegawa what HE thinks, not Weil. Long pause. Hasegawa says he finds it easier to think in other people's sentences. Kawai says: I know. That was not a compliment. After a while Hasegawa says something entirely his own — halting, less elegant — about what it felt like the first time he read something that described an experience he had no words for. The room shifts.
-- **Grammar focus**: Vocabulary of attention and intellectual formation (注意力/他者への配慮/言語化), Hasegawa's citation-mode language (～によれば/～が述べているように) contrasted with his native voice (shorter, more nominal sentences), Kawai's comment: two sentences, grammatically simple, ～にほかならない used by Murata to analytically save the moment (the wrong response — everyone knows it)
-- **Reviewer note**: Philosophical vocabulary (Weil on attention) must stay within N2 range. Weil's concept should be explained through CHARACTER SPEECH, not through dense philosophical prose. Hasegawa presents it; other characters push back in accessible language.
+### Ep 3: 記憶の信頼性
+- **Theme**: 記憶（記憶は本当に「私」のものか）
+- **Story ID**: `tetsugaku-ep3-kioku-no-shinraisei`
+- **Plot**: 文子が店の改装中に見つけた昔の日記を読んで「全く別人が書いたようだった」と話したことで、記憶とアイデンティティの議論が始まる。村瀬はロックの人格同一性論を紹介し、林はその理論が記憶の改ざんを説明できないと反論する。真帆は「でも私はその改ざんされた記憶で今の作風を作っている」と言い、記憶の「真実性」より「機能」が問われる。会の帰り、文子はその日記をもう一度読み直す。
+- **Grammar Focus**:
+  - ～にわたって：「長年にわたって積み重ねた記憶が、本当に自分のものかどうか」
+  - ～をめぐって：「記憶の信頼性をめぐって、議論は深夜まで続いた」
+  - ～に基づいて：「過去の経験に基づいて、人は判断を下す」
+  - ～さえ～ば：「記録さえあれば、記憶がなくても人格は保てるのか」
+- **Emotional Beat**: 穏やかな不安。文子の落ち着きの裏にある問い直しが滲む。
 
-### Ep 6: 川合の夢
-- **id**: `tetsugaku-ep6-kawai`
-- Kawai misses a session — sends only "something came up." Fumie tells the group he was hospitalized briefly (not seriously). Without him the group finds it can't quite proceed as usual; his bluntness has been structuring conversations more than anyone realized. They spend the evening talking about him without talking about him. When he returns the following month, he brings a question: at what point does mercy become a decision that belongs to only one person?
-- **Grammar focus**: Absence as narrative event — how the group talks around a person, ～をめぐって framing implicit discussion of Kawai, indirect reference/circumlocution; then when Kawai returns: medical ethics vocabulary (延命治療/自律/意思確認/苦痛緩和), his question formulated using ～は誰に帰属するのか, group's quieter response communicated through shorter sentences in narration
-- **Note**: Fumie announces shop closure in Ep 7, not here. But she can seem slightly distracted or mention "things to sort out" obliquely.
+---
 
-### Ep 7: 庭の終わりに
-- **id**: `tetsugaku-ep7-owari`
-- A year has passed. Fumie announces she is closing the shop — health requires her to move closer to her sister in Osaka. Final session is not structured around a question. People bring things: Murata brings his old law school notes with a margin note he's no longer ashamed of. Ayaka brings a photo of a machiya Lingling's firm restored. Hasegawa brings nothing and says more than he has in any previous session. Kawai brings a question nobody can answer, and for once this doesn't frustrate him. Final image: Lingling walking back through Nishiki market carrying a book Fumie gave her, looking at building facades she has helped restore.
-- **Grammar focus**: Retrospective constructions (～てきた/～ことになった), ～に至って (how characters arrived at changed positions), vocabulary of ending and continuation (区切り/引き継ぐ/余白), Fumie's closing words use ～にほかならなかった to recontextualize Murata's earlier usage
+### Ep 4: 義務とは誰のためか
+- **Theme**: 義務・責任（道徳的義務の根拠）
+- **Story ID**: `tetsugaku-ep4-gimu-to-dare`
+- **Plot**: 辻が「家族への義務と仕事への義務が衝突したとき、どうすればいいのか」という具体的な悩みを打ち明ける。村瀬はカントの義務論を持ち出すが、真帆は「義務って結局、誰かへの負い目じゃないか」と感情ベースで返す。林は「義務の根拠が社会なら、社会が変われば義務も変わるはず」と言い、悠太は「義務がなければ何もしないのか、自分は」と静かに問う。辻は答えを出さないまま、その夜、病院にいる父親の見舞いに行く。
+- **Grammar Focus**:
+  - ～にもかかわらず：「義務だとわかっているにもかかわらず、体が動かないことがある」
+  - ～だけでなく：「義務は他者へのものだけでなく、自分自身へのものでもある」
+  - ～ばかりか：「彼は仕事の義務を果たすばかりか、家族の世話まで一人で抱えていた」
+  - ～としては：「葬儀社の社員としては、感情を持ち込まないのが当然とされている」
+- **Emotional Beat**: 重く静かな痛み。辻が初めて個人的な傷を見せる転換点。
 
-## Reviewer Notes (APPROVED with minor notes)
-- Fumie's shop closure: foreshadow obliquely in Eps 4-5 (tiredness, vague references to "things to sort out") — addressed in Ep 4 note above
-- Eps 5-6 philosophical vocabulary: keep within N2 through character speech, not dense philosophical prose
+---
+
+### Ep 5: 美は存在するか
+- **Theme**: 美（美の客観性と主観性）
+- **Story ID**: `tetsugaku-ep5-bi-wa-sonzai-suru`
+- **Plot**: 真帆がクライアントに「センスが古い」と言われた話を怒りと共に持ち込み、「美というものは本当に存在するのか」という問いになる。村瀬はカントの「普遍的な美的判断」を説明し、林は「それは西洋中心の美意識ではないか」と文化相対主義で返す。文子は一冊の古い画集を取り出し「これを美しいと感じる人がいる限り、美は消えない」と言う。真帆は帰宅後、クライアントへの返答を書き直す。
+- **Grammar Focus**:
+  - ～というより：「それは好みというより、文化の問題だと言えるかもしれない」
+  - ～からすると：「専門家の目からすると、その判断は偏っているように見える」
+  - ～に関して：「美の基準に関して、万人が合意できる答えはない」
+  - ～に対して：「主観的な感覚に対して、客観的な根拠を示すのは難しい」
+- **Emotional Beat**: 静かな再肯定。真帆が自分の感覚を信じ直す瞬間。
+
+---
+
+### Ep 6: 言葉は思考を作るか
+- **Theme**: 言語と思考（言語が世界の見え方を規定するか）
+- **Story ID**: `tetsugaku-ep6-kotoba-to-shiko`
+- **Plot**: 林が研究で使っている「ケア」という概念を日本語で説明しようとして詰まったことから、ウォーフ仮説（言語が思考を規定する）の議論が始まる。悠太は「日本語にない感情は感じられないのか」と問い、文子は「だから本を読むのだ」と静かに言う。村瀬と林が「言語は思考のツールか枠か」で激しく対立し、真帆は「私はビジュアルで考えるから言語は関係ない」と言い、場が笑いに包まれる。その夜、林は論文の書き出しを言葉ではなく図から始めてみる。
+- **Grammar Focus**:
+  - ～次第：「使う言語次第で、思考の幅が変わるという考え方がある」
+  - ～とはいえ：「言語が思考を規定するとはいえ、完全に決定するとは言えない」
+  - ～にすぎない（再登場）：「言葉は道具にすぎないという立場と、言葉が現実を作るという立場がある」
+  - ～にもかかわらず（再登場）：「言葉がないにもかかわらず、その感情は確かに存在した」
+- **Emotional Beat**: 軽やかな発見。知的な笑いの後に残る真剣な問い。
+
+---
+
+### Ep 7: 幸福とは何か——一年目の終わりに
+- **Theme**: 幸福（幸福の条件と、この会そのものへの問い返し）
+- **Story ID**: `tetsugaku-ep7-koufuku-to-wa-nani-ka`
+- **Plot**: 一年の締めくくりとして文子が「幸福について話しましょう」と提案する。村瀬はアリストテレスの「エウダイモニア（よく生きること）」を持ち出し、辻は「幸福を考える余裕が、この会に来るまでなかった」と初めて素直に言う。悠太は就職先が決まったことを報告し、林は「でもそれが幸福への一歩かどうかは、まだわからない」と言う。真帆は「この部屋で一時間だけ正直でいられること、それが今の私には幸福かもしれない」と言い、しばらく誰も喋らない。文子はいつもより多く茶を注ぐ。
+- **Grammar Focus**:
+  - ～にわたって（再登場）：「一年にわたる議論を通じて、六人それぞれが変わっていた」
+  - ～というものだ（再登場）：「幸福とは、追いかけているときには気づかないというものだ」
+  - ～からには（再登場）：「ここに集まってきたからには、何かを求めていたはずだ」
+  - ～とは限らない（再登場）：「幸せな人生が、正しい答えを持つ人生とは限らない」
+- **Emotional Beat**: 温かく余韻の長い着地。答えではなく、問い続けること自体の肯定。
+
+---
+
+## Writing Guidelines
+
+### 文体と語調
+各エピソードは、議論シーン（会話体・知的）と会後の個人シーン（叙述体・内省的）を組み合わせる。会話は自然な口語を使いながらも、テーマに即した語彙（概念語・抽象語）を適切に含める。地の文は落ち着いた文語調を基本とし、感情描写は抑制的に行う。
+
+### 語彙・漢字密度
+N2水準の語彙を積極的に使用する（概念、根拠、主観、客観、前提、義務、普遍、相対、規定、判断、本質など）。難読漢字にはルビを振ることを検討する（葬儀、遺体、人格同一性など）。N1レベルの語彙は会話の中で自然に登場する場合のみ使用し、地の文では避ける。
+
+### 文長と構文
+一文は25〜50字程度を目安とし、単純構造と複文を交互に配置する。接続詞（しかし、だからこそ、一方で、それにもかかわらず）を使って論理の流れを明示する。各エピソードの日本語テキストは500〜650語を目標とする。
+
+### 会話の書き方
+発言者の職業・年齢・性格が滲み出るよう、語尾や言い回しを使い分ける。
+- 村瀬：「〜というわけですよ」「〜ではないでしょうか」（丁寧体・やや説教調）
+- 林：「〜という前提自体が問題です」「〜とは言えません」（論理的・批判的）
+- 真帆：「〜っていう感じ、わかりますか？」（口語・感覚的）
+- 辻：発言は短く、「……そうかもしれない」「私には、まだわからない」
+- 文子：「まあ、お茶でも」「そういうことかもしれませんね」（包容的・短く核心を突く）
+- 悠太：「あの、聞いてもいいですか」「そういう考え方、なかったです」（素直・敬語）
+
+### N2文法の配置原則
+各エピソードにターゲット文法を4つ割り当て、そのうち少なくとも2つは本文中の日本語例文として地の文または会話の中に自然に埋め込む。文法項目は終盤エピソード（6・7話）で再登場させ、学習者が定着を確認できるようにする。
+
+### エピソード構成の目安
+1. 導入（50〜80語）：会の始まりの情景、今回のテーマが浮上する経緯
+2. 議論（250〜300語）：中心的な問いと、複数の視点からの応答
+3. 転換点（50〜80語）：議論が個人の問題に接地する瞬間
+4. 余韻（100〜150語）：会が終わった後の、一人のメンバーの内省シーン
+
+---
+
+## Reviewer Notes
+
+### テーマと人物の一貫性リスク
+
+**1. 辻の感情開示ペーシング**
+辻は寡黙というキャラクター設定上、感情を出す場面が過剰になると不自然に映る。Ep4（父の見舞い）とEp7（「余裕がなかった」発言）は大きな開示場面であり、Ep1〜3での沈黙と対比が機能するかどうか、各エピソードで辻の発言量と内容を意図的にコントロールすること。
+
+**2. 林の「議論を壊す」役割と読者の共感バランス**
+林は知的に鋭いが、共感を失いかけるリスクがある。Ep2（社会構造の問題で場が紛糾）とEp6（村瀬との激しい対立）が重なる場合、「批判機械」に見えてしまう。Ep3またはEp5で林が他者の発言に素直に影響を受ける場面を一つ入れ、人間的な側面を見せることを検討する。
+
+**3. 村瀬の哲学用語使用量**
+各エピソードで哲学者名や専門用語を引用する役割を担うが、全7話で毎回同じパターンになると教科書的になる。Ep5以降は村瀬が理論を引用しない回を一つ作り、個人的な経験から語る場面を作ること。
+
+**4. 悠太の成長弧とエピソード配置**
+Ep1では萎縮、Ep2では初めての意志的行動（選考辞退）、Ep7では就職決定と報告、という成長弧を設計しているが、Ep3〜6での悠太の変化が見えにくい。各中間エピソードで悠太が一度は主体的な発言をするよう意識すること。
+
+**5. 文子の「場の提供者」と「参加者」の二重性**
+文子は店主として場を提供しつつ議論にも加わるが、ホスト役が強くなりすぎると思想的な発言が少なくなる。Ep3（日記の話）とEp5（画集）のように、文子が個人的な経験を持ち込む回を意図的に配置し、彼女自身も「問われる人」であることを示すこと。
+
+**6. 哲学的テーマの感情的強度の分布**
+Ep1（死）とEp4（義務）は感情的に重い。Ep6（言語）とEp5（美）は比較的明るい。重さの波があること自体は良いが、Ep7（幸福）が締めくくりとして機能するには、前6話の感情的な振れ幅が最終話への布石になっていることを確認する。各エピソードの末尾の「余韻シーン」の登場人物を意図的に変え、全員にほぼ均等にスポットが当たるよう調整すること。
+
+**7. N2文法パターンの自然な埋め込み**
+文法項目を会話に埋め込む際、教科書例文のような不自然さが生じるリスクがある。各文法項目は、その話者のキャラクターが使いそうな文脈で使うこと（例：「〜にもかかわらず」は辻の葛藤を表す地の文で使う）。Ep6・7での再登場は、初出時と異なる文脈で使い、定着確認と表現の幅拡大を両立させること。

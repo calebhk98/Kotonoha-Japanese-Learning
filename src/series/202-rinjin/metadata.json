@@ -1,1 +1,9 @@
-{"id":"202-rinjin","title":"202号室の隣人たち","description":"An aging apartment building in an ordinary mid-sized city holds six residents whose lives do not intersect — until they slowly, unavoidably begin to. Each episode foregrounds a different resident; the building accumulates meaning across the series.","level":"n3","tags":["community","urban-life","neighbors","multiple-perspectives","daily-life","loneliness","connection","apartment","n3","series"]}
+{
+  "id": "202-rinjin",
+  "title": "202号室の隣人たち",
+  "type": "series",
+  "description": "大阪のとあるアパートに暮らす住人たちの、交わりそうで交わらない日常を描く連作。毎話、別の住人の視点から建物の日々が映し出される。8話構成、N3レベル。",
+  "level": "n3",
+  "tags": ["slice-of-life", "osaka", "apartment", "multiple-pov", "adult", "n3", "relationships", "urban-life"],
+  "dateAdded": "2026-05-12"
+}

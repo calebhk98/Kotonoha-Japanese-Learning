@@ -31,7 +31,8 @@
 ### Ep 3: 残業
 - **id**: `hitori-ep3-zangyou`
 - Asked to stay late to finish a report. Misses the last express train, takes local that takes twice as long. On the platform at 11 PM overhears two salarymen complaining and wonders if she's doing the right thing. Kaori notices the next morning the report was good — says so in exactly four words.
-- **Grammar focus**: ～ていただく (残っていただけますか), ～てもらう (説明してもらえばよかった), workplace vocabulary (報告書/係長/締め切り/残業代/お疲れ様です), ～かもしれない for future uncertainty
+- **Grammar focus**: ～ていただく (残っていただけますか), ～てもらう (説明してもらえばよかった — note: ～てもらう is the N4 focus here; the combined ～てもらえばよかった leans toward N3 complexity, so writers should introduce ～てもらう in a simpler construction first, e.g. 「教えてもらった」, before using the conditional form), ～ばよかった as standalone regret expression (～ていればよかった/聞けばよかった — this is where ～ばよかった should receive its primary focus), workplace vocabulary (報告書/係長/締め切り/残業代/お疲れ様です)
+- **[REVIEWER] ～かもしれない removed from grammar focus — it is N5, not N4. It may appear naturally in dialogue but should not be foregrounded as the episode's N4 teaching point. ～ばよかった (N4) added as explicit focus; it was unassigned despite being listed as a key series pattern in Writing Guidelines.**
 - **Emotional beat**: First time she feels genuinely seen at work — not praised, just noticed. Four words land differently when you're tired.
 
 ### Ep 4: 風邪
@@ -50,12 +51,14 @@
 ### Ep 6: となりの人
 - **id**: `hitori-ep6-tonari-no-hito`
 - Kenji knocks — package delivered to him by mistake. She invites him in for tea (mostly out of social obligation). They talk for two hours. She finds out he's studying for a qualification exam while working nights. She had him completely wrong. Mild romantic tension that has been in the background becomes slightly less background.
-- **Grammar focus**: ～ながら (働きながら勉強している), ～たい/～たいと思っている (goals), conversational softeners (じゃないですか/なんか/って言うか), casual past-tense in plain forms mixed into polite dialogue
+- **Grammar focus**: ～ながら (働きながら勉強している), ～かどうか (試験に受かるかどうか分からない/うまくいくかどうか心配だ — this is the primary episode for ～かどうか, which is an N4 key pattern unassigned elsewhere), conversational softeners (じゃないですか/なんか/って言うか), casual past-tense in plain forms mixed into polite dialogue
+- **[REVIEWER] ～たい/～たいと思っている removed from grammar focus — it is N5. ～かどうか (N4) added as the second focus point; it was entirely absent from all episode grammar plans despite being listed as a key series pattern in Writing Guidelines. This is now its designated episode.**
 - **Emotional beat**: The moment when someone becomes real to you — an actual complicated human with goals and exhaustion. She thinks about the conversation longer than she intends to.
 
-### Ep 7: 三か月目
-- **id**: `hitori-ep7-sankagetsu-me`
-- Three months in. Makes a proper meal — not konbini, not just rice — eats at her table which now has a plant. Calls her mother and for the first time doesn't feel like she's reporting in from enemy territory. Looks at her to-do list from the first night. Has done most of it. Last item says: 慣れること. She crosses it out, then writes it again — not quite done yet.
+### Ep 7: 七か月目
+- **id**: `hitori-ep7-nanakagetsu-me`
+- Seven months in. Makes a proper meal — not konbini, not just rice — eats at her table which now has a plant. Calls her mother and for the first time doesn't feel like she's reporting in from enemy territory. Looks at her to-do list from the first night. Has done most of it. Last item says: 慣れること. She crosses it out, then writes it again — not quite done yet.
+- **[REVIEWER] CRITICAL timeline fix: original title was 三か月目 (three months) but this is episode 7 in a month-by-month series. "Three months in" contradicts every prior episode's placement. Changed to 七か月目. If writers wish the reflection to feel like an earlier milestone, consider restructuring the series to place this episode at Ep 4 and extending the arc — but do NOT keep "month 3" as the label for the seventh episode. The episode's emotional content (looking back at the first-night to-do list, gradual growth) works at any milestone; seven months is if anything richer because she has lived through more seasons.**
 - **Grammar focus**: ～ようになった (できるようになった/分かるようになった — reflecting on change), ～てきた (慣れてきた/楽しくなってきた — gradual change), reflection vocabulary (気がする/思い返すと/あの頃/成長), mixing past narrative with present-tense realization
 - **Emotional beat**: Not triumph, not crisis — honest accounting. More herself than she expected. Comfortable ambiguity.
 

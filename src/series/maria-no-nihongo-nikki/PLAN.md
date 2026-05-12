@@ -19,8 +19,9 @@
 ### Ep 1: はじめてのアパート
 - **id**: `maria-ep1-apartment`
 - Maria arrives with two suitcases, dying phone battery. Meets Tanaka-san. Can't work out the shower. Eats konbini onigiri on the floor feeling alone. Tanaka-san knocks, offers tea, says just 「どうぞ。」She cries a little, writes in journal that she said ありがとうございます correctly.
-- **Grammar focus**: これ/それ/あれ, ここ/そこ/あそこ, ～はどこですか, numbers 1-31, は/が/を/に/で particles, すみません/ありがとうございます/おねがいします, basic adjectives おおきい/ちいさい/あたらしい/むずかしい
+- **Grammar focus**: これ/それ/あれ, ここ/そこ/あそこ, ～はどこですか, は/が/を/に/で particles (introduce naturally through dialogue — do NOT drill all five in one scene), すみません/ありがとうございます/おねがいします, basic adjectives おおきい/ちいさい/あたらしい/むずかしい
 - **Emotional beat**: Exhausted and scared → small human warmth
+- **Writer note**: Numbers 1-31 are listed here but should be woven in lightly (apartment number, floor) rather than foregrounded — this episode is already rich. Prioritize the demonstratives and location words; particles will recur throughout the series.
 
 ### Ep 2: スーパーで
 - **id**: `maria-ep2-supermarket`
@@ -31,14 +32,17 @@
 ### Ep 3: でんしゃに のります
 - **id**: `maria-ep3-train`
 - First workday commute. Studies map the night before, confident. Gets on wrong train, ends up 3 stations past stop. Meets Chen Min on the platform. His advice: "Just ask. People are nicer than the signs." Arrives 22 minutes late.
-- **Grammar focus**: でんしゃ/ちかてつ/バス/えき/ホーム/のりかえ, ～にのります/～でおります/～にいきます, ～までどうやっていきますか, time expressions (なんじですか/～じに/いま/あとで), ～ない form (いきません/わかりません), まず/つぎに/それから
+- **Grammar focus**: でんしゃ/ちかてつ/バス/えき/ホーム/のりかえ, ～にのります/～でおります/～にいきます, ～はどこですか/～はあそこです (for asking directions — N5), time expressions (なんじですか/～じに/いま/あとで), ～ない form (いきません/わかりません), まず/つぎに/それから
 - **Note**: Chen Min is a ONE-TIME encounter. Do not set up future meetings.
+- **Writer caution**: Do NOT use ～までどうやっていきますか — "どうやって" is N4. For asking how to get somewhere, keep it simple: ～はどこですか or ～にいきますか with a confused face. Maria panics and asks a station attendant 「すみません、○○えきはどこですか。」— she doesn't need complex phrasing.
+- **Continuity note**: Maria arrives 22 minutes late on her first day. Yui or a coworker should acknowledge this briefly in Ep 4 (even one line) so the world feels continuous. A throwaway joke is enough.
 
 ### Ep 4: はじめてのともだち
 - **id**: `maria-ep4-first-friend`
-- Yui invites Maria to ramen. Maria panics about ordering but decides to try herself — goes reasonably well. Over lunch in slow simple Japanese + occasional English word, they discover: both hate cilantro, both love old movies, both find their home cities very loud. Maria has weekend plans for the first time.
-- **Grammar focus**: ～をおねがいします/～をひとつください (ordering — background, not the main focus), ～がすきです/きらいです/すきじゃないです, おいしい/からい/あまい/つめたい/あつい, ～はどうですか, hobby vocabulary (えいが/おんがく/りょうり/スポーツ/ほん)
+- After a quiet week at the office (writers: open with one line establishing they've exchanged pleasantries but not hung out yet — e.g. Yui has helped Maria with the printer or the coffee machine), Yui invites Maria to ramen. Maria panics about ordering but decides to try herself — goes reasonably well. Over lunch in slow simple Japanese + occasional English word, they discover: both hate cilantro, both love old movies, both find their home cities very loud. Maria has weekend plans for the first time.
+- **Grammar focus**: ～をおねがいします/～をひとつください (ordering — background, not the main focus), ～がすきです/きらいです/すきじゃないです, おいしい/からい/あまい/つめたい/あつい, ～はどうですか, hobby vocabulary (えいが/おんがく/りょうり/スポーツ/ほん), ～てください (Yui demonstrating: 「これを おしてください。」)
 - **Note**: Ordering food is incidental background. The main grammar focus is preference expressions (すきです/きらいです).
+- **Register note**: From this episode onward, Yui may occasionally drop to plain form with Maria (e.g. 「わかった？」). Maria stays in ます/です. This is the only character with whom casual register is permitted, and only from Ep 4 onward.
 
 ### Ep 5: おかだ さんの やさいや
 - **id**: `maria-ep5-vegetable-stand`
@@ -48,8 +52,12 @@
 ### Ep 6: にほんごの てがみ
 - **id**: `maria-ep6-letter`
 - Maria writes Tanaka-san a thank-you note in Japanese. Spends an entire evening, throws away four drafts. Four sentences. Slides it under his door. Next morning: a small plant outside her door and a note in large careful hiragana 「よく かけました。」
-- **Grammar focus**: Written polite form (～です/～ます in writing), ありがとうございます/おせわになりました, simple past (～ました/～でした), ～てくれました, humble/polite vocabulary (いただきます/よろしくおねがいします), てがみ/かきます/よみます/ことば
+- **Grammar focus**: Written polite form (～です/～ます in writing), ありがとうございます/よろしくおねがいします, simple past (～ました/～でした), ～たい (「にほんごで かきたいです。」in Maria's journal — this is her first use of ～たい intentionally), てがみ/かきます/よみます/ことば, review of adjectives learned earlier (むずかしい/うれしい/たのしい)
 - **Emotional beat**: The trying is the thing that is seen.
+- **Writer caution (CRITICAL — read before drafting)**:
+  - Do NOT use おせわになりました — this is a keigo set phrase well above N5. Maria simply writes ありがとうございます and よろしくおねがいします.
+  - Do NOT use ～てくれました (e.g. 「たなかさんが てつだってくれました」) — くれる/あげる/もらう as auxiliary giving-verbs are N4. Instead, Maria describes what Tanaka-san did directly: 「たなかさんは おちゃを もってきました。」or 「たなかさんは やさしかったです。」
+  - いただきます is fine as a mealtime expression (N5 set phrase); do NOT use いただく as a humble verb form (e.g. 「いただきました」meaning "I humbly received") — that nuance is N4.
 
 ## Reviewer Notes (APPROVED)
 - Chen Min in Ep3: make clear he is a one-time encounter, do NOT set up future meetings
