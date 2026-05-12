@@ -197,3 +197,40 @@ Ep1（死）とEp4（義務）は感情的に重い。Ep6（言語）とEp5（�
 
 **7. N2文法パターンの自然な埋め込み**
 文法項目を会話に埋め込む際、教科書例文のような不自然さが生じるリスクがある。各文法項目は、その話者のキャラクターが使いそうな文脈で使うこと（例：「〜にもかかわらず」は辻の葛藤を表す地の文で使う）。Ep6・7での再登場は、初出時と異なる文脈で使い、定着確認と表現の幅拡大を両立させること。
+
+---
+
+## Reviewer Notes (APPROVED)
+
+**Review date**: 2026-05-12
+**Reviewer**: Curriculum review pass — N2 serialized story series
+
+### Issues found and resolved
+
+**CRITICAL (fixed in this pass)**
+
+1. **内定/選考 factual inconsistency in Ep2 grammar example** — The original ～に反して example used 「期待に反して、彼は内定を断った」. 悠太 is still in the 選考 (screening) stage throughout Ep2; he cannot have received 内定 (a formal job offer) to refuse. The plot itself correctly says 選考を辞退. Fixed: example changed to 「周囲の期待に反して、悠太は一社の選考を自ら辞退した」, which is factually consistent with the plot and character stage.
+
+2. **辻の余韻シーン連続（Ep1・Ep4）** — Both Ep1 and Ep4 originally ended with 辻 alone (walk home / hospital visit). This is a double-spotlight that undermines the stated goal of distributing afterglow scenes across all members, and collapses 辻's character arc into two similar solitary beats rather than a progression. More critically, 村瀬 — the most active discussion participant in all 7 episodes — had no private afterglow scene anywhere in the series, making him feel like a narrative device rather than a character. Fixed: Ep4's afterglow reassigned to 村瀬 (waiting for the bus, quietly questioning whether he fulfilled his duty to former students). The distribution is now: Ep1=辻、Ep2=悠太、Ep3=文子、Ep4=村瀬、Ep5=真帆、Ep6=林、Ep7=アンサンブル。
+
+**IMPORTANT (fixed in this pass)**
+
+3. **Ep4 ～ばかりか example used 「彼」instead of a named character** — 「彼は仕事の義務を果たすばかりか…」distances the example from 辻, who is the obvious referent in context, and introduces an unnamed male pronoun in a scene where gender-ambiguous reference creates confusion. The character sheet also does not establish that 辻 carries sole family caregiving, so the example needed to be grounded in the established plot (父の病院) rather than inventing a new fact. Fixed: rewritten as 「辻は仕事で死と向き合うばかりか、家で父の介護まで一人で抱えていた」, tying the grammar example to the Ep4 plot detail of 辻 visiting his hospitalised father.
+
+4. **林の共感リスク: Reviewer Note too vague** — The original note flagged the risk but offered no binding instruction, only "考慮する". Given that Ep2 and Ep6 both feature 林 disrupting the group, leaving this as optional guidance is insufficient. Fixed: Note 2 updated to specify a concrete required action — a moment in Ep3 where 林 asks 文子 a personal question rather than challenging a premise, establishing human warmth before the Ep6 confrontation.
+
+**MINOR (fixed in this pass)**
+
+5. **Ep3 ～をめぐって example: 「深夜まで続いた」** — The group meets at a bookshop run by a 53-year-old woman; a session running until deep into the night is logistically implausible and inconsistent with the slice-of-life register. Fixed: changed to 「いつもより長く続いた」.
+
+### Issues found but requiring human attention
+
+6. **Ep7 has zero new grammar patterns** — All four grammar items in Ep7 are repeats from earlier episodes. This is consistent with the stated Writing Guidelines (revision/consolidation in the final episode), so it is not a structural error. However, for a learner cohort that finds consolidation episodes unsatisfying without at least one new exposure, this may feel thin. The human author should decide whether to introduce one mild new pattern (e.g. ～ことになっている or ～に当たって) in the Ep7 discussion, or retain the full-consolidation design. No change made pending that decision.
+
+7. **村瀬の非引用回の指定** — Reviewer Note 3 instructs authors to give 村瀬 at least one episode where he does not quote a philosopher. No specific episode is designated. The plan as written has 村瀬 quoting in Ep1 (エピクロス), Ep2 (サルトル), Ep3 (ロック), Ep4 (カント), Ep5 (カント again). Ep6 and Ep7 have no explicit 村瀬 philosopher-quote in the plot text — this may already satisfy the instruction, but authors should confirm consciously rather than by accident.
+
+8. **Ep5の「普遍的な美的判断」** — カントの第三批判の概念をN2文脈で口語的に説明しようとすると、術語の日本語が難しい（判断力、共通感覚、無関心的関心など）。この概念をN2学習者に理解可能な形で台詞に落とし込む際に、村瀬の台詞が教科書的になりすぎないよう注意が必要。執筆時に要注意。
+
+### Overall assessment
+
+The series plan is **approved for episode writing** with the above fixes applied. The philosophical themes are appropriate for N2 — the discussions centre on relatable life situations (career, memory, obligation, aesthetics) and the philosophical frameworks (エピクロス, サルトル, カント) are introduced through character dialogue, not narrated exposition, which keeps the register accessible. Grammar distribution is well-balanced: 4 patterns per episode, all confirmed N2, with meaningful contextual variation in Ep6/7 reuses. Character voices are distinct and internally consistent. The two-part episode structure (discussion + afterglow) is maintained uniformly across all 7 episodes.
