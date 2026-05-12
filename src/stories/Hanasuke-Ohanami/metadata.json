@@ -1,13 +1,1 @@
-{
-  "id": "Hanasuke-Ohanami",
-  "title": "チワワの花すけ～お花見 (Chihuahua Hanasuke: Cherry Blossom Viewing)",
-  "type": "story",
-  "description": "春です。桜が咲きました。花すけはおねえさんと目黒川へお花見に行きます。Spring has come and Hanasuke goes cherry blossom viewing at Meguro River with his big sister. Includes Japanese cultural notes on hanami. Tadoku Level 0.",
-  "author": "丸山京子 (Maruyama Kyōko), NPO多言語多読",
-  "level": "beginner",
-  "imageUrl": "",
-  "seriesId": "chihuahua-hanasuke",
-  "episodeNumber": 5,
-  "sourceUrl": "https://tadoku.org/japanese/book/40469/",
-  "license": "CC BY-NC-ND 4.0"
-}
+{"id":"Hanasuke-Ohanami","title":"チワワの花すけ～お花見 (Chihuahua Hanasuke: Cherry Blossom Viewing)","type":"story","description":"春です。桜が咲きました。花すけはおねえさんと目黒川へお花見に行きます。Spring has come and Hanasuke goes cherry blossom viewing at Meguro River with his big sister. Includes Japanese cultural notes on hanami. Tadoku Level 0.","author":"丸山京子 (Maruyama Kyōko), NPO多言語多読","level":"n5","imageUrl":"","seriesId":"chihuahua-hanasuke","episodeNumber":5,"sourceUrl":"https://tadoku.org/japanese/book/40469/","license":"CC BY-NC-ND 4.0"}

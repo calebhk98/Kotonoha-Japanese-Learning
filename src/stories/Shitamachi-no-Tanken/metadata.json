@@ -1,11 +1,1 @@
-{
-  "id": "Shitamachi-no-Tanken",
-  "title": "したまちのたんけん (Shitamachi no Tanken)",
-  "type": "story",
-  "description": "Two children and their grandmother explore the old downtown district. They discover a big hotel, peek through shop doorways, visit the city library, find exciting sale items, and end the day with coffee at a café.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "town", "family", "exploration"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Shitamachi-no-Tanken","title":"したまちのたんけん (Shitamachi no Tanken)","type":"story","description":"Two children and their grandmother explore the old downtown district. They discover a big hotel, peek through shop doorways, visit the city library, find exciting sale items, and end the day with coffee at a café.","author":"オリジナル","level":"n5","tags":["n5","town","family","exploration"],"imageUrl":"","dateAdded":"2026-05-10"}

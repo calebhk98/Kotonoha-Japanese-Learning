@@ -1,9 +1,1 @@
-{
-  "id": "Shrine-Visit",
-  "title": "じんじゃへ (A Visit to the Shrine)",
-  "type": "story",
-  "description": "Visiting a neighborhood Shinto shrine — washing hands at the purification fountain (手水舎), walking up the stone steps, tossing a coin into the offering box, bowing twice, clapping twice, and making a quiet wish.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": ""
-}
+{"id":"Shrine-Visit","title":"じんじゃへ (A Visit to the Shrine)","type":"story","description":"Visiting a neighborhood Shinto shrine — washing hands at the purification fountain (手水舎), walking up the stone steps, tossing a coin into the offering box, bowing twice, clapping twice, and making a quiet wish.","author":"オリジナル","level":"n5","imageUrl":""}

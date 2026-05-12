@@ -1,11 +1,1 @@
-{
-  "id": "Rekishi-Hakubutsukan",
-  "title": "れきしはくぶつかん (Rekishi Hakubutsukan)",
-  "type": "story",
-  "description": "A school class visits the city history museum on a rainy day. Their guide takes them through exhibits on medieval European kingdoms, Napoleon's empire, ancient Mediterranean civilizations, and Japan's own royal history — and one student's restless questions turn the tour into a real lesson.",
-  "author": "オリジナル",
-  "level": "intermediate",
-  "tags": ["n4", "history", "school", "museum", "culture"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Rekishi-Hakubutsukan","title":"れきしはくぶつかん (Rekishi Hakubutsukan)","type":"story","description":"A school class visits the city history museum on a rainy day. Their guide takes them through exhibits on medieval European kingdoms, Napoleon's empire, ancient Mediterranean civilizations, and Japan's own royal history — and one student's restless questions turn the tour into a real lesson.","author":"オリジナル","level":"n3","tags":["n4","history","school","museum","culture"],"imageUrl":"","dateAdded":"2026-05-10"}

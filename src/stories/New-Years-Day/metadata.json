@@ -1,9 +1,1 @@
-{
-  "id": "New-Years-Day",
-  "title": "お正月 (New Year's Day)",
-  "type": "story",
-  "description": "A heartwarming story about New Year's Day celebrations — enjoying osechi with family, visiting the shrine for hatsumoude, receiving otoshidama, and watching the first sunrise of the year.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": "https://images.unsplash.com/photo-1545188261-9cc17c45d63a?q=80&w=600&auto=format&fit=crop"
-}
+{"id":"New-Years-Day","title":"お正月 (New Year's Day)","type":"story","description":"A heartwarming story about New Year's Day celebrations — enjoying osechi with family, visiting the shrine for hatsumoude, receiving otoshidama, and watching the first sunrise of the year.","author":"オリジナル","level":"n5","imageUrl":"https://images.unsplash.com/photo-1545188261-9cc17c45d63a?q=80&w=600&auto=format&fit=crop"}

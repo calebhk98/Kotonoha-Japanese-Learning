@@ -1,11 +1,1 @@
-{
-  "id": "Juken-no-Natsu",
-  "title": "じゅけんのなつ (Juken no Natsu)",
-  "type": "story",
-  "description": "Three high school students spend summer vacation locked in study — university entrance exams loom in winter. Between psyching each other up, admitting weak points, and dealing with private struggles, they discover that preparing for 受験 is really about learning who you are.",
-  "author": "オリジナル",
-  "level": "intermediate",
-  "tags": ["n4", "high school", "study", "exams", "teenager"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Juken-no-Natsu","title":"じゅけんのなつ (Juken no Natsu)","type":"story","description":"Three high school students spend summer vacation locked in study — university entrance exams loom in winter. Between psyching each other up, admitting weak points, and dealing with private struggles, they discover that preparing for 受験 is really about learning who you are.","author":"オリジナル","level":"n3","tags":["n4","high school","study","exams","teenager"],"imageUrl":"","dateAdded":"2026-05-10"}

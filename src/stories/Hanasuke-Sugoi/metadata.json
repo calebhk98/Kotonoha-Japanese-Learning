@@ -1,13 +1,1 @@
-{
-  "id": "Hanasuke-Sugoi",
-  "title": "チワワの花すけ～すごい！ (Chihuahua Hanasuke: Amazing!)",
-  "type": "story",
-  "description": "花すけは何か不思議なものを発見します。中を見たい！でも…。Hanasuke discovers something mysterious and wants to see inside. A short story about curiosity, fish, and brushing teeth at Tadoku Level 0.",
-  "author": "丸山京子 (Maruyama Kyōko), NPO多言語多読",
-  "level": "beginner",
-  "imageUrl": "",
-  "seriesId": "chihuahua-hanasuke",
-  "episodeNumber": 3,
-  "sourceUrl": "https://tadoku.org/japanese/book/5595/",
-  "license": "CC BY-NC-ND 4.0"
-}
+{"id":"Hanasuke-Sugoi","title":"チワワの花すけ～すごい！ (Chihuahua Hanasuke: Amazing!)","type":"story","description":"花すけは何か不思議なものを発見します。中を見たい！でも…。Hanasuke discovers something mysterious and wants to see inside. A short story about curiosity, fish, and brushing teeth at Tadoku Level 0.","author":"丸山京子 (Maruyama Kyōko), NPO多言語多読","level":"n5","imageUrl":"","seriesId":"chihuahua-hanasuke","episodeNumber":3,"sourceUrl":"https://tadoku.org/japanese/book/5595/","license":"CC BY-NC-ND 4.0"}

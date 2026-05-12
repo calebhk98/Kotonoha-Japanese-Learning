@@ -1,11 +1,1 @@
-{
-  "id": "Ichi-nen-no-Nikki",
-  "title": "いちねんのにっき (Ichi-nen no Nikki)",
-  "type": "story",
-  "description": "A child's diary entries through all twelve months of the year — cherry blossoms in spring, cicadas in summer, moon viewing in autumn, and snow in winter. Each entry mentions the date, what happened this month, and what's coming next month. A calendar story full of Japanese seasonal traditions.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "calendar", "seasons", "daily-life", "nature"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Ichi-nen-no-Nikki","title":"いちねんのにっき (Ichi-nen no Nikki)","type":"story","description":"A child's diary entries through all twelve months of the year — cherry blossoms in spring, cicadas in summer, moon viewing in autumn, and snow in winter. Each entry mentions the date, what happened this month, and what's coming next month. A calendar story full of Japanese seasonal traditions.","author":"オリジナル","level":"n5","tags":["n5","calendar","seasons","daily-life","nature"],"imageUrl":"","dateAdded":"2026-05-10"}

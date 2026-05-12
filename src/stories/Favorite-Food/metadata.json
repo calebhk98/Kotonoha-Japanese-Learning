@@ -1,9 +1,1 @@
-{
-  "id": "Favorite-Food",
-  "title": "すきなたべもの (My Favorite Food)",
-  "type": "story",
-  "description": "A child talks about their absolute favorite food — what it is, when they usually eat it, why they love it so much, and what food they really don't like. Simple opinion-giving practice in first person.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": ""
-}
+{"id":"Favorite-Food","title":"すきなたべもの (My Favorite Food)","type":"story","description":"A child talks about their absolute favorite food — what it is, when they usually eat it, why they love it so much, and what food they really don't like. Simple opinion-giving practice in first person.","author":"オリジナル","level":"n5","imageUrl":""}

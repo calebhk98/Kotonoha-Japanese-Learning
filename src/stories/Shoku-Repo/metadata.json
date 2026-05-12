@@ -1,11 +1,1 @@
-{
-  "id": "Shoku-Repo",
-  "title": "しょくレポート (Shoku Repo)",
-  "type": "story",
-  "description": "A food magazine report covering three types of Japanese dining: traditional Japanese cuisine (washoku), spicy regional specialties, and the rise of healthy smoothie cafes. Includes restaurant recommendations, typical prices, and tips for ordering — written in engaging food-magazine style.",
-  "author": "オリジナル",
-  "level": "intermediate",
-  "tags": ["n4", "food", "essay", "report", "culture"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Shoku-Repo","title":"しょくレポート (Shoku Repo)","type":"story","description":"A food magazine report covering three types of Japanese dining: traditional Japanese cuisine (washoku), spicy regional specialties, and the rise of healthy smoothie cafes. Includes restaurant recommendations, typical prices, and tips for ordering — written in engaging food-magazine style.","author":"オリジナル","level":"n4","tags":["n4","food","essay","report","culture"],"imageUrl":"","dateAdded":"2026-05-10"}

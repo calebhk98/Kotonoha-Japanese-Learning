@@ -1,11 +1,1 @@
-{
-  "id": "Hitotsu-no-Tane",
-  "title": "ひとつのたね (Hitotsu no Tane)",
-  "type": "story",
-  "description": "A peaceful cumulative story about a single seed and the chain of life it sets in motion. A child plants a seed, which grows into a flower, which attracts a bee, which helps another flower make fruit, which feeds a bird, which carries a new seed — and the cycle begins again. Each new link in the chain is gently recapped as the story builds.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "cumulative", "nature", "plants", "animals", "seasons", "pattern"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Hitotsu-no-Tane","title":"ひとつのたね (Hitotsu no Tane)","type":"story","description":"A peaceful cumulative story about a single seed and the chain of life it sets in motion. A child plants a seed, which grows into a flower, which attracts a bee, which helps another flower make fruit, which feeds a bird, which carries a new seed — and the cycle begins again. Each new link in the chain is gently recapped as the story builds.","author":"オリジナル","level":"n5","tags":["n5","cumulative","nature","plants","animals","seasons","pattern"],"imageUrl":"","dateAdded":"2026-05-10"}

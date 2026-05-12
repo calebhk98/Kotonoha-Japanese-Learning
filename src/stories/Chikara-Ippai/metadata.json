@@ -1,11 +1,1 @@
-{
-  "id": "Chikara-Ippai",
-  "title": "ちからいっぱい (Chikara Ippai)",
-  "type": "story",
-  "description": "A young woman practices pulling a rope with all her strength every day. One by one, others join her. A warm story about effort, perseverance, and the power of community.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["wanikani-lv1", "n5", "perseverance", "community", "effort"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-11"
-}
+{"id":"Chikara-Ippai","title":"ちからいっぱい (Chikara Ippai)","type":"story","description":"A young woman practices pulling a rope with all her strength every day. One by one, others join her. A warm story about effort, perseverance, and the power of community.","author":"オリジナル","level":"n5","tags":["wanikani-lv1","n5","perseverance","community","effort"],"imageUrl":"","dateAdded":"2026-05-11"}

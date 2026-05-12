@@ -1,11 +1,1 @@
-{
-  "id": "Mori-no-Michi",
-  "title": "もりのみち (Mori no Michi)",
-  "type": "story",
-  "description": "A solo hike through a forest. Someone sets out alone along a road into the trees, watches clouds drift above the canopy, discovers a still pond, and encounters a horse in a field at the forest's edge. A conversation with a farmer and a quiet attempt at painting end the peaceful day.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["wanikani-lv8", "n5", "nature", "hiking", "forest", "solitude", "painting"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-11"
-}
+{"id":"Mori-no-Michi","title":"もりのみち (Mori no Michi)","type":"story","description":"A solo hike through a forest. Someone sets out alone along a road into the trees, watches clouds drift above the canopy, discovers a still pond, and encounters a horse in a field at the forest's edge. A conversation with a farmer and a quiet attempt at painting end the peaceful day.","author":"オリジナル","level":"n5","tags":["wanikani-lv8","n5","nature","hiking","forest","solitude","painting"],"imageUrl":"","dateAdded":"2026-05-11"}

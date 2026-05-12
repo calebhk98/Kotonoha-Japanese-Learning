@@ -1,9 +1,1 @@
-{
-  "id": "School-Library",
-  "title": "としょしつ (The School Library)",
-  "type": "story",
-  "description": "A story about visiting the school library during free time - browsing shelves, finding an interesting book, reading quietly in a corner, and borrowing it to take home.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": ""
-}
+{"id":"School-Library","title":"としょしつ (The School Library)","type":"story","description":"A story about visiting the school library during free time - browsing shelves, finding an interesting book, reading quietly in a corner, and borrowing it to take home.","author":"オリジナル","level":"n5","imageUrl":""}

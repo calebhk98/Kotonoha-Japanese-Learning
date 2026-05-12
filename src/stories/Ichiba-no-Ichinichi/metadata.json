@@ -1,11 +1,1 @@
-{
-  "id": "Ichiba-no-Ichinichi",
-  "title": "いちばのいちにち (Ichiba no Ichinichi)",
-  "type": "story",
-  "description": "Saturday morning at the covered market. The butcher cuts heart-shaped sausages for Valentine's season, a reporter writes a feature article, a street vendor jokes with every passerby, and a retired couple shops for the week. A lively slice of market life where everyone mixes together.",
-  "author": "オリジナル",
-  "level": "intermediate",
-  "tags": ["n4", "slice-of-life", "community", "shopping", "adult"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Ichiba-no-Ichinichi","title":"いちばのいちにち (Ichiba no Ichinichi)","type":"story","description":"Saturday morning at the covered market. The butcher cuts heart-shaped sausages for Valentine's season, a reporter writes a feature article, a street vendor jokes with every passerby, and a retired couple shops for the week. A lively slice of market life where everyone mixes together.","author":"オリジナル","level":"n4","tags":["n4","slice-of-life","community","shopping","adult"],"imageUrl":"","dateAdded":"2026-05-10"}

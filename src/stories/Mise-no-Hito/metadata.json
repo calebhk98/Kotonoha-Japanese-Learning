@@ -1,11 +1,1 @@
-{
-  "id": "Mise-no-Hito",
-  "title": "みせのひと (The Shop People)",
-  "type": "story",
-  "description": "A child visits the same small neighborhood shop every day. The owner knows everyone by name, and through the steady rhythm of daily visits, the child comes to see that the shop is the quiet heart of the whole neighborhood.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["wanikani-lv6", "n5", "community", "shop", "neighborhood", "daily-life", "belonging"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-11"
-}
+{"id":"Mise-no-Hito","title":"みせのひと (The Shop People)","type":"story","description":"A child visits the same small neighborhood shop every day. The owner knows everyone by name, and through the steady rhythm of daily visits, the child comes to see that the shop is the quiet heart of the whole neighborhood.","author":"オリジナル","level":"n5","tags":["wanikani-lv6","n5","community","shop","neighborhood","daily-life","belonging"],"imageUrl":"","dateAdded":"2026-05-11"}

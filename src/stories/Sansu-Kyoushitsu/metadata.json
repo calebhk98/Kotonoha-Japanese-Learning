@@ -1,11 +1,1 @@
-{
-  "id": "Sansu-Kyoushitsu",
-  "title": "さんすうきょうしつ (Sansu Kyoushitsu)",
-  "type": "story",
-  "description": "Elementary school math class gets lively when the teacher introduces unusual word problems — how many loaves of bread does a bakery need? What angle does a ramp make? The students argue, make mistakes, and finally figure it out together in a chaotic but memorable lesson.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "school", "children", "math", "classroom"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Sansu-Kyoushitsu","title":"さんすうきょうしつ (Sansu Kyoushitsu)","type":"story","description":"Elementary school math class gets lively when the teacher introduces unusual word problems — how many loaves of bread does a bakery need? What angle does a ramp make? The students argue, make mistakes, and finally figure it out together in a chaotic but memorable lesson.","author":"オリジナル","level":"n5","tags":["n5","school","children","math","classroom"],"imageUrl":"","dateAdded":"2026-05-10"}
