@@ -4,9 +4,19 @@
   "type": "video",
   "description": "NHK documentary exploring how Zen Buddhism (禅宗) has shaped Japanese aesthetics, design, and daily practice. Visits Kyoto and Kamakura temples, examines the tea ceremony's Zen roots, wabi-sabi aesthetics, zazen meditation practice, and how Zen's 'present-moment awareness' philosophy has influenced modern mindfulness worldwide.",
   "level": "N3-N4",
-  "tags": ["NHK", "Zen", "Buddhism", "culture", "meditation", "wabi-sabi", "philosophy"],
+  "tags": [
+    "NHK",
+    "Zen",
+    "Buddhism",
+    "culture",
+    "meditation",
+    "wabi-sabi",
+    "philosophy",
+    "English narration"
+  ],
   "creator": "NHK",
   "sourceUrl": "https://www.nhk.or.jp/",
   "license": "© NHK — Documentary content",
-  "dateAdded": "2026-05-11"
+  "dateAdded": "2026-05-11",
+  "mediaUrl": "https://www.youtube.com/watch?v=nCc8kSQqyXU"
 }

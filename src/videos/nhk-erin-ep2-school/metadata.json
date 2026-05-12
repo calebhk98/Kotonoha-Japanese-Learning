@@ -4,10 +4,18 @@
   "type": "video",
   "description": "From NHK's Erin's Challenge! (エリンが挑戦！にほんごできます。). Episode 2 follows Erin navigating a day at a Japanese high school: class schedules, club activities (部活動), talking to classmates and teachers, the school lunch system (給食), and after-school routines. Natural student-to-student and student-to-teacher dialogue with clear enunciation. Companion to Episode 1 (introductions).",
   "level": "N4",
-  "tags": ["NHK", "Erin's Challenge", "school life", "high school", "dialogue", "beginner-intermediate", "student Japanese"],
+  "tags": [
+    "NHK",
+    "Erin's Challenge",
+    "school life",
+    "high school",
+    "dialogue",
+    "beginner-intermediate",
+    "student Japanese"
+  ],
   "creator": "NHK (日本放送協会)",
   "sourceUrl": "https://www.nhk.or.jp/lesson/",
-  "mediaUrl": "https://www.nhk.or.jp/lesson/",
+  "mediaUrl": "https://www.erin.jpf.go.jp/en/lesson/02/",
   "license": "© NHK — free educational content",
   "dateAdded": "2026-05-11"
 }

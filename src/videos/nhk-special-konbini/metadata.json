@@ -4,9 +4,18 @@
   "type": "video",
   "description": "NHK Special examining how Japan's convenience store industry transformed from a simple retail format into an essential social infrastructure. Covers the business model of 24-hour operations, franchise relationships, the fight against food waste (フードロス), the move toward unmanned stores, and konbini's role in disaster response and care for isolated elderly residents.",
   "level": "N3-N4",
-  "tags": ["NHK Special", "konbini", "convenience stores", "modern Japan", "business", "food loss"],
+  "tags": [
+    "NHK Special",
+    "konbini",
+    "convenience stores",
+    "modern Japan",
+    "business",
+    "food loss",
+    "English narration"
+  ],
   "creator": "NHK Special (NHKスペシャル)",
   "sourceUrl": "https://www.nhk.jp/p/special/ts/2NY2QQLPM3/",
   "license": "© NHK — Documentary content",
-  "dateAdded": "2026-05-11"
+  "dateAdded": "2026-05-11",
+  "mediaUrl": "https://www.youtube.com/watch?v=mKg4aZvKVu0"
 }

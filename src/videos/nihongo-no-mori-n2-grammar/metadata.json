@@ -4,10 +4,17 @@
   "type": "video",
   "description": "From 日本語の森. This N2 lesson compares the four conditional forms: と、ば、たら、なら — when to use each, what nuance each carries, and common mistakes. Also covers connective patterns 〜上で、〜際に、〜に伴って used to link clauses in formal writing and speech.",
   "level": "N2",
-  "tags": ["日本語の森", "JLPT N2", "grammar", "conditionals", "sentence patterns", "Japanese only"],
+  "tags": [
+    "日本語の森",
+    "JLPT N2",
+    "grammar",
+    "conditionals",
+    "sentence patterns",
+    "Japanese only"
+  ],
   "creator": "日本語の森 (Nihongo no Mori)",
   "sourceUrl": "https://www.youtube.com/@nihongonomori",
-  "mediaUrl": "https://www.youtube.com/@nihongonomori",
+  "mediaUrl": "https://www.youtube.com/watch?v=dUk38cYzGYo",
   "license": "© 日本語の森 — free educational YouTube content",
   "dateAdded": "2026-05-11"
 }

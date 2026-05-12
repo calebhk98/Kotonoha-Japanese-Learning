@@ -1,13 +1,21 @@
 {
   "id": "tedx-tokyo-innovation",
-  "title": "TEDxTokyo — 日本のイノベーションを再考する (Rethinking Japanese Innovation)",
+  "title": "TEDxTokyo — シン・ニホン：データ時代の日本の可能性 (Shin Nihon: Japan's Potential in the Data Era)",
   "type": "video",
-  "description": "A TEDxTokyo talk in Japanese examining Japan's innovation challenges: why a nation known for quality manufacturing (カイゼン, monozukuri) has struggled with digital transformation (DX). The speaker argues for a cultural shift from perfectionism to experimentation. N2–N3 formal Japanese with technical vocabulary.",
+  "description": "TEDxTokyo talk in Japanese by 安宅 和人 (Kazuto Ataka, Yahoo Japan CSO). Argues that Japan is at a turning point for the data/AI era — 'Shin Nihon' (new Japan) — and calls on the next generation to harness Japan's strengths in craft, nature, and depth of knowledge. Dense business and technology vocabulary at N2–N3 level.",
   "level": "N2-N3",
-  "tags": ["TEDxTokyo", "innovation", "technology", "business", "kaizen", "DX", "N2"],
+  "tags": [
+    "TEDxTokyo",
+    "innovation",
+    "technology",
+    "business",
+    "kaizen",
+    "DX",
+    "N2"
+  ],
   "creator": "TEDxTokyo",
   "sourceUrl": "https://tedxtokyo.com/",
-  "mediaUrl": "https://tedxtokyo.com/",
+  "mediaUrl": "https://www.youtube.com/watch?v=G6ypXVO_Fm0",
   "license": "© TEDxTokyo — licensed under Creative Commons Attribution–NonCommercial–NoDerivs",
   "dateAdded": "2026-05-11"
 }

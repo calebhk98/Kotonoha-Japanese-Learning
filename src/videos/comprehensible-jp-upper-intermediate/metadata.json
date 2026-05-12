@@ -4,10 +4,17 @@
   "type": "video",
   "description": "From Comprehensible Japanese. Upper-intermediate episode delivered entirely in natural Japanese at a pace comfortable for N2 learners. Covers the global spread of anime, manga, and J-pop — why they resonated abroad, how fandom communities formed, and how the industry changed. Richer vocabulary and more complex clause structures than the Intermediate episode.",
   "level": "N2",
-  "tags": ["Comprehensible Japanese", "immersion", "pop culture", "anime", "upper intermediate", "Japanese only"],
+  "tags": [
+    "Comprehensible Japanese",
+    "immersion",
+    "pop culture",
+    "anime",
+    "upper intermediate",
+    "Japanese only"
+  ],
   "creator": "Comprehensible Japanese",
   "sourceUrl": "https://www.youtube.com/@comprehensiblejapanese",
-  "mediaUrl": "https://www.youtube.com/@comprehensiblejapanese",
+  "mediaUrl": "https://www.youtube.com/watch?v=dbrDZREdi0o",
   "license": "© Comprehensible Japanese — free educational YouTube content",
   "dateAdded": "2026-05-11"
 }

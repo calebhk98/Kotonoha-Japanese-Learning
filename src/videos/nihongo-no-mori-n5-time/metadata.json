@@ -4,10 +4,17 @@
   "type": "video",
   "description": "From 日本語の森 (Nihongo no Mori), a YouTube channel that teaches Japanese entirely in Japanese. This N5 lesson covers time vocabulary: hours, minutes, daily schedules, and expressions like 'at seven o'clock', 'from ~ to ~', and 'how long does it take'. All explanation and examples in Japanese.",
   "level": "N5",
-  "tags": ["日本語の森", "JLPT N5", "time", "vocabulary", "educational", "Japanese only"],
+  "tags": [
+    "日本語の森",
+    "JLPT N5",
+    "time",
+    "vocabulary",
+    "educational",
+    "Japanese only"
+  ],
   "creator": "日本語の森 (Nihongo no Mori)",
   "sourceUrl": "https://www.youtube.com/@nihongonomori",
-  "mediaUrl": "https://www.youtube.com/@nihongonomori",
+  "mediaUrl": "https://www.youtube.com/watch?v=kpR9lZKWWp0",
   "license": "© 日本語の森 — free educational YouTube content",
   "dateAdded": "2026-05-11"
 }

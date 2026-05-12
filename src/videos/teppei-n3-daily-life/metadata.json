@@ -4,10 +4,18 @@
   "type": "video",
   "description": "From Nihongo con Teppei — the main series for intermediate learners. Teppei talks naturally about small everyday moments: noticing the weather changing, losing track of time, why convenience stores feel comforting. A good stepping stone from N4 Teppei toward fully native-speed content — slightly more complex sentence structures and colloquial connectors than the beginner series.",
   "level": "N3",
-  "tags": ["Nihongo con Teppei", "immersion", "daily life", "conversation", "podcast", "natural Japanese", "intermediate"],
+  "tags": [
+    "Nihongo con Teppei",
+    "immersion",
+    "daily life",
+    "conversation",
+    "podcast",
+    "natural Japanese",
+    "intermediate"
+  ],
   "creator": "Nihongo con Teppei (teppeisensei.com)",
   "sourceUrl": "https://nihongoconteppei.com/",
-  "mediaUrl": "https://www.youtube.com/@nihongoconteppei",
+  "mediaUrl": "https://www.youtube.com/watch?v=vwqNJPxw918",
   "license": "© Nihongo con Teppei — free educational podcast/YouTube content",
   "dateAdded": "2026-05-11"
 }

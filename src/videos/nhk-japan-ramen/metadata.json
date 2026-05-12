@@ -4,9 +4,18 @@
   "type": "video",
   "description": "NHK food documentary tracing ramen from its Chinese noodle origins to its evolution into a quintessentially Japanese dish. Explores regional ramen styles (博多豚骨, 札幌味噌, 喜多方醤油), the obsessive craft of broth-making, and Japan's ramen museum culture. Natural N4 Japanese with some specialist cooking vocabulary.",
   "level": "N4",
-  "tags": ["NHK", "ramen", "food", "documentary", "regional Japan", "cooking"],
+  "tags": [
+    "NHK",
+    "ramen",
+    "food",
+    "documentary",
+    "regional Japan",
+    "cooking",
+    "English narration"
+  ],
   "creator": "NHK",
   "sourceUrl": "https://www.nhk.or.jp/",
   "license": "© NHK — Documentary content",
-  "dateAdded": "2026-05-11"
+  "dateAdded": "2026-05-11",
+  "mediaUrl": "https://www.youtube.com/watch?v=sXSg518TD3U"
 }

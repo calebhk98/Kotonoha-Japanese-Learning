@@ -4,10 +4,17 @@
   "type": "video",
   "description": "Part of NHK World's Easy Japanese series for newcomers to Japan. Covers essential daily greetings: morning, afternoon, and evening expressions, plus thank-you and goodbye phrases. Slow, clear delivery ideal for absolute beginners.",
   "level": "N5",
-  "tags": ["NHK", "educational", "greetings", "daily life", "beginner", "Easy Japanese"],
+  "tags": [
+    "NHK",
+    "educational",
+    "greetings",
+    "daily life",
+    "beginner",
+    "Easy Japanese"
+  ],
   "creator": "NHK World Japan",
   "sourceUrl": "https://www3.nhk.or.jp/nhkworld/en/learnjapanese/",
-  "mediaUrl": "https://www3.nhk.or.jp/nhkworld/en/learnjapanese/",
+  "mediaUrl": "https://www.nhk.or.jp/lesson/",
   "license": "© NHK World Japan — free streaming educational content",
   "dateAdded": "2026-05-11"
 }
