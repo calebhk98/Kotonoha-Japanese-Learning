@@ -1,11 +1,1 @@
-{
-  "id": "Takarakuji",
-  "title": "たからくじ！ (Takarakuji!)",
-  "type": "story",
-  "description": "The office lottery pool wins 10 million yen! Suddenly everyone has opinions — the boss wants to invest it in the company nationwide expansion, the staff want bonuses, and HR is collecting signatures. A comedy of corporate chaos and human nature.",
-  "author": "オリジナル",
-  "level": "intermediate",
-  "tags": ["n4", "workplace", "adult", "comedy", "money"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Takarakuji","title":"たからくじ！ (Takarakuji!)","type":"story","description":"The office lottery pool wins 10 million yen! Suddenly everyone has opinions — the boss wants to invest it in the company nationwide expansion, the staff want bonuses, and HR is collecting signatures. A comedy of corporate chaos and human nature.","author":"オリジナル","level":"n3","tags":["n4","workplace","adult","comedy","money"],"imageUrl":"","dateAdded":"2026-05-10"}

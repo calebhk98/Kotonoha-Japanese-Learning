@@ -1,11 +1,1 @@
-{
-  "id": "Tsuki-no-Yoru",
-  "title": "つきのよる (A Moonlit Night)",
-  "type": "story",
-  "description": "A child and their father cannot sleep, so they go outside to look at the moon together. White moonlight falls on the water and the trees as they count the stars and share a quiet moment.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["wanikani-lv2", "n5", "night", "family", "nature", "moon", "contemplative"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-11"
-}
+{"id":"Tsuki-no-Yoru","title":"つきのよる (A Moonlit Night)","type":"story","description":"A child and their father cannot sleep, so they go outside to look at the moon together. White moonlight falls on the water and the trees as they count the stars and share a quiet moment.","author":"オリジナル","level":"n5","tags":["wanikani-lv2","n5","night","family","nature","moon","contemplative"],"imageUrl":"","dateAdded":"2026-05-11"}

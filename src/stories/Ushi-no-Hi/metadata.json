@@ -1,11 +1,1 @@
-{
-  "id": "Ushi-no-Hi",
-  "title": "うしのひ (Ushi no Hi)",
-  "type": "story",
-  "description": "A child spends the day watching a big, slow cow in a wide field. The child tries everything to get the cow to move — pulling, calling, waving — but the cow just stands there calmly, blinking its enormous eyes. A gentle, funny story about patience, stubbornness, and the wisdom of cows.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["wanikani-lv3", "n5", "farm", "animals", "humor", "children", "countryside"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-11"
-}
+{"id":"Ushi-no-Hi","title":"うしのひ (Ushi no Hi)","type":"story","description":"A child spends the day watching a big, slow cow in a wide field. The child tries everything to get the cow to move — pulling, calling, waving — but the cow just stands there calmly, blinking its enormous eyes. A gentle, funny story about patience, stubbornness, and the wisdom of cows.","author":"オリジナル","level":"n5","tags":["wanikani-lv3","n5","farm","animals","humor","children","countryside"],"imageUrl":"","dateAdded":"2026-05-11"}
