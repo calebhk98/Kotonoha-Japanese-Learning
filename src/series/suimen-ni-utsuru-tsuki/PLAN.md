@@ -80,4 +80,45 @@ These apply to all episodes and override individual technique notes where they c
 - **Grammar focus**: 〜にほかならない (the reflection is nothing other than the moon — and yet), 〜をもって (with this evening, something concludes — not drama, just closure), 〜てやまない in a single, quiet final instance (what he has always wanted, without knowing the words for it), 体言止め as episode's final mode
 
 ## Reviewer Notes (APPROVED)
+
+### Issues fixed in this review pass
+
+**CRITICAL — Missing Writing Guidelines**
+The plan had no overarching guidance on register, sentence length, kanji density, interior monologue signaling, or the Faulkner-within-narration device. Added `## Writing Guidelines` section before the episode list. Translators picking up any individual episode now have a consistent target.
+
+**CRITICAL — Ep 6 grammar focus contained no genuine N1 patterns**
+`〜にすぎない` (N3), `〜というものは` (N2), and `〜とはいえ` (N2 borderline) were all replaced. Substituted `〜にほかならない`, `〜をもって`, and `〜てやまない` — all genuine N1, all fitting the episode's themes of closure, philosophical reflection, and unnamed longing.
+
+**IMPORTANT — Ep 2 grammar focus included `〜かねない` (N2)**
+Replaced with `〜といえども` (N1 concessive), with a usage note grounding it in the Makoto/Ryōta dynamic.
+
+**IMPORTANT — Ep 5 grammar focus included `〜ていたかもしれない` (N2) and `〜てはじめて` (N3)**
+Both replaced: `〜がゆえに` (N1) substituted for the former; `〜ないまでも` (N1) substituted for the latter, reframed around the father's unfulfilled aspiration — which fits the dictionary object more precisely anyway.
+
+**IMPORTANT — Protagonist agency: Makoto passive across all 6 episodes**
+Ep 4 description revised to make his decision to read the French passage aloud legible as a deliberate volitional act — not an accident, not pressure-release — with a parenthetical note to translators marking it as the series' single moment of Makoto acting first. Ep 6 description revised to make his text reply ("almost home") function as a conscious choice, and to specify the one concrete behavioral difference from Ep 1 (he is present in the same room before dinner; in Ep 1 Yuka left without waking him). Translator note added: the arc is "Makoto came home," not "Makoto fixed his marriage."
+
+**IMPORTANT — Plot logic: Ep 6 ending risked reading as "nothing changed"**
+The specific behavioral delta between Ep 1 and Ep 6 is now named in the episode description. The thematic framing ("it is not large") is preserved — but writers are told what to hold.
+
+### Pre-existing note carried forward
 - Eps 3 and 5 both involve father memory: differentiate — Ep 3 has a fleeting sensory impression; Ep 5 is anchored by the physical dictionary object. Give Ep 3's memory a different sensory form (voice, gesture, phrase — NOT an object).
+
+### Items for human attention before translation begins
+
+1. **Faulkner fragments must be drafted before Ep 1.** The plan specifies that Faulkner's text appears in Eps 1, 4, and obliquely 3; Ep 4 names its content (a man trying to confess something to his wife). If the specific passage is not fixed before translation starts, each episode translator will imagine a different source text and the mise en abyme device breaks. Recommend drafting a 150-word fictional Faulkner excerpt (in Japanese, presented as Makoto's working draft) and appending it to this plan.
+
+2. **Yuka's structural opacity — confirm this is an editorial decision.** By design she has no interiority in this plan. The Writing Guidelines now name this explicitly and give a rationale. A human reviewer should confirm this framing is intentional, not an oversight — an N1 series in which a 46-year-old woman functions as pure atmosphere can be read critically. If the intent is sustained opacity throughout all 6 episodes, that should be a named decision.
+
+3. **`〜に至っては` usage in Ep 2 needs a sample.** The pattern demands a scalar extreme ("and even X…"). The current Ep 2 description does not specify what the extreme case is. Writers should be given a sample usage so the pattern is not misapplied.
+
+4. **Metadata description / cast mismatch (linter-added).** The Series Metadata block (added by the linter) describes the protagonist as 中年女性 ("middle-aged woman") but the Cast section describes 黒澤誠 as a 48-year-old man. Correct the metadata description to match the actual protagonist, or document if this was intentional.
+
+5. **Grammar distribution check — Ep 5 may be overloaded:**
+   - Ep 1: 〜ならでは, 〜に他ならない, 〜をおいて (3 patterns)
+   - Ep 2: 〜をよそに, 〜に至っては, 〜といえども (3 patterns, post-fix)
+   - Ep 3: 〜もさることながら, 〜に即して, 〜ならいざしらず (3 patterns)
+   - Ep 4: 〜ずにはいられない, 〜に堪えない, 〜てやまない (3 patterns)
+   - Ep 5: 〜ものを, 〜ないまでも, 〜ことなしに, 〜がゆえに (4 patterns — slightly heavy)
+   - Ep 6: 〜にほかならない, 〜をもって, 〜てやまない (3 patterns, post-fix)
+   Distribution is even except Ep 5. Consider dropping 〜ないまでも or 〜ことなしに from Ep 5 — overloading grammar at the emotional climax risks making the prose feel labored at the moment it needs to breathe.
