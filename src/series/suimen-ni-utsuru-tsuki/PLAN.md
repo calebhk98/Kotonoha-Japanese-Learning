@@ -3,27 +3,17 @@
 ## Series Metadata
 - **id**: `suimen-ni-utsuru-tsuki`
 - **title**: 水面に映る月
-- **description**: 文芸翻訳家の中年女性が、長年取り組んできた難解な原稿をきっかけに言語そのものへの信頼を失い、翻訳とは何か、自分の声とは何かを問い直す全6話の内省的連作。腐れ縁の友人の死が迫る中、言葉と沈黙のあいだで彼女は静かな変容を遂げる。
+- **description**: 文芸翻訳家の中年男性が、長年取り組んできた難解な原稿をきっかけに言語そのものへの信頼を失い、翻訳とは何か、自分の声とは何かを問い直す全6話の内省的連作。老いた父の記憶と向き合う中、言葉と沈黙のあいだで彼は静かな変容を遂げる。
 - **level**: n1
-- **tags**: literary, interior monologue, identity, friendship, language, loss, translation, women, mid-life, N1
+- **tags**: literary, interior monologue, identity, language, loss, translation, mid-life, N1
 
 ---
 
 ## Cast
-
-### 主人公
-
-**白川澄子（しらかわ すみこ）** — 46歳。文芸翻訳家。旧東欧の現代文学を専門とし、20年以上にわたって「正確で気品ある翻訳」で知られてきた。しかし今、チェコの作家による難解な形而上学的小説の翻訳に行き詰まり、原文の言葉が自分の手をすり抜けていく感覚に囚われている。夫と別居中（9年前）、一人暮らし。翻訳とは他者の声を借りることだとずっと信じてきたが、その借り物の声が積み重なって、自分自身の声がどこにあるのかわからなくなってきた。静かで観察眼が鋭く、感情を直接には表現しない。
-
-### 主要人物
-
-**倉橋ひとみ（くらはし ひとみ）** — 48歳。澄子の大学時代からの旧友。陶芸家。卵巣がんの再発で余命宣告を受けており、今作の通底する喪失の軸となる人物。ひとみは言葉より形と手触りを信じる人間で、澄子とは常に補い合いながら、時に根本的なところで噛み合わなかった。澄子が言語に疑念を持ちはじめたこの時期に、ひとみは逆に口数が増え、残すべき言葉を選び始めている。二人の間には言えなかったことが層を成している。
-
-**谷口保（たにぐち たもつ）** — 54歳。澄子の担当編集者。誠実だが鈍感なところがあり、締め切りと原稿の完成度を最優先する。澄子の内的危機に気づいていないわけではないが、どう扱えばいいかわからず、明るく実務的に接することで問題を先送りにしている。二人の間には職業的な信頼があるが、澄子が本当に困難な状況にある時、谷口は常に「正解」を要求する側に回ってしまう。
-
-**ノヴァーク・ヤン（ヤン・ノヴァーク）** — 62歳。澄子が翻訳している小説の著者、チェコ人作家。本人は登場しないが、作品の断片、かつてのメール、一度だけ交わした手紙を通じて存在感を持つ。彼の文体は意図的に曖昧で、「意味の不在こそが意味だ」という思想を持つ。澄子は彼の言語を翻訳することで、言語一般の可能性と限界を突きつけられている。
-
-**白川颯太（しらかわ そうた）** — 19歳。澄子の息子。東京の大学に通い、年に数回しか会わない。母親が翻訳という仕事に人生を捧げていることを漠然と尊敬しているが、別居している父親側になついており、二人の間には微妙な距離感がある。颯太は言葉よりも行動と数字を好む（経済学専攻）。彼の短い訪問が、澄子に自分の人生の外側を垣間見せる。
+- **黒澤誠 (Kurosawa Makoto)**, 48 — Literary translator (French and German into Japanese). Meticulous, gentle, increasingly aware that his precision hasn't been turned inward. Lives in Suginami, Tokyo. House still contains his wife but no longer quite a marriage. Not unhappy in any way he can name. That is the problem.
+- **黒澤由香 (Kurosawa Yuka)**, 46 — Wife. High school music teacher. Appears obliquely — her piano heard through a door, coffee cup in the sink, her absence on evenings she stays late. Not a villain. Has found her sufficiency elsewhere, quietly.
+- **Dominic Faulkner** — Fictional French author whose novel Makoto is currently translating. We encounter him only through fragments Makoto is working on, which bleed into the narration.
+- **安西良太 (Anzai Ryōta)**, 51 — Makoto's oldest friend, now a successful architect. Easeful where Makoto is guarded. Appears in Eps 2 and 4.
 
 ## Writing Guidelines
 
