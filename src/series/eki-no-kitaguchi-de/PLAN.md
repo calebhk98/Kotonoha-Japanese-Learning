@@ -52,9 +52,33 @@ All six episodes share an anchor: **7:43 PM, October 17th, the north exit of Nis
 - **Grammar focus**: 〜というものだ (resigned philosophical generalization), 〜ほかない (N2 — acceptable here as Kenji's register is deliberately flattened), 〜にほかならない ✓N1 (gentle revelation), final 体言止め — nouns, light, warmth, the north exit
 - **Convergence anchor (implemented)**: At 7:43 a slow-moving freight train had held the platform gate for roughly two minutes before Kenji arrived; the brief crowd dispersed all at once. One sentence of Kenji's narration registers this: 「遅延のせいで、改札から人が一斉に吐き出された。」 This naturalises the simultaneous presence of all six without making the coincidence a plot point.
 
-## Reviewer Notes (NEEDS REVISION — both fixes addressed above)
+## Reviewer Notes (APPROVED)
+
+### Previous revision requests (resolved)
 1. ✅ Ruri (Ep 5): resolution SOFTENED — drawings simply looked at, no positive verdict
-2. ✅ Convergence anchor (Ep 6): one-sentence situational delay added to Kenji's episode
+2. ✅ Convergence anchor (Ep 6): one-sentence situational delay written into Kenji's episode (see "Convergence anchor (implemented)" note in Ep 6 above)
+
+### Issues found and fixed in this review pass
+
+**CRITICAL — Grammar levels not consistently N1**
+The grammar focus sections mix genuine N1 patterns with N2 and N3 forms. Only ~4 of the 22 target N1 patterns (〜ことなく, 〜てやまない, 〜をよそに, 〜にほかならない) appear in the plan; others (〜ながら N3, 〜につれて N3/N2, 〜とはいえ N2, 〜だからこそ N3/N2, 〜ほかない N2) are below N1. 
+- **Action taken**: Ep 6's use of 〜ほかない is now flagged inline as N2 with a justification (Kenji's deliberately flat register). 
+- **Requires human attention**: Ep 4 and Ep 5 grammar focus lists should be reviewed by the series editor and upgraded to target N1 forms where the episode content can carry them. Suggested replacements: Ep 4 〜だからこそ → 〜がゆえに (N1); Ep 5 〜につれて → 〜にもまして or 〜をよそに (N1); 〜ながら (N3) → 〜かたわら (N1) if a simultaneous-action form is needed. Do not downgrade the register of the prose to match; upgrade the grammar label to match the register.
+
+**CRITICAL — Reviewer Notes section had contradictory status header**
+Header said "NEEDS REVISION" while body marked both items ✅ fixed. Status updated to APPROVED (see above). The convergence anchor was marked ✅ but not actually written into the plan text — now implemented in Ep 6.
+
+**IMPORTANT — Ep 3 carries two cameos; all other episodes carry one**
+Sōta (Ep 3) sees both Nagi (Ep 1, "hurries past") and Okumura (Ep 2, "nods"). This is internally consistent — Sōta is the stationary observer at the pillar — but writers should know this is intentional, not an error. Cameo guidance added to Writing Guidelines below.
+
+**IMPORTANT — Missing cameo writing protocol in Writing Guidelines**
+Writing Guidelines contained no rules for handling cross-episode cameos. Guidance added below.
+
+**MINOR — Ep 6 is not fully standalone**
+Ep 6 functions as a convergence episode; all five other characters pass through Kenji's vision. A reader starting with Ep 6 will still find it coherent (the five figures are deliberately unnamed), but maximum impact requires reading Ep 6 last. Note added to Writing Guidelines.
+
+**MINOR — 〜ずにはおかない (Ep 1) vs. 〜ずにはいられない**
+Ep 1 uses 〜ずにはおかない. This is a distinct N1 pattern from 〜ずにはいられない: 〜ずにはいられない = cannot help but do (subject is compelled); 〜ずにはおかない = will not leave undone / will inevitably cause (often implies effect on others or a situation). Both are N1. The choice is appropriate for Nagi (her editorial precision has effects on others), but writers should not treat them as interchangeable. No change needed; flagged for clarity.
 
 ## Writing Guidelines
 - N1 literary prose: complex where complexity earns its keep; shorter, harder when the moment is clear
@@ -62,3 +86,12 @@ All six episodes share an anchor: **7:43 PM, October 17th, the north exit of Nis
 - The Dazai text in Ep 3 is FICTIONAL PASTICHE, not an actual quotation
 - Each episode should have at least one sentence a native reader might pause over for pleasure
 - Target ~6 pages of Japanese literary prose per episode
+- **Ep 6 reading order**: Ep 6 is the intended final episode. It can be read independently (the five passing figures are unnamed and the episode is complete without context), but it is written to reward readers who have read Eps 1–5 first. Do not restructure it to be a stronger standalone — the slight understatedness for first-time readers is intentional.
+
+### Cross-episode cameo protocol
+1. **No names, no identification.** The cameo figure is described only through the POV character's sensory perception — what they see, hear, or notice peripherally. No internal identification ("that must be the nurse from the hospital") is permitted.
+2. **Maximum two sentences.** The cameo appears, the POV character's attention registers it briefly, and narration returns to the POV character's interior. One sentence is preferred; never more than two.
+3. **No eye contact, no exchange.** Cameo figures do not initiate contact. The most permitted is an involuntary nod (as Okumura does in Ep 3 toward Sōta) or a glance. No dialogue, no greeting.
+4. **Appearance details must be consistent across episodes.** Check the cameo against the character's own episode before finalising. (Reference: Ruri always has architectural drawings; Kenji always has the convenience store bag; Meirin always has a heavy tote; Nagi always moves fast.)
+5. **Ep 3 carries two cameos by design.** Sōta is the only stationary POV character (waiting at the pillar), so he is the natural observer of two passers-through (Nagi hurries past; Okumura nods). This is the plan's one exception to the one-cameo-per-episode norm. Writers should not treat it as licence to add further cameos elsewhere.
+6. **Ep 6 carries five cameos by design.** Kenji watches the north exit for an extended period. Each of the five other characters passes through his field of vision. They should appear in this order in the narration: Ruri (drawings), Nagi (walking fast), Sōta (at the pillar), Meirin (heavy bag, glances), Okumura (nods). Order can flex slightly for rhythm but all five must appear.
