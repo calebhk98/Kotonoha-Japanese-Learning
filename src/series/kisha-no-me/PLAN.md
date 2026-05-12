@@ -213,3 +213,57 @@
 3. **～に対して のEp6 単独配置**: このパターンは汎用性が高いため、Ep4かEp5の草稿段階で自然に入れられる場所があれば追加しても良い。強制的に詰め込む必要はない。
 
 4. **サ変動詞・複合動詞との相性**: ～に基づいて・～に関して・～をめぐってはサ変動詞と相性が良く、ニュース文体になじみやすい。記者が内部文書を読む・分析するシーンで使うと語彙と文法が自然に噛み合う。
+
+---
+
+## Reviewer Notes (APPROVED)
+
+**Review date**: 2026-05-12  
+**Reviewer**: Curriculum QA — N2 series review  
+**Verdict**: APPROVED WITH REQUIRED FIXES (all critical and important issues corrected in this pass)
+
+---
+
+### Issues Found and Resolved
+
+#### CRITICAL (fixed in this pass)
+
+**C1 — ～に先立って is N1, not N2 (Ep5)**  
+The original Ep5 grammar focus listed ～に先立って as an N2 target pattern. This pattern appears in Shin Kanzen Master N1 (Unit 7) and Nihongo So-Matome N1, not N2 materials. It was replaced with ～に際して, which is a confirmed N2 pattern (Shin Kanzen Master N2 Unit 4) and is equally natural in the journalistic context of seeking pre-publication comment from a subject. The Grammar Distribution Summary table and the coverage note were updated accordingly. Writers: use 「記事掲載に際して、田原議長にコメントを求める必要がある。」
+
+---
+
+#### IMPORTANT (fixed in this pass)
+
+**I1 — 上毛日報 is a real, currently operating newspaper**  
+The Jomo Shimbun Group (上毛新聞社) and related regional papers in Gunma are real entities. Using 上毛日報 as the name of the fictional paper risks confusion between fictional events and real reporting, and may raise rights/reputation concerns. Changed throughout to **上毛新報** (fictional), which preserves the regional flavor (上毛 = classical Gunma) while being clearly a fictional masthead. Writers: use 上毛新報 consistently in all episode text.
+
+**I2 — Ep3→Ep5 document handoff continuity gap**  
+Ep3 ends with an anonymous file (image of a document) arriving on Saori's phone. Ep5 opens with Fujino handing over a physical original copy. Ep4's plot summary mentions "secretly continuing contact with Fujino" but does not explain when or how Saori identifies Fujino as the sender. This leaves a narrative gap that will confuse readers. A new Plot Logic Risk note (#6) was added to the existing Reviewer Notes section with specific guidance for the writer: Ep4 must include a brief scene or inference where Saori deduces the sender's identity.
+
+**I3 — Specialist vocabulary requires in-text glossing**  
+The Writing Guidelines vocabulary list included terms that are beyond typical N2 passive vocabulary and would block comprehension without support: 内偵, 決裁書類, 後追い取材, 黒塗り. A dedicated "Terms requiring glossing" line was added to the Writing Guidelines section with brief Japanese-language definitions suitable for adaptation as sidebar annotations or footnotes in the final text.
+
+---
+
+#### MINOR (noted, no edit required)
+
+**M1 — ～からすると is borderline N2/N1**  
+～からすると appears in some N2 materials (e.g., Nihongo So-Matome N2) but is listed as N1 in others (Shin Kanzen Master). In the Ep3 usage (「彼女の反応からすると…」), the meaning is transparent and the sentence is not structurally complex, so it is acceptable at N2 for reading comprehension. If this series is also used for production practice, consider noting it as "receptive N2 / productive N1."
+
+**M2 — 田原議長 needs earlier presence**  
+The existing Reviewer Notes (Plot Logic Risk #3) correctly identifies that the antagonist has low visibility in Ep1-3. This is a known authorial risk already documented. Confirmed as worth attention during draft review. No plan change needed.
+
+**M3 — Ep7 intentional irresolution**  
+The open ending (検察 begins investigating but no arrest or conviction) is a deliberate craft choice appropriate for a series aimed at N2 adult learners who appreciate journalistic realism. Confirmed intentional; no change needed. The existing Reviewer Note (#5) covers this adequately.
+
+---
+
+### Confirmed Strengths
+
+- **Plot realism**: The corruption mechanism (農業振興地域 fast-track derecognition → land developer receives advance information → payment routed through 特別顧問 appointment) is specific, legally plausible, and recognizable to Japanese readers familiar with regional politics. No implausible shortcuts.
+- **Character architecture**: All six named characters have distinct behavioral logic, functional story roles, and consistent voice cues. The 小池 デスク as simultaneous obstacle/ally is particularly well-drawn.
+- **Grammar distribution**: 22 patterns across 7 episodes with no episode exceeding 4 new patterns and deliberate reinforcement of high-frequency patterns. Distribution is pedagogically sound.
+- **Writing guidelines**: The guidance on register differentiation (普通体 base with journalistic hardness in narration, character-specific dialogue registers) is specific enough to produce consistent multi-author output.
+- **Escalation arc**: Ep1 (quiet unease) → Ep4 (institutional pressure) → Ep5 (ethical crisis) → Ep6 (publication + retaliation) → Ep7 (quiet resolve) is a clean dramatic arc with no missing rungs.
+- **Deliberate irresolution**: The ending avoids the false catharsis of a full conviction and instead leaves resolution in the hands of real-world institutions — appropriate for a series about the limits and necessity of journalism.

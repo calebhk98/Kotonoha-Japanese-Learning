@@ -1,5 +1,14 @@
 # Series Plan: 水面に映る月
 
+## Series Metadata
+- **id**: `suimen-ni-utsuru-tsuki`
+- **title**: 水面に映る月
+- **description**: 文芸翻訳家の中年女性が、長年取り組んできた難解な原稿をきっかけに言語そのものへの信頼を失い、翻訳とは何か、自分の声とは何かを問い直す全6話の内省的連作。腐れ縁の友人の死が迫る中、言葉と沈黙のあいだで彼女は静かな変容を遂げる。
+- **level**: n1
+- **tags**: literary, interior monologue, identity, friendship, language, loss, translation, women, mid-life, N1
+
+---
+
 ## Cast
 - **黒澤誠 (Kurosawa Makoto)**, 48 — Literary translator (French and German into Japanese). Meticulous, gentle, increasingly aware that his precision hasn't been turned inward. Lives in Suginami, Tokyo. House still contains his wife but no longer quite a marriage. Not unhappy in any way he can name. That is the problem.
 - **黒澤由香 (Kurosawa Yuka)**, 46 — Wife. High school music teacher. Appears obliquely — her piano heard through a door, coffee cup in the sink, her absence on evenings she stays late. Not a villain. Has found her sufficiency elsewhere, quietly.
