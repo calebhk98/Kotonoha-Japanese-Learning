@@ -195,3 +195,37 @@ Prioritize everyday workplace vocabulary over N3 test vocabulary lists — words
 
 ### Serialization note
 Episodes 1–3 form a natural introductory arc. Episodes 4–6 are the middle-year passage. Episodes 7–8 are the year's end and the hinge into what comes next. If the series is extended, episode 8 sets up Keita's role as informal guide to new hires — a season 2 hook that does not feel forced.
+
+---
+
+### Curriculum review (2026-05-12) — issues found and resolved
+
+**CRITICAL — fixed:**
+
+1. **Timeline contradiction (Ep 5 / Ep 6):** Ep 5 was labeled "Six months in" (≈ October) while Ep 6 was labeled "Late September" — September precedes October, so the episodes were in the wrong order relative to their stated time markers. Fixed: Ep 5 is now "Five months in (early September)"; Ep 6 is "Late September (six months in)." The episode ordering is unchanged; only the month labels were corrected. This preserves the typhoon in late September (peak season) and keeps both episodes in a plausible sequence.
+
+**IMPORTANT — fixed:**
+
+2. **Keigo example above N3 level (Ep 2):** The original example `ご確認いただけますでしょうか` uses the doubled-tentative form (`ますでしょうか`), which is N2-level business keigo and should not be modeled as a production target in an N3 series. Replaced with `ご確認いただけますか`, which uses the same `～ていただく` pattern at N3 level without the extra-formal overlay.
+
+3. **`～でございます` listed as a Writing Guidelines target:** The Register Mix section listed `～でございます` alongside N3 keigo forms as an example of workplace language to model. `でございます` is functionally N2/N1 — learners may encounter it but should not be expected to produce it. Fixed: the Writing Guidelines now specify N3-appropriate keigo forms (`～ていただく`, `～させていただく`, `～いたします`), restrict `～でございます` to appearance in quoted email text as a recognition target only, and add explicit guidance that keigo flows upward (subordinate → superior) — Keita uses humble/respectful forms to Sakamoto and Eguchi; they respond in plain-polite, not keigo.
+
+4. **Matsumoto character profile contradicts episode plot (Ep 5):** The cast section stated her "perfectionist streak causes her real stress in episode 5" — but Ep 5's plot is entirely about Keita's mistake, and Matsumoto appears only briefly to send a supportive message. Fixed: the cast note now specifies that her stress in Ep 5 comes from a calculation error in her own filed report that week (flagged by accounting) — this backstory is now also threaded into Ep 5's plot summary as a brief mention, which makes her support message feel earned rather than casual.
+
+5. **Hayakawa Misuzu disappears after Ep 2:** She is introduced with full character depth in the cast section (three sentences of specific backstory) but has no presence in Eps 3–8. A character given that much introductory weight who simply vanishes reads as an abandoned plot thread. Fixed: a single-line cameo added to Ep 7 (she and Keita exchange a look after their respective performance reviews), sufficient to keep her present in the series without inflating her role.
+
+**MINOR — not edited, flagged for writer:**
+
+6. **Eguchi's "daughter / high school exams" detail never appears in any episode plot.** The cast profile includes this as a humanizing recurring detail; it does not surface in any of the 8 episode summaries. The writer should include one brief callback (e.g. a line in Ep 6 or Ep 7) to make the detail feel earned. Not edited because it is a writer's texture decision rather than a structural error.
+
+7. **Ep 4 grammar patterns are heaviest on unique/one-off patterns.** Four of Ep 4's patterns (`～らしい`, `～そうだ`, `～だけ`, `～てきた`) appear only in Ep 4 or in the series finale; none reappear in Eps 5–6. This is not wrong — the patterns are N3, well-chosen, and contextually natural — but writers should reinforce `～らしい` and `～だけ` in surrounding dialogue to give learners more exposure.
+
+8. **`ご確認いただけますでしょうか` also appears (verbatim) in Ep 6's third grammar note** — this has been updated in Ep 2 but the Ep 6 note uses a *different* `～ていただく` example (`先輩に確認していただいて、助かった`) which is correct N3. No change needed in Ep 6.
+
+**No action needed:**
+
+- All 19 grammar patterns confirmed N3 or below (after fixes above).
+- Keita's growth arc across 8 episodes is internally consistent and naturalistic.
+- The three-arc structure (Eps 1–3 / 4–6 / 7–8) is sound and the episode balance is appropriate.
+- Sakamoto's register (efficient, flat, polite but not warm) is realistic and correctly described.
+- Eguchi's use of plain-polite to subordinates (not keigo downward) is correctly modeled.

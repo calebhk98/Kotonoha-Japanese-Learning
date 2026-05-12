@@ -6,6 +6,26 @@
 - **Dominic Faulkner** — Fictional French author whose novel Makoto is currently translating. We encounter him only through fragments Makoto is working on, which bleed into the narration.
 - **安西良太 (Anzai Ryōta)**, 51 — Makoto's oldest friend, now a successful architect. Easeful where Makoto is guarded. Appears in Eps 2 and 4.
 
+## Writing Guidelines
+
+These apply to all episodes and override individual technique notes where they conflict.
+
+### Register and voice
+- Narration is **third-person limited**, always in Makoto's perspective. Sentences may be long and subordinate-clause-heavy (40+ words is fine where the grammar earns it), but each long sentence must contain a single clear logical thread — density is not the same as obscurity.
+- **Interior monologue** is not marked with 「」or italics. The shift from external narration to internal thought is signaled by tense, register, and verb form alone — the reader should feel the crossing, not see a label. A useful model: sentences about the physical world use specific sensory nouns; sentences about Makoto's interior use nominalizations and abstract predicates. The transition between the two can happen within a single sentence.
+- **Memory** (especially in Eps 3 and 5) uses classical 回想 markers (〜たものだ, 〜たことがある, imperfective aspect constructions) and a slightly distanced register — as if Makoto is not sure the memory belongs to him. Do not smooth this uncertainty out; the unreliability of memory is part of the thematic material.
+- The Faulkner-within-the-narration device (Eps 1, 4, and obliquely 3): when the French source bleeds into narration, the prose should feel slightly *imperfect* — as if the Japanese is reaching for something the French had, and not quite holding it. Avoid making the embedded translations eloquent. They should feel like working drafts, not finished art. This protects the story from the pretension of a translator-protagonist who has it all figured out.
+
+### Sentence length and kanji density
+- Target **650–800 characters** per episode (Japanese characters, not words). Episodes should not feel padded. Eps 1 and 6 may run shorter (600) if the restraint is intentional.
+- Use advanced kanji that appear in N1 vocabulary lists without hesitation — 憂鬱, 恣意的, 逡巡, 瞑想 etc. — but only where they are semantically right. Do not insert rare kanji to signal difficulty; the difficulty of this series is syntactic and conceptual, not lexical.
+- Furigana: provide for names (黒澤, 安西) on first appearance per episode. Provide for kanji that are N1 or above and not commonly encountered in reading (e.g. 逡巡, 嗄れ). Do not provide furigana for words that a strong N2 reader would know.
+
+### Tone and grounding
+- Makoto is not wise, insightful, or poetic. He is precise and evasive. The prose has literary density because that is the voice of his world, not because he has figured anything out. Every abstract sentence should be earned by a concrete image nearby.
+- Yuka is not a problem to be solved. Writers should resist any impulse to "give her a scene" that explains her inner life. Her function is structural: she is the ordinary life Makoto is adjacent to but not quite inside. That gap is the story.
+- Ryōta is not a therapist or a wise friend. He is simply more comfortable in his own skin — and this is legible without being underlined.
+
 ## Episodes
 
 ### Ep 1: 訳者の余白
