@@ -1032,11 +1032,38 @@ function runStartupTranscription() {
     }
   });
   child.on('close', (code: number | null) => {
-    if (code === 0) {
-      console.log('[Transcription] Background transcription complete');
-    } else {
+    if (code !== 0) {
       console.error(`[Transcription] Background transcription exited with code ${code}`);
+      return;
     }
+    console.log('[Transcription] Background transcription complete — running vocabulary extraction on new transcripts');
+
+    // Re-load all music/video content from disk (transcripts now exist on disk)
+    // and extract vocabulary for any that still lack it in contentWordsStore.
+    const freshContent = [...loadMusicFromDisk(), ...loadVideosFromDisk()];
+    const toExtract = freshContent.filter(
+      c => c.text && c.text.trim().length > 0 && !contentWordsStore.hasContent(c.id)
+    );
+
+    if (toExtract.length === 0) {
+      console.log('[Transcription] No new vocabulary to extract');
+      return;
+    }
+
+    console.log(`[Transcription] Extracting vocabulary for ${toExtract.length} newly transcribed items`);
+    runBatchExtract(toExtract.map(c => ({ id: c.id, text: c.text })))
+      .then(results => {
+        for (const result of results) {
+          if (result.words?.length) {
+            contentWordsStore.setContentWords(result.id, result.words);
+          }
+        }
+        saveDatabase();
+        console.log(`[Transcription] Vocabulary extraction complete for ${results.length} items`);
+      })
+      .catch(err => {
+        console.error('[Transcription] Vocabulary extraction error:', err instanceof Error ? err.message : String(err));
+      });
   });
 }
 
