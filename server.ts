@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { spawn, spawnSync } from "child_process";
 import * as tar from "tar";
 import zlib from "zlib";
 import {
@@ -934,6 +935,9 @@ async function startServer() {
     }
   })();
 
+  // Transcribe any music/video entries that have a playable URL but no transcript
+  runStartupTranscription();
+
   // Save database on shutdown
   process.on('SIGINT', () => {
     console.log('\n[Server] Shutting down, saving database...');
@@ -950,6 +954,116 @@ async function startServer() {
       console.error('[Server] Error saving database on shutdown:', err);
     }
     process.exit(0);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Startup transcription — runs after port opens, non-blocking.
+// Finds music/video entries that have a playable mediaUrl but no transcript.md
+// and spawns transcribe-missing.ts as a background child process.
+// ---------------------------------------------------------------------------
+
+function isPlayableMediaUrl(url: string): boolean {
+  if (!url) return false;
+  return (
+    /youtube\.com\/watch/.test(url) ||
+    /youtu\.be\/[A-Za-z0-9_-]{11}/.test(url) ||
+    /youtube\.com\/shorts\//.test(url) ||
+    /youtube\.com\/embed\//.test(url) ||
+    /nicovideo\.jp\/watch\//.test(url) ||
+    /bilibili\.com\/video\//.test(url) ||
+    /\.(mp3|mp4|wav|ogg|m4a|webm)(\?|$)/.test(url)
+  );
+}
+
+function needsTranscript(dir: string): boolean {
+  const p = path.join(dir, 'transcript.md');
+  if (!fs.existsSync(p)) return true;
+  const content = fs.readFileSync(p, 'utf8').trim();
+  return content.length === 0 || /^\[.*\]$/.test(content);
+}
+
+function runStartupTranscription() {
+  // Silently skip if prerequisites aren't installed — transcription is optional
+  if (spawnSync('which', ['whisper']).status !== 0) return;
+  if (spawnSync('which', ['yt-dlp']).status !== 0) return;
+
+  // Count how many entries actually need transcription
+  let needCount = 0;
+  for (const contentType of ['music', 'videos'] as const) {
+    const dir = path.join(__dirname, 'src', contentType);
+    if (!fs.existsSync(dir)) continue;
+    for (const name of fs.readdirSync(dir)) {
+      const entryDir = path.join(dir, name);
+      if (!fs.statSync(entryDir).isDirectory()) continue;
+      const metaPath = path.join(entryDir, 'metadata.json');
+      if (!fs.existsSync(metaPath)) continue;
+      try {
+        const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+        if (isPlayableMediaUrl(meta.mediaUrl ?? '') && needsTranscript(entryDir)) {
+          needCount++;
+        }
+      } catch { /* skip malformed metadata */ }
+    }
+  }
+
+  if (needCount === 0) {
+    console.log('[Transcription] All content already has transcripts — skipping startup transcription');
+    return;
+  }
+
+  console.log(`[Transcription] Starting background transcription for ${needCount} entries (model: large-v3)`);
+
+  const scriptPath = path.join(__dirname, 'scripts', 'transcribe-missing.ts');
+  const child = spawn('npx', ['tsx', scriptPath], {
+    cwd: __dirname,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: false,
+  });
+
+  child.stdout.on('data', (chunk: Buffer) => {
+    for (const line of chunk.toString().split('\n').filter(Boolean)) {
+      console.log(`[Transcription] ${line}`);
+    }
+  });
+  child.stderr.on('data', (chunk: Buffer) => {
+    for (const line of chunk.toString().split('\n').filter(Boolean)) {
+      console.log(`[Transcription] ${line}`);
+    }
+  });
+  child.on('close', (code: number | null) => {
+    if (code !== 0) {
+      console.error(`[Transcription] Background transcription exited with code ${code}`);
+      return;
+    }
+    console.log('[Transcription] Background transcription complete — running vocabulary extraction on new transcripts');
+
+    // Re-load all music/video content from disk (transcripts now exist on disk)
+    // and extract vocabulary for any that still lack it in contentWordsStore.
+    const freshContent = [...loadMusicFromDisk(), ...loadVideosFromDisk()];
+    const toExtract = freshContent.filter(
+      c => c.text && c.text.trim().length > 0 && !contentWordsStore.hasContent(c.id)
+    );
+
+    if (toExtract.length === 0) {
+      console.log('[Transcription] No new vocabulary to extract');
+      return;
+    }
+
+    console.log(`[Transcription] Extracting vocabulary for ${toExtract.length} newly transcribed items`);
+    runBatchExtract(toExtract.map(c => ({ id: c.id, text: c.text })))
+      .then(results => {
+        for (const result of results) {
+          if (result.words?.length) {
+            contentWordsStore.setContentWords(result.id, result.words);
+          }
+        }
+        saveDatabase();
+        console.log(`[Transcription] Vocabulary extraction complete for ${results.length} items`);
+      })
+      .catch(err => {
+        console.error('[Transcription] Vocabulary extraction error:', err instanceof Error ? err.message : String(err));
+      });
   });
 }
 
