@@ -4,10 +4,17 @@
   "type": "video",
   "description": "NHK Eテレ's beloved children's educational programme Pythagora Switch (ピタゴラスイッチ), broadcast since 2002. Each episode features chain-reaction 'Pythagorean device' machines, short songs, and simple science/logic concepts. Narrated in very clear N5-level Japanese ideal for children and beginner adult learners.",
   "level": "N5",
-  "tags": ["NHK Eテレ", "children", "science", "educational", "beginner", "chain reaction"],
+  "tags": [
+    "NHK Eテレ",
+    "children",
+    "science",
+    "educational",
+    "beginner",
+    "chain reaction"
+  ],
   "creator": "NHK Eテレ",
   "sourceUrl": "https://www.nhk.or.jp/school/pythagora/",
-  "mediaUrl": "https://www.nhk.or.jp/school/pythagora/",
+  "mediaUrl": "https://www.youtube.com/watch?v=9P1IVMv5IZI",
   "license": "© NHK — Educational broadcast content",
   "dateAdded": "2026-05-11"
 }

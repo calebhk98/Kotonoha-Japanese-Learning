@@ -4,10 +4,17 @@
   "type": "video",
   "description": "A beginner-level immersion video from Comprehensible Japanese. The narrator describes spring in Japan — cherry blossoms, school entrance ceremonies, and seasonal food — using clear, measured speech. Designed for learners transitioning from N5 to N4 with some new compound expressions.",
   "level": "N4",
-  "tags": ["Comprehensible Japanese", "immersion", "spring", "beginner", "seasons", "CI"],
+  "tags": [
+    "Comprehensible Japanese",
+    "immersion",
+    "spring",
+    "beginner",
+    "seasons",
+    "CI"
+  ],
   "creator": "Comprehensible Japanese (cijapanese.com)",
   "sourceUrl": "https://cijapanese.com/",
-  "mediaUrl": "https://www.youtube.com/@cijapanese",
+  "mediaUrl": "https://www.youtube.com/watch?v=xNx-FZ4Sj78",
   "license": "© Comprehensible Japanese — free educational YouTube content",
   "dateAdded": "2026-05-11"
 }

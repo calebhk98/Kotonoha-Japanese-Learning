@@ -4,10 +4,18 @@
   "type": "video",
   "description": "Part of NHK World's cultural programming series. Introduces the fundamentals of washoku (traditional Japanese cuisine): dashi broth from kombu and katsuobushi, rice cooking technique, miso soup, and the classic ichiju-sansai (one soup, three dishes) meal structure. Narration mixes accessible N5 and N4 vocabulary.",
   "level": "N5-N4",
-  "tags": ["NHK World", "cooking", "washoku", "food culture", "traditional", "UNESCO"],
+  "tags": [
+    "NHK World",
+    "cooking",
+    "washoku",
+    "food culture",
+    "traditional",
+    "UNESCO",
+    "English narration"
+  ],
   "creator": "NHK World Japan",
   "sourceUrl": "https://www3.nhk.or.jp/nhkworld/en/vod/",
-  "mediaUrl": "https://www.youtube.com/@NHKWorldJapan",
+  "mediaUrl": "https://www.youtube.com/watch?v=_GPd6ffxiuY",
   "license": "© NHK World Japan — free streaming educational content",
   "dateAdded": "2026-05-11"
 }

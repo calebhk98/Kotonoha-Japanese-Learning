@@ -4,10 +4,19 @@
   "type": "video",
   "description": "NHK World examines the global impact of Japanese manga and anime culture. Covers the legacy of Tezuka Osamu, the birth of the first TV anime (Astro Boy, 1963), the worldwide reach of Studio Ghibli films, and the cosplay phenomenon. Interviews with artists and fans at N4 vocabulary level.",
   "level": "N4",
-  "tags": ["NHK World", "anime", "manga", "pop culture", "Tezuka", "Ghibli", "cosplay"],
+  "tags": [
+    "NHK World",
+    "anime",
+    "manga",
+    "pop culture",
+    "Tezuka",
+    "Ghibli",
+    "cosplay",
+    "English narration"
+  ],
   "creator": "NHK World Japan",
   "sourceUrl": "https://www3.nhk.or.jp/nhkworld/en/vod/",
-  "mediaUrl": "https://www.youtube.com/@NHKWorldJapan",
+  "mediaUrl": "https://www.youtube.com/watch?v=HgLPRrmiShc",
   "license": "© NHK World Japan — free streaming educational content",
   "dateAdded": "2026-05-11"
 }

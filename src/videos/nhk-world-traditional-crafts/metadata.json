@@ -4,10 +4,18 @@
   "type": "video",
   "description": "NHK World spotlights four Japanese traditional crafts through visits to artisan workshops: Arita porcelain (佐賀), Wajima lacquerware (石川), Echizen washi paper (福井), and Awa indigo dyeing (徳島). Introduces craft vocabulary and the philosophy of monozukuri (the art of making things).",
   "level": "N4",
-  "tags": ["NHK World", "crafts", "culture", "traditional", "artisan", "monozukuri"],
+  "tags": [
+    "NHK World",
+    "crafts",
+    "culture",
+    "traditional",
+    "artisan",
+    "monozukuri",
+    "English narration"
+  ],
   "creator": "NHK World Japan",
   "sourceUrl": "https://www3.nhk.or.jp/nhkworld/en/vod/",
-  "mediaUrl": "https://www.youtube.com/@NHKWorldJapan",
+  "mediaUrl": "https://www.youtube.com/watch?v=AHf-rGrh3c4",
   "license": "© NHK World Japan — free streaming educational content",
   "dateAdded": "2026-05-11"
 }

@@ -4,10 +4,17 @@
   "type": "video",
   "description": "From JapanesePod101's free beginner lesson series. Covers Japanese family vocabulary and the important distinction between terms used for one's own family (humbly: 父, 母, 兄, 姉) versus terms used for someone else's family (respectfully: お父さん, お母さん, お兄さん, お姉さん). Includes example dialogue.",
   "level": "N5",
-  "tags": ["JapanesePod101", "JLPT N5", "family", "vocabulary", "keigo basics", "beginner"],
+  "tags": [
+    "JapanesePod101",
+    "JLPT N5",
+    "family",
+    "vocabulary",
+    "keigo basics",
+    "beginner"
+  ],
   "creator": "JapanesePod101 (Innovative Language Learning)",
   "sourceUrl": "https://www.japanesepod101.com/",
-  "mediaUrl": "https://www.youtube.com/@JapanesePod101",
+  "mediaUrl": "https://www.youtube.com/watch?v=4IORgVTMHGo",
   "license": "© Innovative Language Learning — free YouTube educational content",
   "dateAdded": "2026-05-11"
 }
