@@ -6,7 +6,7 @@ import { DictionaryEntry } from './scoring.js';
 import { WordInfo } from '../types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, '../../.cache.db');
+const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '../../.cache.db');
 
 let db: SqlDatabase | null = null;
 let SQL: any = null;
