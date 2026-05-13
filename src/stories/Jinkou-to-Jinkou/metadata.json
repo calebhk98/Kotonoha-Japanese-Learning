@@ -1,11 +1,1 @@
-{
-  "id": "Jinkou-to-Jinkou",
-  "title": "じんこうとじんこう (Jinkou to Jinkou)",
-  "type": "story",
-  "description": "A clever wordplay title: 人工 (artificial) and 人口 (population) sound the same but mean different things. At the science museum, Sota learns about artificial intelligence, artificial satellites, and how Japan's population is changing — told through exhibits, a friendly robot guide, and a curious child's questions.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "science", "technology", "curious", "museum"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Jinkou-to-Jinkou","title":"じんこうとじんこう (Jinkou to Jinkou)","type":"story","description":"A clever wordplay title: 人工 (artificial) and 人口 (population) sound the same but mean different things. At the science museum, Sota learns about artificial intelligence, artificial satellites, and how Japan's population is changing — told through exhibits, a friendly robot guide, and a curious child's questions.","author":"オリジナル","level":"n5","tags":["n5","science","technology","curious","museum"],"imageUrl":"","dateAdded":"2026-05-10"}

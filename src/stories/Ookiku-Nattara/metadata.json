@@ -1,11 +1,1 @@
-{
-  "id": "Ookiku-Nattara",
-  "title": "おおきくなったら (Ookiku Nattara)",
-  "type": "story",
-  "description": "Five children in a classroom each answer the question 'What do you want to be when you grow up?' — a firefighter, a baker, a veterinarian, an astronaut, and one child who simply says 'kind.' A sweet, short story about dreams and what matters most.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "jobs", "dreams", "school", "character-education"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Ookiku-Nattara","title":"おおきくなったら (Ookiku Nattara)","type":"story","description":"Five children in a classroom each answer the question 'What do you want to be when you grow up?' — a firefighter, a baker, a veterinarian, an astronaut, and one child who simply says 'kind.' A sweet, short story about dreams and what matters most.","author":"オリジナル","level":"n5","tags":["n5","jobs","dreams","school","character-education"],"imageUrl":"","dateAdded":"2026-05-10"}

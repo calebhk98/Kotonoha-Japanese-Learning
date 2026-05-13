@@ -1,11 +1,1 @@
-{
-  "id": "Minwa-wo-Mamoru-Hito",
-  "title": "みんわをまもるひと (Minwa wo Mamoru Hito)",
-  "type": "story",
-  "description": "Professor Tanaka is a single-minded scholar who has spent his life collecting and preserving traditional folktales. When his life's major work faces cancellation, he shows what it truly means to be earnest — and why literature from ancient times still matters today.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "culture", "tradition", "literature", "perseverance"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Minwa-wo-Mamoru-Hito","title":"みんわをまもるひと (Minwa wo Mamoru Hito)","type":"story","description":"Professor Tanaka is a single-minded scholar who has spent his life collecting and preserving traditional folktales. When his life's major work faces cancellation, he shows what it truly means to be earnest — and why literature from ancient times still matters today.","author":"オリジナル","level":"n3","tags":["n5","culture","tradition","literature","perseverance"],"imageUrl":"","dateAdded":"2026-05-10"}

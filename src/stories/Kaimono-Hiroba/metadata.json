@@ -1,11 +1,1 @@
-{
-  "id": "Kaimono-Hiroba",
-  "title": "かいものひろば (Kaimono Hiroba)",
-  "type": "story",
-  "description": "It's year-end sale season at the shopping complex. A woman hunts for a new bag, a man needs furniture for his new apartment, and a teenager is looking for the perfect gift. Their paths cross at the sale tables, the elevator, and the lost-and-found counter — a comedy of bargains and near-misses.",
-  "author": "オリジナル",
-  "level": "intermediate",
-  "tags": ["n4", "shopping", "comedy", "slice-of-life", "adult"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Kaimono-Hiroba","title":"かいものひろば (Kaimono Hiroba)","type":"story","description":"It's year-end sale season at the shopping complex. A woman hunts for a new bag, a man needs furniture for his new apartment, and a teenager is looking for the perfect gift. Their paths cross at the sale tables, the elevator, and the lost-and-found counter — a comedy of bargains and near-misses.","author":"オリジナル","level":"n4","tags":["n4","shopping","comedy","slice-of-life","adult"],"imageUrl":"","dateAdded":"2026-05-10"}

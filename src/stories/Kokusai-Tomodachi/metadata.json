@@ -1,11 +1,1 @@
-{
-  "id": "Kokusai-Tomodachi",
-  "title": "こくさいともだち (Kokusai Tomodachi)",
-  "type": "story",
-  "description": "Three exchange students arrive at a Japanese elementary school — Emma from America, Jack from England, and Sophie from France. A story about language barriers, finding common ground through food and play, and making friends from around the world.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "international", "friendship", "school", "culture"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Kokusai-Tomodachi","title":"こくさいともだち (Kokusai Tomodachi)","type":"story","description":"Three exchange students arrive at a Japanese elementary school — Emma from America, Jack from England, and Sophie from France. A story about language barriers, finding common ground through food and play, and making friends from around the world.","author":"オリジナル","level":"n5","tags":["n5","international","friendship","school","culture"],"imageUrl":"","dateAdded":"2026-05-10"}

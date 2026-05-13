@@ -1,11 +1,1 @@
-{
-  "id": "Mukashi-no-Hanashi",
-  "title": "むかしのはなし (Mukashi no Hanashi)",
-  "type": "story",
-  "description": "An old woman sits with her grandchild in winter and tells a story from long ago — a simple tale about a wide mountain, a strong river, and one person who walked between them. A quiet meditation on oral tradition, memory, and the stories that connect us across time.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["wanikani-lv3", "n5", "storytelling", "tradition", "family", "elder"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-11"
-}
+{"id":"Mukashi-no-Hanashi","title":"むかしのはなし (Mukashi no Hanashi)","type":"story","description":"An old woman sits with her grandchild in winter and tells a story from long ago — a simple tale about a wide mountain, a strong river, and one person who walked between them. A quiet meditation on oral tradition, memory, and the stories that connect us across time.","author":"オリジナル","level":"n5","tags":["wanikani-lv3","n5","storytelling","tradition","family","elder"],"imageUrl":"","dateAdded":"2026-05-11"}

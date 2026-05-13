@@ -1,11 +1,1 @@
-{
-  "id": "Machi-no-Kimari",
-  "title": "まちのきまり (Machi no Kimari)",
-  "type": "story",
-  "description": "The neighborhood children's council meets to discuss fairness in their town. They uncover some unfairness, debate different perspectives, deal with shortages, and learn that people who seem like strangers can become your greatest friends.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "community", "ethics", "fairness", "friendship"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Machi-no-Kimari","title":"まちのきまり (Machi no Kimari)","type":"story","description":"The neighborhood children's council meets to discuss fairness in their town. They uncover some unfairness, debate different perspectives, deal with shortages, and learn that people who seem like strangers can become your greatest friends.","author":"オリジナル","level":"n4","tags":["n5","community","ethics","fairness","friendship"],"imageUrl":"","dateAdded":"2026-05-10"}

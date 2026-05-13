@@ -1,11 +1,1 @@
-{
-  "id": "Kimochi-no-Namae",
-  "title": "きもちのなまえ (Kimochi no Namae)",
-  "type": "story",
-  "description": "Tarou has a big day full of different feelings, and his grandmother teaches him that every feeling has a name. A long, warm story exploring the full range of children's emotions — happiness, sadness, anger, fear, excitement, embarrassment, and pride — woven into everyday situations.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "emotions", "family", "daily-life"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Kimochi-no-Namae","title":"きもちのなまえ (Kimochi no Namae)","type":"story","description":"Tarou has a big day full of different feelings, and his grandmother teaches him that every feeling has a name. A long, warm story exploring the full range of children's emotions — happiness, sadness, anger, fear, excitement, embarrassment, and pride — woven into everyday situations.","author":"オリジナル","level":"n5","tags":["n5","emotions","family","daily-life"],"imageUrl":"","dateAdded":"2026-05-10"}

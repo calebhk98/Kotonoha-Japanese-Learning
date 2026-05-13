@@ -1,11 +1,1 @@
-{
-  "id": "Natsu-Matsuri",
-  "title": "なつまつり (Natsu Matsuri)",
-  "type": "story",
-  "description": "It's summer festival season! Hina and her dad visit the local summer festival in their prefecture — goldfish scooping, spicy food stalls, fox masks, and sparklers. A lively, sensory story about the sights, sounds, and smells of a Japanese summer matsuri.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "seasons", "culture", "family", "food"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Natsu-Matsuri","title":"なつまつり (Natsu Matsuri)","type":"story","description":"It's summer festival season! Hina and her dad visit the local summer festival in their prefecture — goldfish scooping, spicy food stalls, fox masks, and sparklers. A lively, sensory story about the sights, sounds, and smells of a Japanese summer matsuri.","author":"オリジナル","level":"n5","tags":["n5","seasons","culture","family","food"],"imageUrl":"","dateAdded":"2026-05-10"}

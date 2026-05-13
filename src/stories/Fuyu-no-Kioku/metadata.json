@@ -1,11 +1,1 @@
-{
-  "id": "Fuyu-no-Kioku",
-  "title": "ふゆのきおく (Fuyu no Kioku)",
-  "type": "story",
-  "description": "Seven-year-old Aoi and her older sister Nana travel north to visit their grandmother's house for the first time since grandfather passed away. Amid the snow and cold, they find warmth in memories, old photos, and grandmother's stories. A gentle, moving story about family, winter, and the way love continues after loss.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "family", "winter", "emotions", "seasons"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Fuyu-no-Kioku","title":"ふゆのきおく (Fuyu no Kioku)","type":"story","description":"Seven-year-old Aoi and her older sister Nana travel north to visit their grandmother's house for the first time since grandfather passed away. Amid the snow and cold, they find warmth in memories, old photos, and grandmother's stories. A gentle, moving story about family, winter, and the way love continues after loss.","author":"オリジナル","level":"n4","tags":["n5","family","winter","emotions","seasons"],"imageUrl":"","dateAdded":"2026-05-10"}

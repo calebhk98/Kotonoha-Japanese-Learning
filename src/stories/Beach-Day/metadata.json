@@ -1,9 +1,1 @@
-{
-  "id": "Beach-Day",
-  "title": "うみ (A Day at the Beach)",
-  "type": "story",
-  "description": "A summer trip to the ocean — arriving and feeling the heat, swimming in the waves, building a sandcastle, finding a pretty shell, eating watermelon on the beach, and watching the sunset before going home tired and happy.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": ""
-}
+{"id":"Beach-Day","title":"うみ (A Day at the Beach)","type":"story","description":"A summer trip to the ocean — arriving and feeling the heat, swimming in the waves, building a sandcastle, finding a pretty shell, eating watermelon on the beach, and watching the sunset before going home tired and happy.","author":"オリジナル","level":"n5","imageUrl":""}

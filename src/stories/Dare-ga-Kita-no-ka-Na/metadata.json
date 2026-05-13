@@ -1,11 +1,1 @@
-{
-  "id": "Dare-ga-Kita-no-ka-Na",
-  "title": "だれがきたのかな？ (Dare ga Kita no ka Na)",
-  "type": "story",
-  "description": "A cumulative doorbell story where visitors keep arriving one by one — a dog, a cat, a bird, a rabbit, a friend, and grandma. Each new arrival joins the growing crowd inside, and the house gets noisier and more fun with every ring of the bell.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "cumulative", "repetitive", "animals", "family", "home", "pattern"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Dare-ga-Kita-no-ka-Na","title":"だれがきたのかな？ (Dare ga Kita no ka Na)","type":"story","description":"A cumulative doorbell story where visitors keep arriving one by one — a dog, a cat, a bird, a rabbit, a friend, and grandma. Each new arrival joins the growing crowd inside, and the house gets noisier and more fun with every ring of the bell.","author":"オリジナル","level":"n5","tags":["n5","cumulative","repetitive","animals","family","home","pattern"],"imageUrl":"","dateAdded":"2026-05-10"}

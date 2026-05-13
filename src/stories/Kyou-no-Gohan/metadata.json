@@ -1,11 +1,1 @@
-{
-  "id": "Kyou-no-Gohan",
-  "title": "きょうのごはん (Kyou no Gohan)",
-  "type": "story",
-  "description": "A cumulative food story where a child's meals grow bigger and sillier throughout the day. Breakfast is simple, lunch adds more, and dinner becomes a delightfully long feast. Along the way, we learn who made each dish — mom, grandma, dad — in a fun family chain.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "cumulative", "food", "family", "repetitive", "daily-life"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Kyou-no-Gohan","title":"きょうのごはん (Kyou no Gohan)","type":"story","description":"A cumulative food story where a child's meals grow bigger and sillier throughout the day. Breakfast is simple, lunch adds more, and dinner becomes a delightfully long feast. Along the way, we learn who made each dish — mom, grandma, dad — in a fun family chain.","author":"オリジナル","level":"n5","tags":["n5","cumulative","food","family","repetitive","daily-life"],"imageUrl":"","dateAdded":"2026-05-10"}

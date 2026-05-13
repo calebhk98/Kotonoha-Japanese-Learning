@@ -1,11 +1,1 @@
-{
-  "id": "Kuruma-no-Tabi",
-  "title": "くるまのたび (Kuruma no Tabi)",
-  "type": "story",
-  "description": "A family sets off early in the car on a day trip through the countryside. The children count towns and villages, spot flowers and mountains, and play number games along the way. A cheerful road-trip story full of the simple pleasures of going somewhere together.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["wanikani-lv4", "n5", "travel", "family", "car", "countryside"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-11"
-}
+{"id":"Kuruma-no-Tabi","title":"くるまのたび (Kuruma no Tabi)","type":"story","description":"A family sets off early in the car on a day trip through the countryside. The children count towns and villages, spot flowers and mountains, and play number games along the way. A cheerful road-trip story full of the simple pleasures of going somewhere together.","author":"オリジナル","level":"n5","tags":["wanikani-lv4","n5","travel","family","car","countryside"],"imageUrl":"","dateAdded":"2026-05-11"}

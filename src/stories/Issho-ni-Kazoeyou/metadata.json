@@ -1,11 +1,1 @@
-{
-  "id": "Issho-ni-Kazoeyou",
-  "title": "いっしょにかぞえよう (Issho ni Kazoeyou)",
-  "type": "story",
-  "description": "A warm count-together story following a child and parent through their day, counting one thing at each moment — from 1 sun at wake-up to 10 stars at bedtime. Each item is introduced with 'ikutsu aru kana?' inviting the reader to count along using both native Japanese and Sino-Japanese number words.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "tags": ["n5", "interactive", "counting", "numbers", "daily-life", "participatory"],
-  "imageUrl": "",
-  "dateAdded": "2026-05-10"
-}
+{"id":"Issho-ni-Kazoeyou","title":"いっしょにかぞえよう (Issho ni Kazoeyou)","type":"story","description":"A warm count-together story following a child and parent through their day, counting one thing at each moment — from 1 sun at wake-up to 10 stars at bedtime. Each item is introduced with 'ikutsu aru kana?' inviting the reader to count along using both native Japanese and Sino-Japanese number words.","author":"オリジナル","level":"n5","tags":["n5","interactive","counting","numbers","daily-life","participatory"],"imageUrl":"","dateAdded":"2026-05-10"}

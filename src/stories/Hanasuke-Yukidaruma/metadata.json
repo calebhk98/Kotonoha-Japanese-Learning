@@ -1,13 +1,1 @@
-{
-  "id": "Hanasuke-Yukidaruma",
-  "title": "チワワの花すけ～雪だるま (Chihuahua Hanasuke: Snowman)",
-  "type": "story",
-  "description": "夜、雪がいっぱい降りました。次の朝、花すけのうちに雪だるまのお客さんが来ます。Snow falls overnight and a snowman comes to visit Hanasuke's home — but what happens when the afternoon sun comes out? Tadoku Level 1.",
-  "author": "丸山京子 (Maruyama Kyōko), NPO多言語多読",
-  "level": "beginner",
-  "imageUrl": "",
-  "seriesId": "chihuahua-hanasuke",
-  "episodeNumber": 6,
-  "sourceUrl": "https://tadoku.org/japanese/book/43726/",
-  "license": "CC BY-NC-ND 4.0"
-}
+{"id":"Hanasuke-Yukidaruma","title":"チワワの花すけ～雪だるま (Chihuahua Hanasuke: Snowman)","type":"story","description":"夜、雪がいっぱい降りました。次の朝、花すけのうちに雪だるまのお客さんが来ます。Snow falls overnight and a snowman comes to visit Hanasuke's home — but what happens when the afternoon sun comes out? Tadoku Level 1.","author":"丸山京子 (Maruyama Kyōko), NPO多言語多読","level":"n5","imageUrl":"","seriesId":"chihuahua-hanasuke","episodeNumber":6,"sourceUrl":"https://tadoku.org/japanese/book/43726/","license":"CC BY-NC-ND 4.0"}
