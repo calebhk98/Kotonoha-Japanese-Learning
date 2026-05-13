@@ -1080,6 +1080,9 @@ async function startServer() {
   // Transcribe any music/video entries that have a playable URL but no transcript
   runStartupTranscription();
 
+  // Scrape captions for any video entries that have placeholder transcripts
+  runStartupCaptionScraper();
+
   // Load music lyrics in background from uta-net.com for placeholder transcripts
   loadMusicTranscriptsInBackground().catch((e) =>
     console.error('[Lyrics] Background loading error:', e instanceof Error ? e.message : String(e)),
@@ -1211,6 +1214,44 @@ function runStartupTranscription() {
       .catch(err => {
         console.error('[Transcription] Vocabulary extraction error:', err instanceof Error ? err.message : String(err));
       });
+  });
+}
+
+/**
+ * Scrape real Japanese captions for videos with placeholder transcripts.
+ * Runs as a non-blocking background process, pulling one video at a time with delays.
+ * Detects video sources (YouTube, NHK) and uses source-specific handlers.
+ */
+function runStartupCaptionScraper() {
+  const scriptPath = path.join(__dirname, 'scripts', 'background', 'scrape-video-captions.ts');
+
+  // Script exits after one run (no prerequisites check needed — graceful failures are handled)
+  console.log('[CaptionScraper] Starting background caption scraper');
+
+  const child = spawn('npx', ['tsx', scriptPath], {
+    cwd: __dirname,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: false,
+  });
+
+  child.stdout.on('data', (chunk: Buffer) => {
+    for (const line of chunk.toString().split('\n').filter(Boolean)) {
+      console.log(`[CaptionScraper] ${line}`);
+    }
+  });
+
+  child.stderr.on('data', (chunk: Buffer) => {
+    for (const line of chunk.toString().split('\n').filter(Boolean)) {
+      console.log(`[CaptionScraper] ${line}`);
+    }
+  });
+
+  child.on('close', (code: number | null) => {
+    if (code !== 0) {
+      console.warn(`[CaptionScraper] Exited with code ${code} (some captions may not have been pulled)`);
+      return;
+    }
+    console.log('[CaptionScraper] Background caption scraping complete');
   });
 }
 
