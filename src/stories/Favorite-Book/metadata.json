@@ -1,9 +1,1 @@
-{
-  "id": "Favorite-Book",
-  "title": "おきにいりのほん (My Favorite Book)",
-  "type": "story",
-  "description": "A child talks about their favorite book — what the story is about, when they first read it, how many times they have read it, and why they love it. A simple opinion-and-reason structure using なぜなら grammar.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": ""
-}
+{"id":"Favorite-Book","title":"おきにいりのほん (My Favorite Book)","type":"story","description":"A child talks about their favorite book — what the story is about, when they first read it, how many times they have read it, and why they love it. A simple opinion-and-reason structure using なぜなら grammar.","author":"オリジナル","level":"n4","imageUrl":""}

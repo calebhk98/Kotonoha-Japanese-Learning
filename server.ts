@@ -3,28 +3,21 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { spawn, spawnSync } from "child_process";
 import * as tar from "tar";
 import zlib from "zlib";
 import {
-  DictionaryVariant,
-  DictionaryEntry,
-  FindBestVariantResult,
-  JLPT_SCORES,
-  JOYO_PENALTIES,
-  getFrequencyPenalty,
-  getWordScoreBreakdown,
   getCachedDictionaryEntries,
-  findBestVariant,
-  markCacheAsDirty,
-  shouldSaveCache,
-  clearCacheDirtyFlag,
 } from "./src/lib/scoring.js";
+import { WordResolver } from "./src/lib/wordResolver.js";
 import { DictionaryManager } from "./src/lib/dictionary.js";
 import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 import { getMorphemeDefinition } from "./src/lib/morphemeDefinitions.js";
 import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk } from "./src/lib/storyLoader.js";
 import { initDatabase, WordsCache, JishoCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
+import { isPunctuation, isSingleKana, looksLikePartialStem } from "./src/lib/extraction-helpers.js";
+import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,6 +59,7 @@ async function ensureJmdictExtracted() {
 
 let tokenizer: Tokenizer | null = null;
 let dictionary: DictionaryManager | null = null;
+let wordResolver: WordResolver | null = null;
 
 const tokenizerReady = (async () => {
   try {
@@ -134,6 +128,7 @@ const dictionaryReady = (async () => {
     await dictionary.initialize('jisho', undefined, undefined, jmnedictFile as string | undefined, jishoCache as any, onJishoCacheUpdate);
   }
   console.log('[Dictionary] Initialization complete');
+  wordResolver = new WordResolver(dictionary);
 
   // Pre-load all cached words from database into memory for fast lookups
   const preloadStart = Date.now();
@@ -174,13 +169,10 @@ const dictionaryReady = (async () => {
 })();
 
 
+
 async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
   const tokens = await tokenizer.segment(text);
-
-  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
-  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
@@ -191,9 +183,9 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     const surface = token.surface;
     if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    if (isSingleKana(surface)) {
-      // Check if it's a morpheme we have a definition for
-      const morphemeDef = getMorphemeDefinition(surface);
+    const morphemeDef = getMorphemeDefinition(surface);
+    const isKanaMorpheme = morphemeDef && /^[ぁ-んー]+$/.test(surface);
+    if (isSingleKana(surface) || isKanaMorpheme) {
       if (morphemeDef) {
         morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
       }
@@ -212,108 +204,26 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   for (const [wordStr, baseForm] of validWords) {
     processedWords.push(wordStr);
     const start = Date.now();
-    // Try to look up using baseForm first (for conjugated verbs), then fall back to wordStr
-    const cacheHadBase = wordsCache.has(baseForm);
-    const cacheHadSurface = wordsCache.has(wordStr);
-    let entries = cacheHadBase ? wordsCache.get(baseForm)! : getCachedDictionaryEntries(baseForm);
+    const cacheHit = wordsCache.has(baseForm) || wordsCache.has(wordStr);
 
-    // If baseForm lookup failed, try the surface form
-    if (entries.length === 0 && baseForm !== wordStr) {
-      entries = cacheHadSurface ? wordsCache.get(wordStr)! : getCachedDictionaryEntries(wordStr);
-    }
+    const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
+      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache);
 
     const lookupTime = Date.now() - start;
-
-    if (cacheHadBase || cacheHadSurface) {
+    if (cacheHit) {
       cacheHits++;
       hitWords.push(wordStr);
     } else {
       cacheMisses++;
       missWords.push(wordStr);
     }
-
     if (lookupTime > 250) {
       console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
     }
 
-    const { variant, entry } = findBestVariant(baseForm, entries);
-
-    let meaning = "Unknown meaning";
-    let meanings: string[] | undefined = undefined;
-    let reading = wordStr;
-
-    if (entry && variant) {
-      reading = variant.pronounced || wordStr;
-      meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
-    }
-
-    // Use dictionary (Jisho API or jmdict) for pure hiragana or katakana words
-    // These are particles, auxiliaries, and other kana-only words where kanji-data is unreliable
-    const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
-    const isPureKatakana = /^[ァ-ヴー]+$/.test(wordStr);
-    const isKanaOnly = isPureHiragana || isPureKatakana;
-
-    if (isKanaOnly && dictionary) {
-      // Try persistent cache first, then batch cache, then dictionary lookup
-      const cachedEntries = wordsCache.get(wordStr);
-      let dictResult: any = null;
-
-      if (cachedEntries && cachedEntries.length > 0) {
-        // Use cached entry
-        const entry = cachedEntries[0];
-        if (entry.meanings && entry.meanings.length > 0) {
-          dictResult = {
-            meaning: entry.meanings[0]?.glosses?.join(", ") || "Unknown",
-            reading: entry.variants?.[0]?.pronounced || wordStr,
-            meanings: entry.meanings.map((m: any) => m.glosses?.join(", ")).filter((m: any) => m)
-          };
-        }
-      } else {
-        // Try batch cache first, then dictionary lookup
-        dictResult = kanaLookupCache?.get(wordStr);
-        if (!dictResult) {
-          dictResult = await dictionary.lookup(wordStr);
-          // Save to batch cache for reuse within this request
-          if (dictResult) {
-            kanaLookupCache?.set(wordStr, dictResult);
-          }
-        }
-
-        // Save dictionary result to persistent cache for future requests
-        if (dictResult) {
-          const entry: DictionaryEntry = {
-            meanings: (dictResult.meanings || [dictResult.meaning])
-              .filter(Boolean)
-              .map((m: string) => ({ glosses: [m] })),
-            variants: [{
-              pronounced: dictResult.reading || wordStr,
-              written: wordStr,
-              priorities: []
-            }]
-          };
-          wordsCache.set(wordStr, [entry]);
-        }
-      }
-
-      if (dictResult) {
-        meaning = dictResult.meaning;
-        if (dictResult.meanings) {
-          meanings = dictResult.meanings;
-        }
-      }
-    }
-
-    // Fallback for pure hiragana particles if still no result from dictionary
-    if (meaning === "Unknown meaning" && isPureHiragana) {
-      meaning = "Kana particle / expression";
-    }
-
-    const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
     const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
-    if (meanings) {
-      wordData.meanings = meanings;
-    }
+    if (meanings) wordData.meanings = meanings;
     results.push(wordData);
   }
 
@@ -341,9 +251,6 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
 }
 
 async function processTextWithTokens(text: string, tokens: any[], kanaLookupCache: Map<string, any>) {
-  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
-  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
@@ -354,9 +261,9 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     const surface = token.surface;
     if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    if (isSingleKana(surface)) {
-      // Check if it's a morpheme we have a definition for
-      const morphemeDef = getMorphemeDefinition(surface);
+    const morphemeDef = getMorphemeDefinition(surface);
+    const isKanaMorpheme = morphemeDef && /^[ぁ-んー]+$/.test(surface);
+    if (isSingleKana(surface) || isKanaMorpheme) {
       if (morphemeDef) {
         morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
       }
@@ -375,85 +282,26 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
   for (const [wordStr, baseForm] of validWords) {
     processedWords.push(wordStr);
     const start = Date.now();
-    // Try to look up using baseForm first (for conjugated verbs), then fall back to wordStr
-    const cacheHadBase = wordsCache.has(baseForm);
-    const cacheHadSurface = wordsCache.has(wordStr);
-    let entries = cacheHadBase ? wordsCache.get(baseForm)! : getCachedDictionaryEntries(baseForm);
+    const cacheHit = wordsCache.has(baseForm) || wordsCache.has(wordStr);
 
-    // If baseForm lookup failed, try the surface form
-    if (entries.length === 0 && baseForm !== wordStr) {
-      entries = cacheHadSurface ? wordsCache.get(wordStr)! : getCachedDictionaryEntries(wordStr);
-    }
+    const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
+      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache);
 
     const lookupTime = Date.now() - start;
-
-    if (cacheHadBase || cacheHadSurface) {
+    if (cacheHit) {
       cacheHits++;
       hitWords.push(wordStr);
     } else {
       cacheMisses++;
       missWords.push(wordStr);
     }
-
     if (lookupTime > 250) {
       console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
     }
 
-    const { variant, entry } = findBestVariant(baseForm, entries);
-
-    let meaning = "Unknown meaning";
-    let meanings: string[] | undefined = undefined;
-    let reading = wordStr;
-
-    if (entry && variant) {
-      reading = variant.pronounced || wordStr;
-      meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
-    }
-
-    // Use dictionary (Jisho API or jmdict) for pure hiragana or katakana words
-    const isPureHiragana = /^[ぁ-ん]+$/.test(wordStr);
-    const isPureKatakana = /^[ァ-ヴー]+$/.test(wordStr);
-    const isKanaOnly = isPureHiragana || isPureKatakana;
-
-    if (isKanaOnly) {
-      // Try persistent cache first, then batch cache
-      const cachedEntries = wordsCache.get(wordStr);
-      let dictResult: any = null;
-
-      if (cachedEntries && cachedEntries.length > 0) {
-        // Use cached entry
-        const entry = cachedEntries[0];
-        if (entry.meanings && entry.meanings.length > 0) {
-          dictResult = {
-            meaning: entry.meanings[0]?.glosses?.join(", ") || "Unknown",
-            reading: entry.variants?.[0]?.pronounced || wordStr,
-            meanings: entry.meanings.map((m: any) => m.glosses?.join(", ")).filter((m: any) => m)
-          };
-        }
-      } else {
-        // Fall back to batch cache
-        dictResult = kanaLookupCache.get(wordStr);
-      }
-
-      if (dictResult) {
-        meaning = dictResult.meaning;
-        if (dictResult.meanings) {
-          meanings = dictResult.meanings;
-        }
-      }
-    }
-
-    // Fallback for pure hiragana particles if still no result from dictionary
-    if (meaning === "Unknown meaning" && isPureHiragana) {
-      meaning = "Kana particle / expression";
-    }
-
-    const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
     const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
-    if (meanings) {
-      wordData.meanings = meanings;
-    }
+    if (meanings) wordData.meanings = meanings;
     results.push(wordData);
   }
 
@@ -483,10 +331,6 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
 async function processStoryText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
   const tokenInfos = await tokenizer.segment(text);
-
-  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
-  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
 
   // Find positions of each segment in the original text
   const tokens: any[] = [];
@@ -522,67 +366,10 @@ async function processStoryText(text: string) {
   for (const token of vocabTokens) {
     if (tokenMap.has(token.surface)) continue;
 
-    // Try baseForm first for dictionary lookup
-    let entries = getCachedDictionaryEntries(token.baseForm);
-    if (entries.length === 0 && token.baseForm !== token.surface) {
-      entries = getCachedDictionaryEntries(token.surface);
-    }
-    const { variant, entry } = findBestVariant(token.baseForm, entries);
+    const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
+      await wordResolver!.resolve(token.surface, token.baseForm);
 
-    let meaning = "Unknown meaning";
-    let meanings: string[] | undefined = undefined;
-    let reading = token.surface;
-
-    if (entry && variant) {
-      reading = variant.pronounced || token.surface;
-      meaning = entry.meanings[0]?.glosses?.join(", ") || meaning;
-    }
-
-    const isPureHiragana = /^[ぁ-ん]+$/.test(token.surface);
-    if (isPureHiragana && dictionary) {
-      // Try persistent cache first, then dictionary lookup
-      const cachedEntries = wordsCache.get(token.surface);
-      let dictResult: any = null;
-
-      if (cachedEntries && cachedEntries.length > 0) {
-        // Use cached entry
-        const entry = cachedEntries[0];
-        if (entry.meanings && entry.meanings.length > 0) {
-          dictResult = {
-            meaning: entry.meanings[0]?.glosses?.join(", ") || "Unknown",
-            reading: entry.variants?.[0]?.pronounced || token.surface,
-            meanings: entry.meanings.map((m: any) => m.glosses?.join(", ")).filter((m: any) => m)
-          };
-        }
-      } else {
-        // Fall back to dictionary lookup
-        dictResult = await dictionary.lookup(token.surface);
-      }
-
-      if (dictResult) {
-        meaning = dictResult.meaning;
-        if (dictResult.meanings) {
-          meanings = dictResult.meanings;
-        }
-      }
-    }
-
-    if (meaning === "Unknown meaning" && isPureHiragana) {
-      meaning = "Kana particle / expression";
-    }
-
-    const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(token.surface, variant);
-
-    tokenMap.set(token.surface, {
-      word: token.surface,
-      reading,
-      meaning,
-      jlpt,
-      joyo,
-      score,
-      breakdown,
-      meanings,
-    });
+    tokenMap.set(token.surface, { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown, meanings });
   }
 
   // Add morpheme definitions to tokenMap
@@ -644,10 +431,6 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
   console.log(`[API] /api/batch-extract: Step 1 - Tokenization completed in ${Date.now() - tokenStart}ms`);
 
   // Collect unique kana-only words from all texts
-  const particles = new Set(["は", "が", "を", "に", "へ", "と", "で", "も", "か", "の", "て", "な", "だ"]);
-  const isPunctuation = (s: string) => /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
-  const isSingleKana = (s: string) => s.length === 1 && (particles.has(s) || /[ぁ-ん]/.test(s));
-
   const collectStart = Date.now();
   const uniqueKanaWords = new Set<string>();
   for (const item of tokenizedBatch) {
@@ -656,7 +439,7 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
       const surface = token.surface;
       if (surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface)) continue;
       if (/^[ぁ-ん]+$/.test(surface) || /^[ァ-ヴー]+$/.test(surface)) {
-        uniqueKanaWords.add(surface);
+        if (!looksLikePartialStem(surface)) uniqueKanaWords.add(surface);
       }
     }
   }
@@ -769,8 +552,153 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
   return results;
 }
 
+/**
+ * Background loader for music lyrics from uta-net.com.
+ * Detects placeholder transcripts and auto-fetches actual lyrics on startup.
+ * Runs non-blocking after server is bound to port.
+ */
+async function loadMusicTranscriptsInBackground() {
+  try {
+    const musicDir = path.join(process.cwd(), 'src', 'music');
+    if (!fs.existsSync(musicDir)) {
+      return; // No music directory
+    }
+
+    const musicFolders = fs.readdirSync(musicDir);
+    const toFetch: Array<{ id: string; title: string; sourceUrl: string; transcriptPath: string }> = [];
+
+    // Identify placeholders
+    for (const folder of musicFolders) {
+      const metadataPath = path.join(musicDir, folder, 'metadata.json');
+      const transcriptPath = path.join(musicDir, folder, 'transcript.md');
+
+      if (!fs.existsSync(metadataPath) || !fs.existsSync(transcriptPath)) continue;
+
+      try {
+        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+        const transcript = fs.readFileSync(transcriptPath, 'utf-8');
+
+        // Check if it's a placeholder (contains "to be fetched" or "Placeholder" or is just the header)
+        const isPlaceholder =
+          transcript.includes('to be fetched') ||
+          transcript.includes('Placeholder') ||
+          transcript.includes('fetch') ||
+          transcript.trim().split('\n').length < 5; // Very short = likely placeholder
+
+        if (
+          isPlaceholder &&
+          metadata.sourceUrl &&
+          metadata.sourceUrl.includes('uta-net.com')
+        ) {
+          toFetch.push({
+            id: metadata.id,
+            title: metadata.title,
+            sourceUrl: metadata.sourceUrl,
+            transcriptPath,
+          });
+        }
+      } catch (e) {
+        // Skip errors per-folder
+      }
+    }
+
+    if (toFetch.length === 0) {
+      console.log('[Lyrics] All music transcripts already populated — skipping');
+      return;
+    }
+
+    console.log(
+      `[Lyrics] Background loader: ${toFetch.length} placeholder transcripts detected`
+    );
+
+    // Batch-fetch with rate limiting (delay between fetches to avoid hammering uta-net)
+    const DELAY_MS = 1000; // 1 second between requests
+    for (let i = 0; i < toFetch.length; i++) {
+      const item = toFetch[i];
+
+      // Delay before fetch (except the first one)
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+      }
+
+      try {
+        console.log(`[Lyrics] Fetching ${item.id} (${i + 1}/${toFetch.length})...`);
+
+        const response = await fetch(item.sourceUrl);
+        if (!response.ok) {
+          console.warn(`[Lyrics] Failed to fetch ${item.id}: HTTP ${response.status}`);
+          continue;
+        }
+
+        const html = await response.text();
+
+        // Parse uta-net HTML: lyrics are in <div id="kashi_area">
+        const match = html.match(
+          /<div id="kashi_area">[\s\S]*?<\/div>/i
+        );
+        if (!match) {
+          console.warn(`[Lyrics] No #kashi_area found in ${item.sourceUrl}`);
+          continue;
+        }
+
+        let lyricsHtml = match[0];
+
+        // Convert <br> to newlines
+        lyricsHtml = lyricsHtml.replace(/<br\s*\/?>/gi, '\n');
+
+        // Remove all HTML tags
+        lyricsHtml = lyricsHtml.replace(/<[^>]+>/g, '');
+
+        // Decode HTML entities
+        lyricsHtml = lyricsHtml
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+
+        // Clean up whitespace
+        const lyrics = lyricsHtml
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+          .join('\n');
+
+        if (!lyrics) {
+          console.warn(
+            `[Lyrics] Extracted empty lyrics for ${item.id}`
+          );
+          continue;
+        }
+
+        // Write to transcript.md
+        fs.writeFileSync(item.transcriptPath, lyrics + '\n', 'utf-8');
+        console.log(
+          `[Lyrics] ✓ ${item.id} — ${lyrics.split('\n').length} lines`
+        );
+      } catch (e) {
+        console.error(
+          `[Lyrics] Error fetching ${item.id}:`,
+          e instanceof Error ? e.message : String(e)
+        );
+      }
+    }
+
+    console.log('[Lyrics] Background loading complete');
+  } catch (e) {
+    console.error(
+      '[Lyrics] Background loader error:',
+      e instanceof Error ? e.message : String(e)
+    );
+  }
+}
+
 async function startServer() {
-  // Wait for tokenizer and dictionary to be ready before starting server
+  // Startup takes ~30 seconds: dictionary decompression and tokenizer (Sudachi WASM)
+  // both load here before the server binds. Wait for "Server running on http://localhost:3000"
+  // before sending requests — the port is not open until this function reaches app.listen().
+  console.log('[Server] Starting up — please wait ~30s for dictionaries and tokenizer to load before sending requests...');
   await tokenizerReady;
   await dictionaryReady;
 
@@ -855,7 +783,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/update-words", (req, res) => {
+  app.post("/api/update-words", async (req, res) => {
     const start = Date.now();
     try {
       const { words } = req.body;
@@ -864,22 +792,20 @@ async function startServer() {
       }
 
       console.log(`[API] /api/update-words: scoring ${words.length} words`);
-      const results = words.map((w: Record<string, unknown>) => {
+      const results = await Promise.all(words.map(async (w: Record<string, unknown>) => {
         const wordStr = w.word as string | undefined;
         if (!wordStr) return w;
 
-        const entries = getCachedDictionaryEntries(wordStr);
-        const { variant } = findBestVariant(wordStr, entries);
-        const calculated = getWordScoreBreakdown(wordStr, variant);
+        const { jlpt, joyo, score, breakdown } = await wordResolver!.resolve(wordStr, wordStr);
 
         return {
           ...w,
-          score: w.score ?? calculated.score,
-          breakdown: w.breakdown ?? calculated.breakdown,
-          jlpt: w.jlpt ?? calculated.jlpt,
-          joyo: w.joyo ?? calculated.joyo,
+          score: w.score ?? score,
+          breakdown: w.breakdown ?? breakdown,
+          jlpt: w.jlpt ?? jlpt,
+          joyo: w.joyo ?? joyo,
         };
-      });
+      }));
 
       console.log(`[API] /api/update-words: completed in ${Date.now() - start}ms`);
       res.json(results);
@@ -955,46 +881,11 @@ async function startServer() {
         return res.status(400).json({ error: 'No word provided' });
       }
 
-      const entries = getCachedDictionaryEntries(word);
-      const { variant, entry } = findBestVariant(word, entries);
+      const { reading, meaning, meanings, variant, entry, jlpt, joyo, score, breakdown } =
+        await wordResolver!.resolve(word, word);
 
-      let reading = word;
-      let meaning = "Unknown meaning";
-      let meanings: string[] | undefined = undefined;
-
-      if (entry && variant) {
-        reading = variant.pronounced || word;
-        if (entry.meanings && entry.meanings.length > 0) {
-          meaning = entry.meanings[0].glosses?.join(", ") || meaning;
-          // Collect all unique meanings
-          const allMeanings = new Set<string>();
-          for (const m of entry.meanings) {
-            if (m.glosses) {
-              for (const gloss of m.glosses) {
-                allMeanings.add(gloss);
-              }
-            }
-          }
-          meanings = Array.from(allMeanings);
-        }
-      }
-
-      const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(word, variant);
-
-      const wordData: any = {
-        word,
-        reading,
-        meaning,
-        jlpt,
-        joyo,
-        score,
-        breakdown,
-        entry
-      };
-
-      if (meanings) {
-        wordData.meanings = meanings;
-      }
+      const wordData: any = { word, reading, meaning, jlpt, joyo, score, breakdown, entry };
+      if (meanings) wordData.meanings = meanings;
 
       const elapsed = Date.now() - start;
       console.log(`[API] /api/word/${word}: completed in ${elapsed}ms`);
@@ -1097,7 +988,10 @@ async function startServer() {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-  // Kick off background extraction for any content not yet in content_words
+  // Kick off background extraction for any content not yet in content_words.
+  // Runs in a worker_threads Worker so the Express event loop stays responsive
+  // to user-facing API requests during the potentially minutes-long warmup.
+  // Fix for #200: previously this ran inline and blocked the event loop.
   (async () => {
     try {
       const allContent = [
@@ -1110,21 +1004,89 @@ async function startServer() {
         console.log('[Server] All content already extracted — skipping startup extraction');
         return;
       }
-      console.log(`[Server] Starting background extraction for ${missing.length}/${allContent.length} content items`);
+      console.log(`[Server] Starting background extraction for ${missing.length}/${allContent.length} content items (worker thread)`);
+
+      const { Worker } = await import('worker_threads');
+
+      // Build chunks upfront; we send one chunk at a time (wait for 'done' before
+      // sending the next) so the worker's event loop isn't flooded.
       const CHUNK_SIZE = 20;
+      const chunks: Array<{ id: string; text: string }[]> = [];
       for (let i = 0; i < missing.length; i += CHUNK_SIZE) {
-        const chunk = missing.slice(i, i + CHUNK_SIZE).map(c => ({ id: c.id, text: c.text }));
-        await runBatchExtract(chunk);
+        chunks.push(missing.slice(i, i + CHUNK_SIZE).map(c => ({ id: c.id, text: c.text })));
       }
-      console.log(`[Server] Startup extraction complete`);
+
+      const workerData: WorkerInitData = {
+        jmdictPath: path.join(__dirname, 'jmdict-db'),
+        jmdictFile: fs.existsSync(path.join(__dirname, 'jmdict-all-3.6.2.json'))
+          ? path.join(__dirname, 'jmdict-all-3.6.2.json')
+          : null,
+        jmnedictFile,
+        // Seed the worker's kana cache with everything already persisted in this
+        // process so the worker avoids redundant Jisho API round-trips.
+        jishoCacheEntries: jishoCache.entries(),
+      };
+
+      // Use the plain-JS shim as the worker entry point.
+      // The shim calls register() with the tsx ESM loader so that .ts imports
+      // work inside the worker thread before bootstrapping extraction-worker.ts.
+      // Pointing at the .ts file directly and passing execArgv=['--import','tsx/esm']
+      // does not work: tsx skips hook registration when isMainThread is false.
+      const workerUrl = new URL('./src/lib/extraction-worker-shim.mjs', import.meta.url);
+      const worker = new Worker(workerUrl, { workerData });
+
+      let currentChunk = 0;
+
+      const sendNextChunk = () => {
+        if (currentChunk < chunks.length) {
+          worker.postMessage({ type: 'extract', items: chunks[currentChunk] });
+        } else {
+          console.log('[Server] Startup extraction complete');
+          worker.terminate();
+        }
+      };
+
+      worker.on('message', (msg: WorkerOutMessage) => {
+        switch (msg.type) {
+          case 'ready':
+            console.log('[Server] Extraction worker ready');
+            sendNextChunk();
+            break;
+          case 'result':
+            if (msg.words && Array.isArray(msg.words)) {
+              contentWordsStore.setContentWords(msg.id, msg.words);
+            }
+            break;
+          case 'done':
+            saveDatabase();
+            currentChunk++;
+            console.log(`[Server] Extraction progress: ${currentChunk}/${chunks.length} chunks`);
+            sendNextChunk();
+            break;
+          case 'init_error':
+            console.error('[Server] Extraction worker error:', msg.message);
+            break;
+        }
+      });
+
+      worker.on('error', e =>
+        console.error('[Server] Extraction worker thread error:', e instanceof Error ? e.message : String(e)),
+      );
     } catch (e) {
-      console.error('[Server] Startup extraction error:', e instanceof Error ? e.message : String(e));
+      console.error('[Server] Failed to start extraction worker:', e instanceof Error ? e.message : String(e));
     }
   })();
 
-  // Keep server alive even if parent process tries to shut down
-  let shutdownRequested = false;
-  let shutdownAttempts = 0;
+  // Transcribe any music/video entries that have a playable URL but no transcript
+  runStartupTranscription();
+
+  // Scrape captions for any video entries that have placeholder transcripts
+  runStartupCaptionScraper();
+
+  // Load music lyrics in background from uta-net.com for placeholder transcripts
+  loadMusicTranscriptsInBackground().catch((e) =>
+    console.error('[Lyrics] Background loading error:', e instanceof Error ? e.message : String(e)),
+  );
 
   // Save database on shutdown
   process.on('SIGINT', () => {
@@ -1133,21 +1095,164 @@ async function startServer() {
     process.exit(0);
   });
 
+  // SIGTERM was previously ignored (commit 1b49e85) to survive GitHub Codespaces idle
+  // timeouts, but that breaks docker stop / systemd / k8s. If Codespaces kills the server
+  // on idle, restart it — don't make the server unkillable to compensate.
   process.on('SIGTERM', () => {
-    shutdownAttempts++;
-    console.log(`[Server] Received SIGTERM (attempt ${shutdownAttempts}), ignoring gracefully...`);
-
-    if (!shutdownRequested) {
-      shutdownRequested = true;
-      console.log('[Server] Server will continue running. Press Ctrl+C to stop.');
+    console.log('[Server] Received SIGTERM, shutting down gracefully...');
+    try { saveDatabase(); } catch (err) {
+      console.error('[Server] Error saving database on shutdown:', err);
     }
-    // Don't exit - server should stay alive
+    process.exit(0);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Startup transcription — runs after port opens, non-blocking.
+// Finds music/video entries that have a playable mediaUrl but no transcript.md
+// and spawns transcribe-missing.ts as a background child process.
+// ---------------------------------------------------------------------------
+
+function isPlayableMediaUrl(url: string): boolean {
+  if (!url) return false;
+  return (
+    /youtube\.com\/watch/.test(url) ||
+    /youtu\.be\/[A-Za-z0-9_-]{11}/.test(url) ||
+    /youtube\.com\/shorts\//.test(url) ||
+    /youtube\.com\/embed\//.test(url) ||
+    /nicovideo\.jp\/watch\//.test(url) ||
+    /bilibili\.com\/video\//.test(url) ||
+    /\.(mp3|mp4|wav|ogg|m4a|webm)(\?|$)/.test(url)
+  );
+}
+
+function needsTranscript(dir: string): boolean {
+  const p = path.join(dir, 'transcript.md');
+  if (!fs.existsSync(p)) return true;
+  const content = fs.readFileSync(p, 'utf8').trim();
+  return content.length === 0 || /^\[.*\]$/.test(content);
+}
+
+function runStartupTranscription() {
+  // Silently skip if prerequisites aren't installed — transcription is optional
+  if (spawnSync('which', ['whisper']).status !== 0) return;
+  if (spawnSync('which', ['yt-dlp']).status !== 0) return;
+
+  // Count how many entries actually need transcription
+  let needCount = 0;
+  for (const contentType of ['music', 'videos'] as const) {
+    const dir = path.join(__dirname, 'src', contentType);
+    if (!fs.existsSync(dir)) continue;
+    for (const name of fs.readdirSync(dir)) {
+      const entryDir = path.join(dir, name);
+      if (!fs.statSync(entryDir).isDirectory()) continue;
+      const metaPath = path.join(entryDir, 'metadata.json');
+      if (!fs.existsSync(metaPath)) continue;
+      try {
+        const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+        if (isPlayableMediaUrl(meta.mediaUrl ?? '') && needsTranscript(entryDir)) {
+          needCount++;
+        }
+      } catch { /* skip malformed metadata */ }
+    }
+  }
+
+  if (needCount === 0) {
+    console.log('[Transcription] All content already has transcripts — skipping startup transcription');
+    return;
+  }
+
+  console.log(`[Transcription] Starting background transcription for ${needCount} entries (model: large-v3)`);
+
+  const scriptPath = path.join(__dirname, 'scripts', 'transcribe-missing.ts');
+  const child = spawn('npx', ['tsx', scriptPath], {
+    cwd: __dirname,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: false,
   });
 
-  // Prevent the process from exiting due to empty event loop
-  setInterval(() => {
-    // Keep-alive interval to prevent process exit
-  }, 30000);
+  child.stdout.on('data', (chunk: Buffer) => {
+    for (const line of chunk.toString().split('\n').filter(Boolean)) {
+      console.log(`[Transcription] ${line}`);
+    }
+  });
+  child.stderr.on('data', (chunk: Buffer) => {
+    for (const line of chunk.toString().split('\n').filter(Boolean)) {
+      console.log(`[Transcription] ${line}`);
+    }
+  });
+  child.on('close', (code: number | null) => {
+    if (code !== 0) {
+      console.error(`[Transcription] Background transcription exited with code ${code}`);
+      return;
+    }
+    console.log('[Transcription] Background transcription complete — running vocabulary extraction on new transcripts');
+
+    // Re-load all music/video content from disk (transcripts now exist on disk)
+    // and extract vocabulary for any that still lack it in contentWordsStore.
+    const freshContent = [...loadMusicFromDisk(), ...loadVideosFromDisk()];
+    const toExtract = freshContent.filter(
+      c => c.text && c.text.trim().length > 0 && !contentWordsStore.hasContent(c.id)
+    );
+
+    if (toExtract.length === 0) {
+      console.log('[Transcription] No new vocabulary to extract');
+      return;
+    }
+
+    console.log(`[Transcription] Extracting vocabulary for ${toExtract.length} newly transcribed items`);
+    runBatchExtract(toExtract.map(c => ({ id: c.id, text: c.text })))
+      .then(results => {
+        for (const result of results) {
+          if (result.words?.length) {
+            contentWordsStore.setContentWords(result.id, result.words);
+          }
+        }
+        saveDatabase();
+        console.log(`[Transcription] Vocabulary extraction complete for ${results.length} items`);
+      })
+      .catch(err => {
+        console.error('[Transcription] Vocabulary extraction error:', err instanceof Error ? err.message : String(err));
+      });
+  });
+}
+
+/**
+ * Scrape real Japanese captions for videos with placeholder transcripts.
+ * Runs as a non-blocking background process, pulling one video at a time with delays.
+ * Detects video sources (YouTube, NHK) and uses source-specific handlers.
+ */
+function runStartupCaptionScraper() {
+  const scriptPath = path.join(__dirname, 'scripts', 'background', 'scrape-video-captions.ts');
+
+  // Script exits after one run (no prerequisites check needed — graceful failures are handled)
+  console.log('[CaptionScraper] Starting background caption scraper');
+
+  const child = spawn('npx', ['tsx', scriptPath], {
+    cwd: __dirname,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: false,
+  });
+
+  child.stdout.on('data', (chunk: Buffer) => {
+    for (const line of chunk.toString().split('\n').filter(Boolean)) {
+      console.log(`[CaptionScraper] ${line}`);
+    }
+  });
+
+  child.stderr.on('data', (chunk: Buffer) => {
+    for (const line of chunk.toString().split('\n').filter(Boolean)) {
+      console.log(`[CaptionScraper] ${line}`);
+    }
+  });
+
+  child.on('close', (code: number | null) => {
+    if (code !== 0) {
+      console.warn(`[CaptionScraper] Exited with code ${code} (some captions may not have been pulled)`);
+      return;
+    }
+    console.log('[CaptionScraper] Background caption scraping complete');
+  });
 }
 
 startServer().catch((err) => {

@@ -88,11 +88,11 @@ describe('vocabulary extraction pipeline', () => {
 
   it('applies frequency penalties correctly across priority ranges', () => {
     const testCases = [
-      // (priorities, expectedMinScore, description)
-      (['ichi1'], null, 'very common word'),
-      (['nf01'], null, 'frequent in general corpus'),
-      (['nf31'], null, 'rare in general corpus'),
-      ([], null, 'no frequency data'),
+      // [priorities, expectedMinScore, description]
+      [['ichi1'], null, 'very common word'],
+      [['nf01'], null, 'frequent in general corpus'],
+      [['nf31'], null, 'rare in general corpus'],
+      [[], null, 'no frequency data'],
     ];
 
     const entry: DictionaryEntry = {
@@ -145,6 +145,88 @@ describe('vocabulary extraction pipeline', () => {
     expect(result.entry).toBeDefined();
     // Should pick the variant with priorities from the second entry
     expect(result.variant?.priorities).toBeDefined();
+  });
+
+  // ── Mixed kanji+kana words (#191) ────────────────────────────────────────
+
+  it('extracts and scores a mixed kanji+kana verb 食べる (to eat)', () => {
+    const entry: DictionaryEntry = {
+      meanings: [{ glosses: ['to eat', 'to live on'] }],
+      variants: [{ written: '食べる', pronounced: 'たべる', priorities: ['ichi1'] }],
+    };
+    const variant = findBestVariant('食べる', [entry]);
+    expect(variant.variant).not.toBeNull();
+    expect(variant.variant?.written).toBe('食べる');
+    const scored = getWordScoreBreakdown('食べる', variant.variant);
+    expect(scored.breakdown.jlptValues.length).toBeGreaterThan(0); // 食 has a JLPT level
+    expect(scored.score).toBeGreaterThanOrEqual(1);
+    expect(scored.score).toBeLessThanOrEqual(100);
+  });
+
+  it('extracts and scores katakana loan word プレゼント (present/gift)', () => {
+    const entry: DictionaryEntry = {
+      meanings: [{ glosses: ['present', 'gift'] }],
+      variants: [{ written: 'プレゼント', pronounced: 'プレゼント' }],
+    };
+    const variant = findBestVariant('プレゼント', [entry]);
+    expect(variant.variant).not.toBeNull();
+    const scored = getWordScoreBreakdown('プレゼント', variant.variant);
+    expect(scored.breakdown.jlptValues).toHaveLength(0); // pure katakana, no kanji
+    expect(scored.score).toBeGreaterThanOrEqual(1);
+    expect(scored.score).toBeLessThanOrEqual(100);
+  });
+
+  it('extracts and scores katakana loan word コーヒー (coffee)', () => {
+    const entry: DictionaryEntry = {
+      meanings: [{ glosses: ['coffee'] }],
+      variants: [{ written: 'コーヒー', pronounced: 'コーヒー' }],
+    };
+    const variant = findBestVariant('コーヒー', [entry]);
+    expect(variant.variant).not.toBeNull();
+    const scored = getWordScoreBreakdown('コーヒー', variant.variant);
+    expect(scored.breakdown.jlptValues).toHaveLength(0);
+  });
+
+  it('extracts and scores mixed adjective 可愛い (cute)', () => {
+    const entry: DictionaryEntry = {
+      meanings: [{ glosses: ['cute', 'adorable', 'charming'] }],
+      variants: [{ written: '可愛い', pronounced: 'かわいい', priorities: ['ichi1'] }],
+    };
+    const variant = findBestVariant('可愛い', [entry]);
+    expect(variant.variant).not.toBeNull();
+    expect(variant.variant?.written).toBe('可愛い');
+    const scored = getWordScoreBreakdown('可愛い', variant.variant);
+    expect(scored.breakdown.jlptValues.length).toBeGreaterThan(0); // 可 and 愛 are kanji
+    expect(scored.score).toBeGreaterThanOrEqual(1);
+    expect(scored.score).toBeLessThanOrEqual(100);
+  });
+
+  it('extracts and scores 桜 (cherry blossom)', () => {
+    const entry: DictionaryEntry = {
+      meanings: [{ glosses: ['cherry blossom', 'cherry tree'] }],
+      variants: [{ written: '桜', pronounced: 'さくら', priorities: ['ichi2'] }],
+    };
+    const variant = findBestVariant('桜', [entry]);
+    expect(variant.variant).not.toBeNull();
+    const scored = getWordScoreBreakdown('桜', variant.variant);
+    expect(scored.breakdown.jlptValues.length).toBeGreaterThan(0);
+    expect(scored.score).toBeGreaterThanOrEqual(1);
+  });
+
+  it('extracts and scores the base form 寝る (to sleep) of conjugated 寝ています', () => {
+    // The resolver looks up the base form; this tests that the base form can be
+    // selected and scored correctly via the extraction pipeline.
+    const entry: DictionaryEntry = {
+      meanings: [{ glosses: ['to sleep', 'to go to bed', 'to lie down'] }],
+      variants: [{ written: '寝る', pronounced: 'ねる', priorities: ['ichi1'] }],
+    };
+    const variant = findBestVariant('寝る', [entry]);
+    expect(variant.variant).not.toBeNull();
+    expect(variant.variant?.written).toBe('寝る');
+    const scored = getWordScoreBreakdown('寝る', variant.variant);
+    expect(scored.breakdown.jlptValues.length).toBeGreaterThan(0); // 寝 is a kanji
+    expect(scored.score).toBeGreaterThanOrEqual(1);
+    expect(scored.score).toBeLessThanOrEqual(100);
   });
 
   it('maintains score bounds (1-100) across all input combinations', () => {

@@ -1,0 +1,22 @@
+{
+  "id": "nhk-nature-four-seasons",
+  "title": "NHK Nature — 日本の四季 (Japan's Four Seasons)",
+  "type": "video",
+  "description": "A stunning NHK nature documentary celebrating Japan's four distinct seasons. From spring cherry blossoms to summer fireflies, autumn foliage, and winter snow landscapes. Explores how Japan's dramatic seasonal change has shaped its art, poetry (万葉集、俳句), and daily life through the concept of 'mono no aware'.",
+  "level": "N3",
+  "tags": [
+    "NHK",
+    "nature",
+    "seasons",
+    "documentary",
+    "landscape",
+    "poetry",
+    "mono no aware",
+    "English narration"
+  ],
+  "creator": "NHK",
+  "sourceUrl": "https://www3.nhk.or.jp/nhkworld/en/vod/",
+  "mediaUrl": "https://www.youtube.com/watch?v=zNGZDlnXJ10",
+  "license": "© NHK — Documentary content",
+  "dateAdded": "2026-05-11"
+}

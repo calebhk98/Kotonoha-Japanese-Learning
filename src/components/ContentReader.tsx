@@ -1,7 +1,7 @@
 import { Content } from '../data/content';
 import { WordInfo } from '../types';
 import { ArrowLeft, Play, Pause } from 'lucide-react';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react';
 
 function getYouTubeId(url: string) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -95,7 +95,7 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
     const { text, tokens } = paragraphData;
     if (!showFurigana && !showHoverDefs) return text;
 
-    const elements: React.ReactNode[] = [];
+    const elements: ReactNode[] = [];
     let lastEnd = 0;
 
     // Sort tokens by startIndex

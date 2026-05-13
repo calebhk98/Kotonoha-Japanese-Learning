@@ -1,9 +1,1 @@
-{
-  "id": "Test-Day",
-  "title": "テストのひ (Test Day)",
-  "type": "story",
-  "description": "A day in the life of a student preparing for and taking an exam - studying the night before, arriving at school nervous, working through test questions carefully, completing the exam, and feeling relieved when it's finished.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": ""
-}
+{"id":"Test-Day","title":"テストのひ (Test Day)","type":"story","description":"A day in the life of a student preparing for and taking an exam - studying the night before, arriving at school nervous, working through test questions carefully, completing the exam, and feeling relieved when it's finished.","author":"オリジナル","level":"n4","imageUrl":""}

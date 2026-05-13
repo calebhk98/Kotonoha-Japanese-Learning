@@ -146,7 +146,7 @@ async function addSeries(args: SeriesArgs) {
     console.log(`\n💡 Next steps:`);
     console.log(`  1. Create episodes with:`);
     console.log(`     npx tsx scripts/add-story.ts --title "Episode 1" --seriesId ${metadata.id}`);
-    console.log(`  2. Run the tests to verify: npx tsx tests/test-stories-quick.ts`);
+    console.log(`  2. Run the tests to verify: npx tsx integration/test-stories-quick.ts`);
   } catch (error) {
     console.error(`❌ Error creating series: ${error}`);
     process.exit(1);

@@ -1,9 +1,1 @@
-{
-  "id": "Convenience-Store",
-  "title": "コンビニで (At the Convenience Store)",
-  "type": "story",
-  "description": "Stopping at a convenience store on the way home — browsing the snack aisle, picking a drink from the cold section, paying at the register, and getting change back.",
-  "author": "オリジナル",
-  "level": "beginner",
-  "imageUrl": ""
-}
+{"id":"Convenience-Store","title":"コンビニで (At the Convenience Store)","type":"story","description":"Stopping at a convenience store on the way home — browsing the snack aisle, picking a drink from the cold section, paying at the register, and getting change back.","author":"オリジナル","level":"n5","imageUrl":""}

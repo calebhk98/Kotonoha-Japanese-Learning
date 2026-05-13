@@ -1,0 +1,12 @@
+{
+  "id": "Basho-Haiku",
+  "title": "松尾芭蕉の俳句 (Haiku by Matsuo Bashō)",
+  "type": "story",
+  "description": "Six famous haiku by Matsuo Bashō (1644–1694), the master who elevated haiku into a high literary art. From the ancient frog's splash that shattered and then deepened eternal silence, to his final poem dictated from his deathbed — still dreaming of wandering across withered autumn fields.",
+  "level": "n5",
+  "author": "松尾芭蕉 (Matsuo Bashō, 1644–1694)",
+  "tags": ["haiku", "俳句", "classical poetry", "Edo period"],
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Basho_by_Buson.jpg/360px-Basho_by_Buson.jpg",
+  "sourceUrl": "https://www.aozora.gr.jp/index_pages/person2240.html",
+  "license": "Public Domain (青空文庫 — Matsuo Bashō died 1694)"
+}

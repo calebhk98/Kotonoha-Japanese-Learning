@@ -1,0 +1,11 @@
+{
+  "id": "Momiji",
+  "title": "もみじ (Momiji — Autumn Leaves)",
+  "type": "music",
+  "description": "A beautiful 1911 song about autumn foliage in the Japanese mountains. The first verse paints maples and ivy decorating the mountain slopes like the hem of a kimono. The second verse shows scattered leaves floating on a stream, their reds and yellows weaving a living brocade on the water's surface.",
+  "level": "N4",
+  "tags": ["文部省唱歌", "Meiji period", "autumn", "nature", "school song", "traditional", "poetry"],
+  "mediaUrl": "https://www.youtube.com/watch?v=CwsuMUiztF0",
+  "sourceUrl": "https://www.worldfolksong.com/songbook/japan/momiji.htm",
+  "license": "Public Domain (Lyrics by 高野辰之, music by 岡野貞一; published 1911 in 尋常小学唱歌 第二学年用 — copyright expired)"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "nhk-world-kyoto",
+  "title": "NHK World — 京都の旅 (Journey to Kyoto)",
+  "type": "video",
+  "description": "An NHK World Japan travel documentary exploring Kyoto — Japan's ancient capital for over a thousand years. Covers the golden pavilion Kinkakuji, geisha culture in Gion, traditional Kyoto cuisine, and the Gion Festival. Narrated in moderately paced Japanese suitable for N4 learners.",
+  "level": "N4",
+  "tags": [
+    "NHK World",
+    "travel",
+    "Kyoto",
+    "culture",
+    "temples",
+    "history",
+    "geisha",
+    "English narration"
+  ],
+  "creator": "NHK World Japan",
+  "sourceUrl": "https://www3.nhk.or.jp/nhkworld/en/vod/",
+  "mediaUrl": "https://www.youtube.com/watch?v=aansXcMqnNk",
+  "license": "© NHK World Japan — free streaming educational content",
+  "dateAdded": "2026-05-11"
+}

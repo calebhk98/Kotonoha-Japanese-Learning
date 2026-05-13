@@ -1,0 +1,269 @@
+# Series Plan: 記者の目
+
+## Series Metadata
+- **id**: `kisha-no-me`
+- **title**: 記者の目
+- **description**: 地方紙の記者・村上沙織は、地元の土地開発をめぐる汚職疑惑を追ううちに、組織の圧力と個人の良心の間で引き裂かれていく。真実を報じることの意味と代償を問う、全7話の調査報道ドラマ。
+- **level**: n2
+- **tags**: [investigative-journalism, corruption, regional-japan, workplace, ethics, drama]
+
+---
+
+## Cast
+
+### 村上 沙織（むらかみ さおり）、32歳
+**役割**: 主人公。北関東の地方紙「上毛新報」社会部記者。  
+**性格**: 粘り強く、正義感が強い一方で、感情を内側に押し込む癖がある。上司に逆らうのは苦手だが、事実に直面すると曲げられない芯がある。一人暮らし、コーヒー依存症。  
+**物語上の機能**: 読者の視点人物。調査の進展と個人的な代償を両方体現する。
+
+### 小池 英二（こいけ えいじ）、54歳
+**役割**: 社会部デスク（編集長代理）。  
+**性格**: かつては鋭い調査記者だったが、今は「現実的な判断」を優先する。沙織を守ろうとする気持ちと、組織を守ろうとする本能が常に葛藤している。  
+**物語上の機能**: 障害であり、理解者でもある。沙織が組織の論理と衝突するたびに登場する。
+
+### 須田 裕樹（すだ ゆうき）、29歳
+**役割**: 社会部の後輩記者・同僚。  
+**性格**: 明るく要領がいいが、深みに欠ける。沙織に憧れており、助けたい気持ちはあるが、リスクには及び腰。  
+**物語上の機能**: 対比役。沙織の孤立を際立たせると同時に、後半で予想外の行動をとる。
+
+### 田原 誠一（たはら せいいち）、61歳
+**役割**: 上毛市議会議長。疑惑の中心人物。  
+**性格**: 表向きは温厚な地域の名士。実際には長年の人脈と根回しで動く老練な政治家。直接手を汚さず、常に「グレー」を保つ。  
+**物語上の機能**: 対立軸。顔を見せるほど捕まえにくくなるタイプの悪。
+
+### 藤野 摂子（ふじの せつこ）、47歳
+**役割**: 市の都市整備課・課長補佐。内部告発者。  
+**性格**: 真面目で几帳面。長年の不正を目撃してきたが、家族への影響を恐れて沈黙してきた。沙織との出会いが彼女を変える。  
+**物語上の機能**: 核心情報の保有者。物語の後半で最も大きなリスクを引き受ける人物。
+
+### 黒沢 浩之（くろさわ ひろゆき）、38歳
+**役割**: 不動産会社「東和地建」の営業部長。  
+**性格**: 野心的で口が上手い。上には従順、下には圧力をかける。自分が単なる駒であることに薄々気づいている。  
+**物語上の機能**: 中間管理職の共犯者。沙織が接触する際の「入り口」であり、後半で動揺を見せる。
+
+---
+
+## Episodes
+
+### Ep 1: 白紙の土地
+**id**: `kisha-ep1-hakushi-no-tochi`  
+**plot**: 沙織は市の広報資料を整理中に、農業振興地域の指定解除が異例の速さで承認された区画を発見する。現地を訪れると、すでに更地になっており、境界杭に「東和地建」のシールが貼られている。気になりながらも確証はなく、記事にするには証拠が足りないと判断し、ひとまず調査を続ける決意をする。  
+**grammar focus**:
+- ～に基づいて: 「農業振興地域の指定解除は、法律に基づいて審査されるはずだ。」
+- ～に関して: 「この土地の所有権移転に関して、記録が見当たらない。」
+- ～に違いない: 「これほど速く許可が下りるとは、何か裏があるに違いない。」
+- ～にすぎない: 「今のところ、これは偶然の一致にすぎないかもしれない。」  
+**emotional beat**: 静かな違和感。嵐の前の静けさ。沙織が「これは何かある」と感じる最初の瞬間。
+
+---
+
+### Ep 2: 名簿の欠片
+**id**: `kisha-ep2-meibo-no-kakera`  
+**plot**: 沙織は情報公開請求で入手した審議会議事録に、委員名簿の一部が黒塗りされていることに気づく。市議会の公開データを調べると、田原議長が審議会の「特別顧問」に就いていた事実が浮かぶ。小池デスクに相談すると「証拠が薄い、もう少し固めろ」と返される。沙織は単独で東和地建の登記情報を掘り始める。  
+**grammar focus**:
+- ～によって: 「情報公開請求によって入手した文書に、不自然な黒塗りがあった。」
+- ～をめぐって: 「この土地の利用計画をめぐって、議会内で何らかの調整が行われた形跡がある。」
+- ～とは限らない: 「黒塗りがあるからといって、必ずしも不正があるとは限らない。」
+- ～ものの: 「公開資料は入手できたものの、肝心の部分は読み取れなかった。」  
+**emotional beat**: 手ごたえと焦り。壁に当たるたびに別の糸口が見える、調査の醍醐味と苛立ちが交錯する。
+
+---
+
+### Ep 3: 声にならない証言
+**id**: `kisha-ep3-koe-ni-naranai`  
+**plot**: 沙織は都市整備課の前任職員に接触するが、「もう関わりたくない」と断られる。偶然の再会を装って藤野摂子と話す機会を得るが、藤野は緊張した様子で「その件は私には分かりません」と言い残して去る。しかしその夜、沙織のもとに差出人不明のメッセージが届く。添付されたファイルには、決裁書類の一部らしき画像があった。  
+**grammar focus**:
+- ～にもかかわらず: 「明らかに知っているにもかかわらず、彼女は何も言おうとしなかった。」
+- ～に反して: 「予想に反して、最初に動いたのは沙織が接触を諦めかけた人物だった。」
+- ～からすると: 「彼女の反応からすると、ただの一般職員ではないと思われる。」
+- ～としては: 「記者としては、匿名の情報源に頼ることへの葛藤は常につきまとう。」  
+**emotional beat**: 孤独な期待。誰かが助けようとしているかもしれない——その可能性が沙織を奮い立たせる。
+
+---
+
+### Ep 4: 圧力の形
+**id**: `kisha-ep4-atsuryoku-no-katachi`  
+**plot**: 沙織が特集記事の下書きを小池に見せると、翌日、社長室から「地域経済への影響を考慮してほしい」という非公式の要請が入る。同時に、沙織の取材先だった元職員から「もう話せない」と連絡が来る。須田は「大丈夫か」と声をかけてくれるが、深入りしない。沙織は記事を一時保留にせざるを得ないが、藤野との接触を密かに続ける。  
+**grammar focus**:
+- ～からには: 「記者である以上、知った事実を黙っているわけにはいかない。」
+- ～だけでなく: 「これは一企業の問題だけでなく、行政の構造的な腐敗につながっている。」
+- ～ばかりか: 「取材を止めるよう求められたばかりか、情報源への圧力まで加わった。」
+- ～次第: 「これ以上の証拠が集まり次第、すぐに記事化に動く。」  
+**emotional beat**: 怒りと孤立。初めて「これは自分一人の戦いかもしれない」と感じる回。
+
+---
+
+### Ep 5: 文書の重さ
+**id**: `kisha-ep5-bunsho-no-omosa`  
+**plot**: 藤野が沙織に直接会い、保管していた決裁書類の原本コピーを渡す。そこには田原議長の直筆サインと、東和地建への事前情報漏洩を示す日付の矛盾があった。しかし藤野は「これを使ったら、私の家族がどうなるか分からない」と打ち明ける。沙織は「必ず守る」と言いたいが、その言葉が嘘になる可能性を知っている。記事を書くべきか、藤野を守るべきか。  
+**grammar focus**:
+- ～さえ～ば: 「この文書さえ公開できれば、すべての疑惑が裏付けられる。」
+- ～というものだ: 「情報源を守ることは、ジャーナリズムの基本というものだ。」
+- ～にわたって: 「この不正は、数年にわたって組織的に行われていた。」
+- ～に際して: 「記事掲載に際して、田原議長にコメントを求める必要がある。」  
+**emotional beat**: 倫理の核心。「真実を伝える義務」と「人を守る責任」が真正面からぶつかる。
+
+---
+
+### Ep 6: 掲載と沈黙
+**id**: `kisha-ep6-keisai-to-chinmoku`  
+**plot**: 沙織は藤野の同意を得た上で、証拠を匿名加工して記事を掲載する。反響は大きく、全国紙が後追い取材を始める。しかし田原議長は「事実無根」と否定し、東和地建は法的手段をほのめかす。社内では小池が「よくやった」と言いながら、上層部のプレッシャーで沙織を社会部から外す人事を進める。須田は初めて上司に異議を唱える。  
+**grammar focus**:
+- ～にもかかわらず: 「証拠を突きつけられたにもかかわらず、議長は全面否定を続けた。」
+- ～とはいえ: 「記事は掲載されたとはいえ、問題の核心はまだ誰も処罰されていない。」
+- ～に対して: 「社長の決定に対して、須田が初めて声を上げた。」
+- ～によって: 「圧力によって沙織が異動させられることは、取材への報復に他ならない。」  
+**emotional beat**: 勝利と喪失。正しいことをしたのに、代償が伴う。苦くて複雑な達成感。
+
+---
+
+### Ep 7: それでも書く
+**id**: `kisha-ep7-soredemo-kaku`  
+**plot**: 異動先の文化部で沙織は雑務をこなす日々を送る。一方、検察が田原議長周辺の内偵を始めたというニュースが流れる。藤野から短いメッセージが届く——「ありがとう」の一言。須田は社会部に残り、沙織の後を継いで調査を続けている。沙織は手帳に次の取材テーマを書き込む。彼女の目はすでに次の「白紙の土地」を見ている。  
+**grammar focus**:
+- ～からには: 「記者である以上、どこに配属されても取材をやめるつもりはない。」
+- ～にもかかわらず: 「異動を命じられたにもかかわらず、沙織の中で何かが変わっていた。」
+- ～というものだ: 「権力に屈しないことが、ジャーナリズムの本質というものだ。」
+- ～としては: 「記者としては、これで終わりではなく始まりだと信じるしかない。」  
+**emotional beat**: 静かな決意。ハッピーエンドではなく、「それでも続ける」という選択の肯定。正義の完全な勝利よりも重い終わり方。
+
+---
+
+## Grammar Distribution Summary
+
+| Pattern | Episodes |
+|---|---|
+| ～に基づいて | 1 |
+| ～に関して | 1 |
+| ～に違いない | 1 |
+| ～にすぎない | 1 |
+| ～によって | 2, 6 |
+| ～をめぐって | 2 |
+| ～とは限らない | 2 |
+| ～ものの | 2 |
+| ～にもかかわらず | 3, 6, 7 |
+| ～に反して | 3 |
+| ～からすると | 3 |
+| ～としては | 3, 7 |
+| ～からには | 4, 7 |
+| ～だけでなく | 4 |
+| ～ばかりか | 4 |
+| ～次第 | 4 |
+| ～さえ～ば | 5 |
+| ～というものだ | 5, 7 |
+| ～にわたって | 5 |
+| ～に際して | 5 |
+| ～とはいえ | 6 |
+| ～に対して | 6 |
+
+**Coverage**: 22 N2 patterns distributed across 7 episodes. Several high-frequency patterns (～にもかかわらず, ～によって, ～からには, ～というものだ) recur across multiple episodes for reinforcement. Note: ～に際して replaces the original ～に先立って (which is N1); ～に際して is confirmed N2 (appears in Shin Kanzen Master N2 Unit 4).
+
+---
+
+## Writing Guidelines
+
+### Register and Tone
+- **Register**: 普通体（だ・である調）をベースとし、地の文は新聞的な硬さを持ちつつも、主人公の内面描写では自然な口語感覚を混ぜる。会話文は各キャラクターの立場・年齢・感情状態を反映した個別のスタイルを持たせること（田原議長：丁寧で計算高い語り口、藤野：敬語多用だが声に震えがある、須田：砕けた口語）。
+- **Journalistic vocabulary to incorporate**: 情報公開請求、議事録、決裁書類、登記情報、内偵、告発、圧力、証拠固め、裏付け、取材源（情報源）、掲載、後追い取材、コメントを求める、事実無根、法的手段
+- **Terms requiring in-text glossing or sidebar annotation** (N2 learners may lack these): 内偵（警察・検察が秘密裏に行う内部調査）、決裁書類（上位職の承認印が押された公文書）、後追い取材（他社が先に報じたニュースを独自に追跡すること）、黒塗り（情報公開文書で開示不適当と判断され墨で消された箇所）
+- **Sentence structure**: 単文の連打を避け、従属節と主節を組み合わせた複合文を積極的に使う。受身形・使役形・間接話法を自然に組み込む。「～という事実」「～ということ」「～かどうか」などの名詞節を多用して情報を積み重ねる文体にする。
+
+### Word Count Target
+- 各エピソード：**500〜650語の日本語テキスト**（地の文＋会話文の合計）
+- 文数の目安：35〜50文
+- 段落数：6〜9段落（各段落4〜8文程度）
+- 構成の目安：導入（100語）→展開1（150語）→展開2（150語）→山場（100語）→結び（50〜100語）
+
+### Complexity Markers for N2 Level
+- 一文の平均語数：15〜22語
+- 助詞の連続や複合助詞（～にもかかわらず、～に基づいて等）を各エピソード3〜4か所使用
+- 漢字語彙比率：50〜60%（音訓の混合、N2〜N1境界の語彙を含む）
+- 敬語・謙譲語の対比：会話シーンで意図的に使い分ける
+- 逆接・譲歩・条件などの複雑な論理関係を文中で明示する
+
+### Content Guidelines
+- 各エピソードは自己完結しつつ、前後のエピソードへの伏線・回収を1か所以上含める
+- 一般名詞の固有名詞化（「議長」「デスク」「文書」等）を通じて、読者が場面に没入できる具体性を持たせる
+- 感情描写は「感じた」「思った」の多用を避け、行動・身体反応・情景描写で内面を示す
+
+---
+
+## Reviewer Notes (see also: Reviewer Notes — APPROVED below)
+
+### Plot Logic Risks
+
+1. **内部告発者の動機のタイミング**: 藤野摂子がEp3で動き始める理由が弱いと感じられる可能性がある。執筆時に「なぜ今なのか」をさりげなく補足すること（例：異動の辞令が出た、別の同僚が処分された等）。
+
+2. **証拠の法的有効性**: 藤野が「コピー」を渡す設定では、法的証拠能力について読者が疑問を持つ可能性がある。物語上は「報道の証拠」として扱い、「法的証拠」との区別をEp5内で軽く言及するとリアリティが増す。
+
+3. **田原議長の描写バランス**: 「顔を見せるほど捕まえにくい」設定は巧みだが、Ep1〜3で登場が少なすぎると読者が実在感を持てない。Ep2かEp3で議長が別の文脈で登場するシーンを入れると効果的。
+
+4. **沙織の異動の論理**: Ep6で社内の異動が起きるが、日本の地方紙の慣行として「処罰的人事異動」の現実感を裏付けるディテールを入れること。読者によっては唐突に感じる可能性がある。
+
+5. **解決の曖昧さ**: Ep7はあえて「不完全な正義」で終わる設計だが、「結局どうなったのか」を求める読者が不満を感じるリスクがある。検察の動きをほのめかすことでEp7の「続きは現実に委ねる」感覚を担保している——この曖昧さは意図的なものと注記すべき。
+
+6. **Ep3→Ep5の文書継続性**: Ep3で沙織が受け取る「差出人不明のファイル（決裁書類の画像）」とEp5で藤野が直接渡す「原本コピー」の連続性が、Ep4のプロット内で明示されていない。執筆時に、Ep4の「藤野との接触を密かに続ける」という一文に、沙織がファイル送信者が藤野であると確信するに至る経緯を短く組み込むこと。そうしないとEp5の信頼関係の構築が唐突に見える。
+
+### Grammar Distribution Concerns
+
+1. **～にもかかわらず の反復**: Ep3・6・7に登場する。意図的な反復学習設計だが、執筆時に文のリズムが単調にならないよう、文中の位置（文頭・文中・文末近く）を変えることを推奨。
+
+2. **Ep4 の文法密度**: ～からには、～だけでなく、～ばかりか、～次第の4パターンが集中している。文法的に「盛り込みすぎ」な印象を与えないよう、会話文と地の文に分散させ、一段落に一パターン以上置かないようにすること。
+
+3. **～に対して のEp6 単独配置**: このパターンは汎用性が高いため、Ep4かEp5の草稿段階で自然に入れられる場所があれば追加しても良い。強制的に詰め込む必要はない。
+
+4. **サ変動詞・複合動詞との相性**: ～に基づいて・～に関して・～をめぐってはサ変動詞と相性が良く、ニュース文体になじみやすい。記者が内部文書を読む・分析するシーンで使うと語彙と文法が自然に噛み合う。
+
+---
+
+## Reviewer Notes (APPROVED)
+
+**Review date**: 2026-05-12  
+**Reviewer**: Curriculum QA — N2 series review  
+**Verdict**: APPROVED WITH REQUIRED FIXES (all critical and important issues corrected in this pass)
+
+---
+
+### Issues Found and Resolved
+
+#### CRITICAL (fixed in this pass)
+
+**C1 — ～に先立って is N1, not N2 (Ep5)**  
+The original Ep5 grammar focus listed ～に先立って as an N2 target pattern. This pattern appears in Shin Kanzen Master N1 (Unit 7) and Nihongo So-Matome N1, not N2 materials. It was replaced with ～に際して, which is a confirmed N2 pattern (Shin Kanzen Master N2 Unit 4) and is equally natural in the journalistic context of seeking pre-publication comment from a subject. The Grammar Distribution Summary table and the coverage note were updated accordingly. Writers: use 「記事掲載に際して、田原議長にコメントを求める必要がある。」
+
+---
+
+#### IMPORTANT (fixed in this pass)
+
+**I1 — 上毛日報 is a real, currently operating newspaper**  
+The Jomo Shimbun Group (上毛新聞社) and related regional papers in Gunma are real entities. Using 上毛日報 as the name of the fictional paper risks confusion between fictional events and real reporting, and may raise rights/reputation concerns. Changed throughout to **上毛新報** (fictional), which preserves the regional flavor (上毛 = classical Gunma) while being clearly a fictional masthead. Writers: use 上毛新報 consistently in all episode text.
+
+**I2 — Ep3→Ep5 document handoff continuity gap**  
+Ep3 ends with an anonymous file (image of a document) arriving on Saori's phone. Ep5 opens with Fujino handing over a physical original copy. Ep4's plot summary mentions "secretly continuing contact with Fujino" but does not explain when or how Saori identifies Fujino as the sender. This leaves a narrative gap that will confuse readers. A new Plot Logic Risk note (#6) was added to the existing Reviewer Notes section with specific guidance for the writer: Ep4 must include a brief scene or inference where Saori deduces the sender's identity.
+
+**I3 — Specialist vocabulary requires in-text glossing**  
+The Writing Guidelines vocabulary list included terms that are beyond typical N2 passive vocabulary and would block comprehension without support: 内偵, 決裁書類, 後追い取材, 黒塗り. A dedicated "Terms requiring glossing" line was added to the Writing Guidelines section with brief Japanese-language definitions suitable for adaptation as sidebar annotations or footnotes in the final text.
+
+---
+
+#### MINOR (noted, no edit required)
+
+**M1 — ～からすると is borderline N2/N1**  
+～からすると appears in some N2 materials (e.g., Nihongo So-Matome N2) but is listed as N1 in others (Shin Kanzen Master). In the Ep3 usage (「彼女の反応からすると…」), the meaning is transparent and the sentence is not structurally complex, so it is acceptable at N2 for reading comprehension. If this series is also used for production practice, consider noting it as "receptive N2 / productive N1."
+
+**M2 — 田原議長 needs earlier presence**  
+The existing Reviewer Notes (Plot Logic Risk #3) correctly identifies that the antagonist has low visibility in Ep1-3. This is a known authorial risk already documented. Confirmed as worth attention during draft review. No plan change needed.
+
+**M3 — Ep7 intentional irresolution**  
+The open ending (検察 begins investigating but no arrest or conviction) is a deliberate craft choice appropriate for a series aimed at N2 adult learners who appreciate journalistic realism. Confirmed intentional; no change needed. The existing Reviewer Note (#5) covers this adequately.
+
+---
+
+### Confirmed Strengths
+
+- **Plot realism**: The corruption mechanism (農業振興地域 fast-track derecognition → land developer receives advance information → payment routed through 特別顧問 appointment) is specific, legally plausible, and recognizable to Japanese readers familiar with regional politics. No implausible shortcuts.
+- **Character architecture**: All six named characters have distinct behavioral logic, functional story roles, and consistent voice cues. The 小池 デスク as simultaneous obstacle/ally is particularly well-drawn.
+- **Grammar distribution**: 22 patterns across 7 episodes with no episode exceeding 4 new patterns and deliberate reinforcement of high-frequency patterns. Distribution is pedagogically sound.
+- **Writing guidelines**: The guidance on register differentiation (普通体 base with journalistic hardness in narration, character-specific dialogue registers) is specific enough to produce consistent multi-author output.
+- **Escalation arc**: Ep1 (quiet unease) → Ep4 (institutional pressure) → Ep5 (ethical crisis) → Ep6 (publication + retaliation) → Ep7 (quiet resolve) is a clean dramatic arc with no missing rungs.
+- **Deliberate irresolution**: The ending avoids the false catharsis of a full conviction and instead leaves resolution in the hands of real-world institutions — appropriate for a series about the limits and necessity of journalism.

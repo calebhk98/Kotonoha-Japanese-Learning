@@ -34,7 +34,7 @@ Open your browser to **http://localhost:3000**
 
 ## Features
 
-- **104 Curated Stories**: Classic folktales, modern stories, and literary classics from N5 (beginner) to N4 (intermediate)
+- **123+ Curated Stories**: Classic folktales, modern stories, and literary classics from N5 (beginner) to N4 (intermediate)
 - **Smart Vocabulary Extraction**: Japanese text is automatically tokenized and analyzed
 - **Intelligent Scoring**: Words are scored by JLPT level, kanji complexity, and frequency
 - **Progress Tracking**: Mark words as known and track your learning progress
@@ -43,19 +43,17 @@ Open your browser to **http://localhost:3000**
 
 ## Content Library
 
-The app includes **104 curated Japanese stories** organized by difficulty:
+The app includes **123+ curated Japanese stories** organized by difficulty (see [STORIES_LIST.md](STORIES_LIST.md) for the up-to-date catalog):
 
-- **Classic Folktales** (16): Momotaro, Urashima Taro, Kaguya-hime, and more
-- **N5 Everyday Stories** (57): Daily routines, school, food, nature, holidays, and more
-- **N5-N4 Transition Classics** (13): Literary works from Akutagawa, Natsume Soseki, Miyazawa Kenji
-- **Aesop's Fables** (7): Western classics adapted to Japanese
-- **Themed Stories** (11): Seasonal, personal life, and specialized topics
-
-See [STORIES_LIST.md](STORIES_LIST.md) for the complete catalog.
+- **Classic Folktales**: Momotaro, Urashima Taro, Kaguya-hime, and more
+- **N5 Everyday Stories**: Daily routines, school, food, nature, holidays, and more
+- **N5-N4 Transition Classics**: Literary works from Akutagawa, Natsume Soseki, Miyazawa Kenji
+- **Aesop's Fables**: Western classics adapted to Japanese
+- **Themed Stories**: Seasonal, personal life, and specialized topics
 
 ## How It Works
 
-1. **Select a Story**: Browse 104 curated Japanese stories by difficulty level
+1. **Select a Story**: Browse curated Japanese stories by difficulty level
 2. **Extract Vocabulary**: The app automatically tokenizes the text and identifies unfamiliar words
 3. **Score Words**: Each word gets a difficulty score based on:
    - JLPT level (N5 beginner to N1 advanced)
@@ -81,7 +79,7 @@ Want to contribute stories, fix bugs, or extend features? See [DEVELOPMENT.md](D
 
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
 - **Backend**: Express.js
-- **Tokenization**: Sudachi WASM (default), Sudachi-TS, Lindera, Kuromoji, TinySegmenter
+- **Tokenization**: Sudachi WASM (default); TinySegmenter (emergency dev fallback)
 - **Dictionary**: kanji-data
 - **UI**: lucide-react (icons)
 
@@ -108,7 +106,7 @@ npm run preview
 ## Documentation
 
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Developer guide and contribution workflow
-- [STORIES_LIST.md](STORIES_LIST.md) - Complete story catalog (104 implemented stories)
+- [STORIES_LIST.md](STORIES_LIST.md) - Complete story catalog
 - [SONGS_LIST.md](SONGS_LIST.md) - Japanese songs for learning
 - [VIDEOS.md](VIDEOS.md) - Japanese videos and content recommendations
 - [TOKENIZER_SETUP.md](TOKENIZER_SETUP.md) - Tokenizer configuration and troubleshooting

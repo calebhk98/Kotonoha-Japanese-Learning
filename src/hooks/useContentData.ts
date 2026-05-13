@@ -219,15 +219,12 @@ export function useContentData() {
     localStorage.removeItem('knownWords');
   }, []);
 
-  const clearContentVocab = useCallback(async () => {
+  const clearContentVocab = useCallback(() => {
     setContentVocab({});
     localStorage.removeItem('contentVocab');
-    try {
-      await fetch('/api/clear-cache', { method: 'POST' });
-      console.log("[API] Server cache cleared");
-    } catch (e) {
-      console.error("[API] Failed to clear server cache:", e);
-    }
+    fetch('/api/clear-cache', { method: 'POST' })
+      .then(() => console.log("[API] Server cache cleared"))
+      .catch(e => console.error("[API] Failed to clear server cache:", e));
   }, []);
 
   const updateWord = useCallback((wordStr: string, updatedWord: WordInfo) => {

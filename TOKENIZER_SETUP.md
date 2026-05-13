@@ -78,17 +78,24 @@ npm run setup-sudachi
 
 ## Switching Tokenizers
 
-### Use TinySegmenter (Fallback)
-```bash
-TOKENIZER=tinysegmenter npm run dev
-```
-
 ### Use Sudachi WASM (Default)
 ```bash
 TOKENIZER=sudachi-wasm npm run dev
 # or simply:
 npm run dev
 ```
+
+### Use TinySegmenter (Emergency Dev Fallback)
+
+Use this only when Sudachi WASM is broken and you need the rest of the app running while you fix it. Vocabulary scores and word lookups degrade significantly.
+
+```bash
+TOKENIZER=tinysegmenter npm run dev
+```
+
+### Deprecated tokenizers (Sudachi-TS, Lindera, Kuromoji)
+
+These tokenizer classes are still in `src/lib/tokenizers.ts` but their npm packages were removed. Each has a JSDoc `@deprecated` comment with the exact reinstall command. They will throw a runtime error if selected without reinstalling.
 
 ## What Gets Built?
 
@@ -139,8 +146,8 @@ Location: `sudachi-wasm-built/`
 | Tokenizer | Accuracy | Speed | Notes |
 |-----------|----------|-------|-------|
 | Sudachi WASM | 83% | ~3ms | Default, recommended |
-| TinySegmenter | 60% | <1ms | Fallback, lightweight |
-| Kuromoji | 20% | ~10ms | Poor hiragana support |
+| TinySegmenter | 60% | <1ms | Emergency dev fallback only |
+| Kuromoji | 20% | ~10ms | Deprecated; poor hiragana support; package removed |
 
 Test case: 6 critical hiragana words
 - Sudachi gets 5/6 correct (83%)
@@ -159,6 +166,10 @@ node test-simple.mjs
 
 # Compare tokenization modes
 node test-sudachi-modes.mjs
+
+# Compare TinySegmenter vs BudouX vs Kuromoji on test text
+# (requires: npm install kuromoji)
+npx tsx scripts/dev/tokenizer-comparison.ts
 ```
 
 ### Updating the Dictionary

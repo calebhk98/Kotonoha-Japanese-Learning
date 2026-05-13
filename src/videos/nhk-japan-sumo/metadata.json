@@ -1,0 +1,21 @@
+{
+  "id": "nhk-japan-sumo",
+  "title": "NHK — 大相撲：国技の世界 (Grand Sumo: Japan's National Sport)",
+  "type": "video",
+  "description": "NHK documentary on the world of grand sumo (大相撲). Covers the history of sumo as a Shinto ritual, stable life (部屋), the ranking system (番付) from jonokuchi to yokozuna, tournament structure (本場所), and key techniques (決まり手). Features interviews with wrestlers and coaches in natural spoken Japanese.",
+  "level": "N4",
+  "tags": [
+    "NHK",
+    "sumo",
+    "sports",
+    "culture",
+    "Shinto",
+    "documentary",
+    "English narration"
+  ],
+  "creator": "NHK",
+  "sourceUrl": "https://www.nhk.or.jp/sports/sumo/",
+  "mediaUrl": "https://www.youtube.com/watch?v=xMTDYjXIrXQ",
+  "license": "© NHK — Documentary content",
+  "dateAdded": "2026-05-11"
+}
