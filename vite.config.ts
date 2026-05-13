@@ -11,9 +11,8 @@ export default defineConfig({
     },
   },
   server: {
-    // HMR is disabled in AI Studio via DISABLE_HMR env var.
-    // Do not modify — file watching is disabled to prevent flickering during agent edits.
-    hmr: process.env.DISABLE_HMR !== 'true',
+    // This tells Vite to use the secure port GitHub's proxy expects
+      clientPort: 443, //Default is 24678
   },
   test: {
     globals: true,
