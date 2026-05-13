@@ -244,9 +244,6 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     results.push(morphemeData);
   }
 
-  const hitRate = cacheHits + cacheMisses > 0 ? Math.round(cacheHits / (cacheHits + cacheMisses) * 100) : 100;
-  console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${hitRate}% hit rate) | Words (${processedWords.length}): hits=[${hitWords.join(', ')}], misses=[${missWords.join(', ')}]`);
-
   return results;
 }
 
@@ -273,16 +270,9 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     }
   }
 
-  let cacheHits = 0;
-  let cacheMisses = 0;
-  const hitWords: string[] = [];
-  const missWords: string[] = [];
   const results = [];
-  const processedWords: string[] = [];
   for (const [wordStr, baseForm] of validWords) {
-    processedWords.push(wordStr);
     const start = Date.now();
-    const cacheHit = wordsCache.has(baseForm) || wordsCache.has(wordStr);
 
     // Check batch-level resolution cache first to avoid re-resolving the same word
     const cacheKey = `${wordStr}|${baseForm}`;
@@ -297,13 +287,6 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     const { reading, meaning, meanings, jlpt, joyo, score, breakdown } = resolution;
 
     const lookupTime = Date.now() - start;
-    if (cacheHit) {
-      cacheHits++;
-      hitWords.push(wordStr);
-    } else {
-      cacheMisses++;
-      missWords.push(wordStr);
-    }
     if (lookupTime > 250) {
       console.log(`[API] Slow lookup: "${wordStr}" took ${lookupTime}ms`);
     }
@@ -330,9 +313,6 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     };
     results.push(morphemeData);
   }
-
-  const hitRate = cacheHits + cacheMisses > 0 ? Math.round(cacheHits / (cacheHits + cacheMisses) * 100) : 100;
-  console.log(`[API] Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${hitRate}% hit rate) | Words (${processedWords.length}): hits=[${hitWords.join(', ')}], misses=[${missWords.join(', ')}]`);
 
   return results;
 }
