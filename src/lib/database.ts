@@ -6,11 +6,47 @@ import { DictionaryEntry } from './scoring.js';
 import { WordInfo } from '../types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, '../../.cache.db');
+const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '../../.cache.db');
 
 let db: SqlDatabase | null = null;
 let SQL: any = null;
 let isDirty = false;
+
+// Write queue to prevent concurrent access to sql.js database (not thread-safe)
+interface WriteOp {
+  type: 'write';
+  fn: () => void;
+  resolve: () => void;
+}
+const writeQueue: WriteOp[] = [];
+let isProcessingQueue = false;
+
+async function processWriteQueue(): Promise<void> {
+  if (isProcessingQueue) return;
+  isProcessingQueue = true;
+
+  while (writeQueue.length > 0) {
+    const op = writeQueue.shift();
+    if (!op) break;
+
+    try {
+      op.fn();
+      op.resolve();
+    } catch (e) {
+      console.error('[Database] Write queue operation failed:', e instanceof Error ? e.message : String(e));
+      op.resolve();
+    }
+  }
+
+  isProcessingQueue = false;
+}
+
+function queueWrite(fn: () => void): Promise<void> {
+  return new Promise(resolve => {
+    writeQueue.push({ type: 'write', fn, resolve });
+    processWriteQueue().catch(e => console.error('[Database] Failed to process write queue:', e));
+  });
+}
 
 export async function initDatabase() {
   SQL = await initSqlJs();
@@ -66,27 +102,44 @@ function createTables() {
   console.log('[Database] Tables created');
 }
 
-export function saveDatabase() {
-  if (!db || !isDirty) return;
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(DB_PATH, buffer);
-  isDirty = false;
-  console.log('[Database] Saved to disk');
+export async function saveDatabase(): Promise<void> {
+  return new Promise(resolve => {
+    queueWrite(() => {
+      if (!db || !isDirty) {
+        resolve();
+        return;
+      }
+      try {
+        const data = db.export();
+        const buffer = Buffer.from(data);
+        fs.writeFileSync(DB_PATH, buffer);
+        isDirty = false;
+        console.log('[Database] Saved to disk');
+      } catch (e) {
+        console.error('[Database] Failed to save:', e instanceof Error ? e.message : String(e));
+      }
+      resolve();
+    }).catch(e => {
+      console.error('[Database] Error in save queue:', e);
+      resolve();
+    });
+  });
 }
 
 export class WordsCache {
   private memoryCache: Map<string, DictionaryEntry[]> = new Map();
   private isPreloaded = false;
 
-  set(key: string, value: DictionaryEntry[]) {
+  async set(key: string, value: DictionaryEntry[]) {
     if (!db) throw new Error('Database not initialized');
-    db.run(
-      'INSERT OR REPLACE INTO words_cache (word, entries) VALUES (?, ?)',
-      [key, JSON.stringify(value)]
-    );
-    this.memoryCache.set(key, value);
-    isDirty = true;
+    await queueWrite(() => {
+      db!.run(
+        'INSERT OR REPLACE INTO words_cache (word, entries) VALUES (?, ?)',
+        [key, JSON.stringify(value)]
+      );
+      this.memoryCache.set(key, value);
+      isDirty = true;
+    });
   }
 
   get(key: string): DictionaryEntry[] | undefined {
@@ -124,11 +177,13 @@ export class WordsCache {
     return result.length > 0 && result[0].values.length > 0;
   }
 
-  clear() {
+  async clear() {
     if (!db) throw new Error('Database not initialized');
-    db.run('DELETE FROM words_cache');
-    this.memoryCache.clear();
-    isDirty = true;
+    await queueWrite(() => {
+      db!.run('DELETE FROM words_cache');
+      this.memoryCache.clear();
+      isDirty = true;
+    });
   }
 
   entries(): [string, DictionaryEntry[]][] {
@@ -166,13 +221,15 @@ export class WordsCache {
 }
 
 export class JishoCache {
-  set(key: string, value: any) {
+  async set(key: string, value: any) {
     if (!db) throw new Error('Database not initialized');
-    db.run(
-      'INSERT OR REPLACE INTO jisho_cache (word, result) VALUES (?, ?)',
-      [key, JSON.stringify(value)]
-    );
-    isDirty = true;
+    await queueWrite(() => {
+      db!.run(
+        'INSERT OR REPLACE INTO jisho_cache (word, result) VALUES (?, ?)',
+        [key, JSON.stringify(value)]
+      );
+      isDirty = true;
+    });
   }
 
   get(key: string): any | undefined {
@@ -196,10 +253,12 @@ export class JishoCache {
     return result.length > 0 && result[0].values.length > 0;
   }
 
-  clear() {
+  async clear() {
     if (!db) throw new Error('Database not initialized');
-    db.run('DELETE FROM jisho_cache');
-    isDirty = true;
+    await queueWrite(() => {
+      db!.run('DELETE FROM jisho_cache');
+      isDirty = true;
+    });
   }
 
   entries(): [string, any][] {
@@ -221,30 +280,32 @@ export class JishoCache {
 }
 
 export class ContentWordsStore {
-  setContentWords(contentId: string, words: WordInfo[]): void {
+  async setContentWords(contentId: string, words: WordInfo[]): Promise<void> {
     if (!db) throw new Error('Database not initialized');
-    db.run('DELETE FROM content_words WHERE content_id = ?', [contentId]);
-    isDirty = true;
-    for (const w of words) {
-      db.run(
-        `INSERT INTO content_words
-           (content_id, word, reading, meaning, meanings, jlpt, joyo, score, breakdown, frequency, is_morpheme)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          contentId,
-          w.word,
-          w.reading,
-          w.meaning,
-          w.meanings ? JSON.stringify(w.meanings) : null,
-          w.jlpt,
-          w.joyo ? 1 : 0,
-          w.score,
-          JSON.stringify(w.breakdown ?? {}),
-          w.frequencyInContent ?? 1,
-          w.isMorpheme ? 1 : 0,
-        ]
-      );
-    }
+    await queueWrite(() => {
+      db!.run('DELETE FROM content_words WHERE content_id = ?', [contentId]);
+      isDirty = true;
+      for (const w of words) {
+        db!.run(
+          `INSERT INTO content_words
+             (content_id, word, reading, meaning, meanings, jlpt, joyo, score, breakdown, frequency, is_morpheme)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            contentId,
+            w.word,
+            w.reading,
+            w.meaning,
+            w.meanings ? JSON.stringify(w.meanings) : null,
+            w.jlpt,
+            w.joyo ? 1 : 0,
+            w.score,
+            JSON.stringify(w.breakdown ?? {}),
+            w.frequencyInContent ?? 1,
+            w.isMorpheme ? 1 : 0,
+          ]
+        );
+      }
+    });
   }
 
   getContentWords(contentId: string): WordInfo[] {
@@ -306,15 +367,19 @@ export class ContentWordsStore {
     return result.length > 0 && result[0].values.length > 0;
   }
 
-  deleteContentWords(contentId: string): void {
+  async deleteContentWords(contentId: string): Promise<void> {
     if (!db) throw new Error('Database not initialized');
-    db.run('DELETE FROM content_words WHERE content_id = ?', [contentId]);
-    isDirty = true;
+    await queueWrite(() => {
+      db!.run('DELETE FROM content_words WHERE content_id = ?', [contentId]);
+      isDirty = true;
+    });
   }
 
-  clear(): void {
+  async clear(): Promise<void> {
     if (!db) throw new Error('Database not initialized');
-    db.run('DELETE FROM content_words');
-    isDirty = true;
+    await queueWrite(() => {
+      db!.run('DELETE FROM content_words');
+      isDirty = true;
+    });
   }
 }

@@ -112,10 +112,12 @@ const dictionaryReady = (async () => {
   const jmdictExists = fs.existsSync(jmdictFile);
 
   const onJishoCacheUpdate = (cache: Map<string, any>) => {
-    // Sync updated cache entries from dictionary
+    // Sync updated cache entries from dictionary (fire-and-forget during initialization)
     for (const [key, value] of cache.entries()) {
       if (!jishoCache.has(key)) {
-        jishoCache.set(key, value);
+        jishoCache.set(key, value).catch(e =>
+          console.error('[Cache] Error updating Jisho cache:', e.message)
+        );
       }
     }
   };
@@ -147,7 +149,9 @@ const dictionaryReady = (async () => {
         const data = JSON.parse(fs.readFileSync(jishoCacheFile, 'utf-8'));
         for (const [word, result] of Object.entries(data)) {
           if (!jishoCache.has(word)) {
-            jishoCache.set(word, result);
+            jishoCache.set(word, result).catch(e =>
+              console.error('[Cache] Error loading Jisho cache entry:', e.message)
+            );
           }
         }
         const elapsed = Date.now() - cacheStart;
@@ -483,7 +487,7 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
     for (const { word, result } of kanaResults) {
       kanaLookupCache.set(word, result);
       if (result) {
-        wordsCache.set(word, [{
+        await wordsCache.set(word, [{
           meanings: [{ glosses: [result.meaning || 'Unknown'] }],
           variants: [{ pronounced: result.reading || word, written: word }]
         } as any]);
@@ -510,11 +514,11 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
   for (const [surface, baseForm] of uniqueKanjiWords) {
     if (!wordsCache.has(baseForm)) {
       const entries = getCachedDictionaryEntries(baseForm);
-      if (entries.length > 0) { wordsCache.set(baseForm, entries); kanjiPreloaded++; }
+      if (entries.length > 0) { await wordsCache.set(baseForm, entries); kanjiPreloaded++; }
     }
     if (surface !== baseForm && !wordsCache.has(surface)) {
       const entries = getCachedDictionaryEntries(surface);
-      if (entries.length > 0) wordsCache.set(surface, entries);
+      if (entries.length > 0) await wordsCache.set(surface, entries);
     }
   }
   console.log(`[API] /api/batch-extract: Step 3.5 - Pre-loaded ${kanjiPreloaded}/${uniqueKanjiWords.size} kanji words in ${Date.now() - kanjiPreloadStart}ms`);
@@ -543,10 +547,10 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
   // Persist content-word associations
   for (const result of results) {
     if (result.words && Array.isArray(result.words)) {
-      contentWordsStore.setContentWords(result.id, result.words);
+      await contentWordsStore.setContentWords(result.id, result.words);
     }
   }
-  saveDatabase();
+  await saveDatabase();
 
   console.log(`[API] /api/batch-extract: Complete - cache now has ${wordsCache.size} words (total: ${Date.now() - batchStart}ms)`);
   return results;
@@ -821,21 +825,26 @@ async function startServer() {
     'Content-Type': 'application/json',
   });
 
-  app.post("/api/clear-cache", (req, res) => {
-    const wordCacheSize = wordsCache.size;
-    const jishoCacheSize = jishoCache.size;
+  app.post("/api/clear-cache", async (req, res) => {
+    try {
+      const wordCacheSize = wordsCache.size;
+      const jishoCacheSize = jishoCache.size;
 
-    wordsCache.clear();
-    jishoCache.clear();
-    contentWordsStore.clear();
-    saveDatabase();
+      await wordsCache.clear();
+      await jishoCache.clear();
+      await contentWordsStore.clear();
+      await saveDatabase();
 
-    console.log(`[API] /api/clear-cache: Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`);
+      console.log(`[API] /api/clear-cache: Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`);
 
-    res.json({
-      cleared: true,
-      message: `Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`
-    });
+      res.json({
+        cleared: true,
+        message: `Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`
+      });
+    } catch (e: any) {
+      console.error('[API] /api/clear-cache failed:', e.message);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get("/api/content/words", (req, res) => {
@@ -1046,7 +1055,7 @@ async function startServer() {
         }
       };
 
-      worker.on('message', (msg: WorkerOutMessage) => {
+      worker.on('message', async (msg: WorkerOutMessage) => {
         switch (msg.type) {
           case 'ready':
             console.log('[Server] Extraction worker ready');
@@ -1054,11 +1063,11 @@ async function startServer() {
             break;
           case 'result':
             if (msg.words && Array.isArray(msg.words)) {
-              contentWordsStore.setContentWords(msg.id, msg.words);
+              await contentWordsStore.setContentWords(msg.id, msg.words);
             }
             break;
           case 'done':
-            saveDatabase();
+            await saveDatabase();
             currentChunk++;
             console.log(`[Server] Extraction progress: ${currentChunk}/${chunks.length} chunks`);
             sendNextChunk();
@@ -1091,8 +1100,10 @@ async function startServer() {
   // Save database on shutdown
   process.on('SIGINT', () => {
     console.log('\n[Server] Shutting down, saving database...');
-    saveDatabase();
-    process.exit(0);
+    saveDatabase().then(() => process.exit(0)).catch(err => {
+      console.error('[Server] Error saving database on shutdown:', err);
+      process.exit(0);
+    });
   });
 
   // SIGTERM was previously ignored (commit 1b49e85) to survive GitHub Codespaces idle
@@ -1100,10 +1111,10 @@ async function startServer() {
   // on idle, restart it — don't make the server unkillable to compensate.
   process.on('SIGTERM', () => {
     console.log('[Server] Received SIGTERM, shutting down gracefully...');
-    try { saveDatabase(); } catch (err) {
+    saveDatabase().then(() => process.exit(0)).catch(err => {
       console.error('[Server] Error saving database on shutdown:', err);
-    }
-    process.exit(0);
+      process.exit(0);
+    });
   });
 }
 
@@ -1202,13 +1213,13 @@ function runStartupTranscription() {
 
     console.log(`[Transcription] Extracting vocabulary for ${toExtract.length} newly transcribed items`);
     runBatchExtract(toExtract.map(c => ({ id: c.id, text: c.text })))
-      .then(results => {
+      .then(async results => {
         for (const result of results) {
           if (result.words?.length) {
-            contentWordsStore.setContentWords(result.id, result.words);
+            await contentWordsStore.setContentWords(result.id, result.words);
           }
         }
-        saveDatabase();
+        await saveDatabase();
         console.log(`[Transcription] Vocabulary extraction complete for ${results.length} items`);
       })
       .catch(err => {
