@@ -250,7 +250,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   return results;
 }
 
-async function processTextWithTokens(text: string, tokens: any[], kanaLookupCache: Map<string, any>) {
+async function processTextWithTokens(text: string, tokens: any[], kanaLookupCache: Map<string, any>, batchResolutionCache?: Map<string, any>) {
 
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
@@ -284,8 +284,17 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     const start = Date.now();
     const cacheHit = wordsCache.has(baseForm) || wordsCache.has(wordStr);
 
-    const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache);
+    // Check batch-level resolution cache first to avoid re-resolving the same word
+    const cacheKey = `${wordStr}|${baseForm}`;
+    let resolution;
+    if (batchResolutionCache?.has(cacheKey)) {
+      resolution = batchResolutionCache.get(cacheKey);
+    } else {
+      resolution = await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache);
+      batchResolutionCache?.set(cacheKey, resolution);
+    }
+
+    const { reading, meaning, meanings, jlpt, joyo, score, breakdown } = resolution;
 
     const lookupTime = Date.now() - start;
     if (cacheHit) {
@@ -520,6 +529,8 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
   console.log(`[API] /api/batch-extract: Step 3.5 - Pre-loaded ${kanjiPreloaded}/${uniqueKanjiWords.size} kanji words in ${Date.now() - kanjiPreloadStart}ms`);
 
   // Step 4: Process each text using the pre-built caches
+  // Create a batch-level resolution cache to avoid resolving the same word multiple times
+  const batchResolutionCache = new Map<string, any>();
   const processStart = Date.now();
   const results: BatchResult[] = await Promise.all(
     tokenizedBatch.map(async (item) => {
@@ -528,7 +539,7 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
       if (!tokens) return { id, error: "Tokenization failed" };
       const start = Date.now();
       try {
-        const words = await processTextWithTokens(text, tokens, kanaLookupCache);
+        const words = await processTextWithTokens(text, tokens, kanaLookupCache, batchResolutionCache);
         const elapsed = Date.now() - start;
         console.log(`[API] batch-extract[${id}]: ${words.length} words in ${elapsed}ms`);
         return { id, words, elapsed };

@@ -8,7 +8,7 @@ export interface WordLookupResult {
 
 export interface Dictionary {
   isInitialized(): boolean;
-  lookup(word: string): Promise<WordLookupResult | null>;
+  lookup(word: string, quiet?: boolean): Promise<WordLookupResult | null>;
 }
 
 // ==================== Kanji Data Dictionary ====================
@@ -32,9 +32,9 @@ export class KanjiDataDictionary implements Dictionary {
     return this.searchWords !== null;
   }
 
-  async lookup(word: string): Promise<WordLookupResult | null> {
+  async lookup(word: string, quiet: boolean = false): Promise<WordLookupResult | null> {
     if (!this.searchWords || typeof this.searchWords !== 'function') {
-      console.log(`[Dictionary.KanjiData] searchWords not available`);
+      if (!quiet) console.log(`[Dictionary.KanjiData] searchWords not available`);
       return null;
     }
     const entries = this.searchWords(word) as any[];
@@ -57,7 +57,6 @@ export class KanjiDataDictionary implements Dictionary {
     }
 
     const firstMeaning = bestEntry.meanings?.[0]?.glosses?.[0] || "Unknown";
-    console.log(`[Dictionary.KanjiData] Found "${word}": ${firstMeaning}`);
     return {
       meaning: firstMeaning,
       reading: word,
@@ -131,9 +130,8 @@ export class JishoApiDictionary implements Dictionary {
     return this.initialized;
   }
 
-  async lookup(word: string): Promise<WordLookupResult | null> {
+  async lookup(word: string, quiet: boolean = false): Promise<WordLookupResult | null> {
     if (!this.initialized) {
-      console.log(`[Dictionary.Jisho] Not initialized, returning null for "${word}"`);
       return null;
     }
 
@@ -177,10 +175,7 @@ export class JishoApiDictionary implements Dictionary {
                 meanings,
                 reading: word,
               };
-              console.log(`[Dictionary.Jisho] Found "${word}": ${meanings[0]}`);
             }
-          } else {
-            console.log(`[Dictionary.Jisho] No results from Jisho API for "${word}"`);
           }
 
           this.cache.set(word, lookupResult);
@@ -304,7 +299,7 @@ export class JmdictDictionary implements Dictionary {
     return this.initialized && this.db !== null;
   }
 
-  async lookup(word: string): Promise<WordLookupResult | null> {
+  async lookup(word: string, quiet: boolean = false): Promise<WordLookupResult | null> {
     if (!this.db || !this.readingBeginning || !this.kanjiBeginning) return null;
 
     try {
@@ -479,7 +474,7 @@ export class JmnedictDictionary implements Dictionary {
     return this.initialized;
   }
 
-  async lookup(word: string): Promise<WordLookupResult | null> {
+  async lookup(word: string, quiet: boolean = false): Promise<WordLookupResult | null> {
     // Check cache first
     if (this.cache.has(word)) {
       return this.cache.get(word) || null;
