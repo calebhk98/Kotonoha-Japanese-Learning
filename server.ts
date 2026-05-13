@@ -552,6 +552,148 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
   return results;
 }
 
+/**
+ * Background loader for music lyrics from uta-net.com.
+ * Detects placeholder transcripts and auto-fetches actual lyrics on startup.
+ * Runs non-blocking after server is bound to port.
+ */
+async function loadMusicTranscriptsInBackground() {
+  try {
+    const musicDir = path.join(process.cwd(), 'src', 'music');
+    if (!fs.existsSync(musicDir)) {
+      return; // No music directory
+    }
+
+    const musicFolders = fs.readdirSync(musicDir);
+    const toFetch: Array<{ id: string; title: string; sourceUrl: string; transcriptPath: string }> = [];
+
+    // Identify placeholders
+    for (const folder of musicFolders) {
+      const metadataPath = path.join(musicDir, folder, 'metadata.json');
+      const transcriptPath = path.join(musicDir, folder, 'transcript.md');
+
+      if (!fs.existsSync(metadataPath) || !fs.existsSync(transcriptPath)) continue;
+
+      try {
+        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+        const transcript = fs.readFileSync(transcriptPath, 'utf-8');
+
+        // Check if it's a placeholder (contains "to be fetched" or "Placeholder" or is just the header)
+        const isPlaceholder =
+          transcript.includes('to be fetched') ||
+          transcript.includes('Placeholder') ||
+          transcript.includes('fetch') ||
+          transcript.trim().split('\n').length < 5; // Very short = likely placeholder
+
+        if (
+          isPlaceholder &&
+          metadata.sourceUrl &&
+          metadata.sourceUrl.includes('uta-net.com')
+        ) {
+          toFetch.push({
+            id: metadata.id,
+            title: metadata.title,
+            sourceUrl: metadata.sourceUrl,
+            transcriptPath,
+          });
+        }
+      } catch (e) {
+        // Skip errors per-folder
+      }
+    }
+
+    if (toFetch.length === 0) {
+      console.log('[Lyrics] All music transcripts already populated — skipping');
+      return;
+    }
+
+    console.log(
+      `[Lyrics] Background loader: ${toFetch.length} placeholder transcripts detected`
+    );
+
+    // Batch-fetch with rate limiting (delay between fetches to avoid hammering uta-net)
+    const DELAY_MS = 1000; // 1 second between requests
+    for (let i = 0; i < toFetch.length; i++) {
+      const item = toFetch[i];
+
+      // Delay before fetch (except the first one)
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+      }
+
+      try {
+        console.log(`[Lyrics] Fetching ${item.id} (${i + 1}/${toFetch.length})...`);
+
+        const response = await fetch(item.sourceUrl);
+        if (!response.ok) {
+          console.warn(`[Lyrics] Failed to fetch ${item.id}: HTTP ${response.status}`);
+          continue;
+        }
+
+        const html = await response.text();
+
+        // Parse uta-net HTML: lyrics are in <div id="kashi_area">
+        const match = html.match(
+          /<div id="kashi_area">[\s\S]*?<\/div>/i
+        );
+        if (!match) {
+          console.warn(`[Lyrics] No #kashi_area found in ${item.sourceUrl}`);
+          continue;
+        }
+
+        let lyricsHtml = match[0];
+
+        // Convert <br> to newlines
+        lyricsHtml = lyricsHtml.replace(/<br\s*\/?>/gi, '\n');
+
+        // Remove all HTML tags
+        lyricsHtml = lyricsHtml.replace(/<[^>]+>/g, '');
+
+        // Decode HTML entities
+        lyricsHtml = lyricsHtml
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+
+        // Clean up whitespace
+        const lyrics = lyricsHtml
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+          .join('\n');
+
+        if (!lyrics) {
+          console.warn(
+            `[Lyrics] Extracted empty lyrics for ${item.id}`
+          );
+          continue;
+        }
+
+        // Write to transcript.md
+        fs.writeFileSync(item.transcriptPath, lyrics + '\n', 'utf-8');
+        console.log(
+          `[Lyrics] ✓ ${item.id} — ${lyrics.split('\n').length} lines`
+        );
+      } catch (e) {
+        console.error(
+          `[Lyrics] Error fetching ${item.id}:`,
+          e instanceof Error ? e.message : String(e)
+        );
+      }
+    }
+
+    console.log('[Lyrics] Background loading complete');
+  } catch (e) {
+    console.error(
+      '[Lyrics] Background loader error:',
+      e instanceof Error ? e.message : String(e)
+    );
+  }
+}
+
 async function startServer() {
   // Startup takes ~30 seconds: dictionary decompression and tokenizer (Sudachi WASM)
   // both load here before the server binds. Wait for "Server running on http://localhost:3000"
@@ -937,6 +1079,11 @@ async function startServer() {
 
   // Transcribe any music/video entries that have a playable URL but no transcript
   runStartupTranscription();
+
+  // Load music lyrics in background from uta-net.com for placeholder transcripts
+  loadMusicTranscriptsInBackground().catch((e) =>
+    console.error('[Lyrics] Background loading error:', e instanceof Error ? e.message : String(e)),
+  );
 
   // Save database on shutdown
   process.on('SIGINT', () => {
