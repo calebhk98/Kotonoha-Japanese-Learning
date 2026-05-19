@@ -186,7 +186,7 @@ const dictionaryReady = (async () => {
 
 const refreshingContent = new Set<string>();
 const lastRefreshTime = new Map<string, number>();
-const REFRESH_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes per content ID
+const REFRESH_COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes per content ID
 
 async function refreshUnknownMeanings(contentId: string, words: WordInfo[]): Promise<void> {
   if (!wordResolver) return;
