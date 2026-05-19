@@ -564,10 +564,10 @@ export class DictionaryManager {
     const result = await this.primary.lookup(word);
     if (result) return result;
 
-    // For pure hiragana words, try JMnedict next (proper nouns)
-    // This is after primary cache, so frequent hiragana hits the cache
-    const isPureHiragana = /^[ぁ-ん]+$/.test(word);
-    if (isPureHiragana && this.fallback1) {
+    // Try JMnedict for names and proper nouns — these can be hiragana, katakana,
+    // or kanji-written (e.g. 和彦, 山城屋). The previous guard limited this to
+    // pure-hiragana only, causing kanji-written names to always return null here.
+    if (this.fallback1) {
       const jmnedictResult = await this.fallback1.lookup(word);
       if (jmnedictResult) return jmnedictResult;
     }
