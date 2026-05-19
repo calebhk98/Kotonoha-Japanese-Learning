@@ -1018,9 +1018,12 @@ async function startServer() {
 
       const workerData: WorkerInitData = {
         jmdictPath: path.join(__dirname, 'jmdict-db'),
-        jmdictFile: fs.existsSync(path.join(__dirname, 'jmdict-all-3.6.2.json'))
-          ? path.join(__dirname, 'jmdict-all-3.6.2.json')
-          : null,
+        // Do not pass jmdictFile to the worker. jmdict-wrapper uses LevelDB
+        // (classic-level) which holds an exclusive lock on the jmdict-db directory.
+        // The main thread already holds that lock; a second open from the worker
+        // thread fails with "Database is not open". The worker falls back to
+        // Jisho API which is correct for background extraction.
+        jmdictFile: null,
         jmnedictFile,
         // Seed the worker's kana cache with everything already persisted in this
         // process so the worker avoids redundant Jisho API round-trips.
