@@ -558,7 +558,6 @@ export default function App() {
             setIsConfirmingReset={setIsConfirmingReset}
             clearKnownWords={clearKnownWords}
             navigateToWord={navigateToWord}
-            setEditingWord={setEditingWord}
           />
 
         )}
