@@ -10,9 +10,16 @@ export const PARTICLES = new Set([
   'は', 'が', 'を', 'に', 'へ', 'と', 'で', 'も', 'か', 'の', 'て', 'な', 'だ',
 ]);
 
-/** Returns true for characters that should be skipped entirely during extraction. */
+/**
+ * Returns true for tokens that should be skipped entirely during extraction.
+ *
+ * Uses a negative test: a token is "punctuation" if it contains NO Japanese
+ * vocabulary characters (kanji, hiragana, katakana). This handles full-width
+ * punctuation (：, …, ［, ＃, ②, etc.) without maintaining an ever-growing
+ * allowlist, and correctly passes katakana loanwords through to the dictionary.
+ */
 export function isPunctuation(s: string): boolean {
-  return /[、。！？・「」『』（）()[\]a-zA-Z0-9\s]/.test(s);
+  return !/[ぁ-ん゛゜ァ-ヴー一-鿿々〆〇]/.test(s);
 }
 
 /**

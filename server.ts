@@ -18,6 +18,7 @@ import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk } from "./sr
 import { initDatabase, WordsCache, JishoCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
 import { isPunctuation, isSingleKana, looksLikePartialStem } from "./src/lib/extraction-helpers.js";
 import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
+import type { WordInfo } from "./src/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -173,6 +174,72 @@ const dictionaryReady = (async () => {
 })();
 
 
+
+// ---------------------------------------------------------------------------
+// Background re-lookup for "Unknown meaning" cache entries
+//
+// Words extracted before the dictionary was fully initialised (or before the
+// JMnedict fallback fix) land in content_words with meaning="Unknown meaning".
+// On the next request that serves those words we fire a background re-resolution
+// so subsequent requests return real definitions without blocking the first one.
+// ---------------------------------------------------------------------------
+
+const refreshingContent = new Set<string>();
+const lastRefreshTime = new Map<string, number>();
+const REFRESH_COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes per content ID
+
+async function refreshUnknownMeanings(contentId: string, words: WordInfo[]): Promise<void> {
+  if (!wordResolver) return;
+
+  const unknownWords = words.filter(
+    w => w.meaning === 'Unknown meaning' && !isPunctuation(w.word)
+  );
+  if (unknownWords.length === 0) return;
+
+  console.log(`[Cache] Refreshing ${unknownWords.length} unknown-meaning words for ${contentId}`);
+  const wordMap = new Map(words.map(w => [w.word, { ...w }]));
+  let updated = false;
+
+  for (const w of unknownWords) {
+    try {
+      const resolution = await wordResolver.resolve(w.word, w.word);
+      if (resolution.meaning !== 'Unknown meaning') {
+        wordMap.set(w.word, {
+          ...wordMap.get(w.word)!,
+          reading: resolution.reading,
+          meaning: resolution.meaning,
+          ...(resolution.meanings ? { meanings: resolution.meanings } : {}),
+          jlpt: resolution.jlpt,
+          joyo: resolution.joyo,
+          score: resolution.score,
+          breakdown: resolution.breakdown,
+        });
+        updated = true;
+      }
+    } catch (e: any) {
+      console.error(`[Cache] Refresh failed for "${w.word}":`, e.message);
+    }
+  }
+
+  if (updated) {
+    await contentWordsStore.setContentWords(contentId, [...wordMap.values()]);
+    await saveDatabase();
+    console.log(`[Cache] Updated unknown-meaning entries for ${contentId}`);
+  }
+}
+
+function scheduleRefreshIfNeeded(contentId: string, words: WordInfo[]): void {
+  if (refreshingContent.has(contentId)) return;
+  const now = Date.now();
+  if (now - (lastRefreshTime.get(contentId) ?? 0) < REFRESH_COOLDOWN_MS) return;
+  if (!words.some(w => w.meaning === 'Unknown meaning' && !isPunctuation(w.word))) return;
+
+  refreshingContent.add(contentId);
+  lastRefreshTime.set(contentId, now);
+  refreshUnknownMeanings(contentId, words).finally(() => {
+    refreshingContent.delete(contentId);
+  });
+}
 
 async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
@@ -840,7 +907,19 @@ async function startServer() {
 
   app.get("/api/content/words", (req, res) => {
     try {
-      res.json(contentWordsStore.getAllContentWords());
+      const allWords = contentWordsStore.getAllContentWords();
+      res.json(allWords);
+
+      // Schedule background refresh for content IDs with unknown-meaning words,
+      // limited to 3 at a time so we don't flood the event loop on the bulk call.
+      let scheduled = 0;
+      for (const [contentId, words] of Object.entries(allWords)) {
+        if (scheduled >= 3) break;
+        if (!refreshingContent.has(contentId)) {
+          scheduleRefreshIfNeeded(contentId, words);
+          if (refreshingContent.has(contentId)) scheduled++;
+        }
+      }
     } catch (e: any) {
       console.error('[API Error] /api/content/words failed:', e.message);
       res.status(500).json({ error: e.message });
@@ -850,7 +929,9 @@ async function startServer() {
   app.get("/api/content/:contentId/words", (req, res) => {
     try {
       const { contentId } = req.params;
-      res.json(contentWordsStore.getContentWords(contentId));
+      const words = contentWordsStore.getContentWords(contentId);
+      res.json(words);
+      scheduleRefreshIfNeeded(contentId, words);
     } catch (e: any) {
       console.error(`[API Error] /api/content/${req.params.contentId}/words failed:`, e.message);
       res.status(500).json({ error: e.message });

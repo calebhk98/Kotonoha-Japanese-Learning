@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEnglishGlosses, getSenseCommonness } from './dictionary';
+import { getEnglishGlosses, getSenseCommonness, DictionaryManager } from './dictionary';
 import { getMorphemeDefinition } from './morphemeDefinitions';
 
 // ---------------------------------------------------------------------------
@@ -324,5 +324,47 @@ describe('mixed kanji+kana sense ordering – real-world cases (#191)', () => {
   it('ない has a morpheme definition (not undefined)', () => {
     expect(getMorphemeDefinition('ない')).toBeDefined();
     expect(getMorphemeDefinition('ない')).toMatch(/negat/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DictionaryManager – JMnedict fallback for kanji-containing names
+//
+// The previous DictionaryManager.lookup() only tried the JMnedict fallback for
+// pure-hiragana words. Kanji-written names like 和彦 or 山城屋 would fail the
+// primary lookup and then skip JMnedict entirely, always returning null (which
+// became "Unknown meaning" in WordResolver).  The fix removes the isPureHiragana
+// guard so JMnedict is tried for any word the primary dictionary misses.
+// ---------------------------------------------------------------------------
+
+describe('DictionaryManager – JMnedict fallback', () => {
+  it('tries JMnedict for kanji-containing words when primary returns null', async () => {
+    const manager = new DictionaryManager();
+
+    // Inject mock dictionaries directly (TypeScript cast to bypass private fields).
+    const primaryMock = { lookup: async (_word: string) => null };
+    const jmnedictMock = {
+      lookup: async (word: string) =>
+        word === '和彦'
+          ? { meaning: 'Japanese male given name', reading: 'かずひこ', meanings: ['Japanese male given name'] }
+          : null,
+    };
+    (manager as any).primary = primaryMock;
+    (manager as any).fallback1 = jmnedictMock;
+
+    const result = await manager.lookup('和彦');
+    expect(result).not.toBeNull();
+    expect(result?.meaning).toBe('Japanese male given name');
+  });
+
+  it('still returns null when both primary and JMnedict miss the word', async () => {
+    const manager = new DictionaryManager();
+    const primaryMock = { lookup: async (_word: string) => null };
+    const jmnedictMock = { lookup: async (_word: string) => null };
+    (manager as any).primary = primaryMock;
+    (manager as any).fallback1 = jmnedictMock;
+
+    const result = await manager.lookup('和彦');
+    expect(result).toBeNull();
   });
 });

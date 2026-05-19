@@ -9,6 +9,18 @@ describe('extraction helpers', () => {
       }
     });
 
+    it('returns true for full-width punctuation that slipped through the old regex', () => {
+      // These were previously extracted as vocabulary items with "Unknown meaning"
+      // because the old regex only covered a limited allowlist of symbols.
+      expect(isPunctuation('：')).toBe(true);   // full-width colon
+      expect(isPunctuation('…')).toBe(true);    // horizontal ellipsis
+      expect(isPunctuation('［')).toBe(true);   // full-width left bracket
+      expect(isPunctuation('］')).toBe(true);   // full-width right bracket
+      expect(isPunctuation('｜')).toBe(true);   // full-width vertical bar
+      expect(isPunctuation('＃')).toBe(true);   // full-width hash
+      expect(isPunctuation('②')).toBe(true);   // circled digit
+    });
+
     it('returns true for ASCII alphanumerics and whitespace', () => {
       expect(isPunctuation('a')).toBe(true);
       expect(isPunctuation('Z')).toBe(true);
@@ -24,6 +36,13 @@ describe('extraction helpers', () => {
     it('returns false for hiragana words', () => {
       expect(isPunctuation('ねこ')).toBe(false);
       expect(isPunctuation('は')).toBe(false);
+    });
+
+    it('returns false for katakana loanwords', () => {
+      // Katakana words must NOT be filtered as punctuation; they are real vocabulary.
+      expect(isPunctuation('ピクニック')).toBe(false);
+      expect(isPunctuation('クレヨン')).toBe(false);
+      expect(isPunctuation('ラビット')).toBe(false);
     });
   });
 
