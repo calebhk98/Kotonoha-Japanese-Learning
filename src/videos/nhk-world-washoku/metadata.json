@@ -17,5 +17,8 @@
   "sourceUrl": "https://www3.nhk.or.jp/nhkworld/en/vod/",
   "mediaUrl": "https://www.youtube.com/watch?v=_GPd6ffxiuY",
   "license": "© NHK World Japan — free streaming educational content",
-  "dateAdded": "2026-05-11"
+  "dateAdded": "2026-05-11",
+  "captionScrapeAttempts": 1,
+  "lastCaptionScrapeError": "Script exited with status 1: WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one\nERROR: [youtube] _GPd6ffxiuY: Private video. Sign in if you've been granted access to this video. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies\n",
+  "lastCaptionScrapeAttempt": "2026-05-13T02:15:20.249Z"
 }
