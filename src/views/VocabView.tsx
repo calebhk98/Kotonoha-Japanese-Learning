@@ -1,11 +1,10 @@
-import { CheckCircle, Library } from 'lucide-react';
+import { CheckCircle, Library, Search } from 'lucide-react';
 import React from 'react';
 import { WordInfo } from '../types';
 
 function VocabView({
   setDisplayCount,
   setIsConfirmingReset,
-  setEditingWord,
   clearContentVocab,
   clearKnownWords,
   navigateToWord,
@@ -15,6 +14,8 @@ function VocabView({
   diskContent,
   isConfirmingReset,
 }: VocabViewProps) {
+  const [searchQuery, setSearchQuery] = React.useState('');
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
@@ -222,6 +223,17 @@ function VocabView({
         </div>
       </div>
 
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Search vocabulary..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 shadow-sm"
+        />
+      </div>
+
       <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
         <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
           <CheckCircle className="w-5 h-5 text-green-500" />
@@ -233,31 +245,19 @@ function VocabView({
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {Array.from(knownWords).map((w: string) => {
-              // Try to find the WordInfo to show on click
-              const info = (
-                Object.values(contentVocab).flat() as WordInfo[]
-              ).find((x) => x.word === w);
-              return (
-                <div key={w} className="flex items-center gap-1">
-                  <button
-                    onClick={() => navigateToWord(w)}
-                    className={`px-3 py-1.5 bg-green-50 border border-green-100 text-green-800 rounded-lg text-sm font-medium transition-colors hover:bg-green-100 cursor-pointer`}
-                  >
-                    {w}
-                  </button>
-                  {info && (
-                    <button
-                      onClick={() => setEditingWord(info)}
-                      className="px-2 py-1.5 text-gray-400 hover:text-gray-600 transition-colors text-xs font-medium"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+            {Array.from(knownWords)
+              .filter((w) =>
+                searchQuery === '' || w.toLowerCase().includes(searchQuery.toLowerCase()),
+              )
+              .map((w: string) => (
+                <button
+                  key={w}
+                  onClick={() => navigateToWord(w)}
+                  className="px-3 py-1.5 bg-green-50 border border-green-100 text-green-800 rounded-lg text-sm font-medium transition-colors hover:bg-green-100 cursor-pointer"
+                >
+                  {w}
+                </button>
+              ))}
           </div>
         )}
       </div>
@@ -268,10 +268,9 @@ function VocabView({
         </h3>
         <p className="text-sm text-gray-500 mb-6">
           These are words extracted from upcoming content that you haven't
-          learned yet. Click a word to view details or edit it.
+          learned yet. Click a word to view details.
         </p>
         <div className="flex flex-wrap gap-2">
-          {/* Aggregate a sample of unknown words from loaded content */}
           {Array.from(
             new Set(
               (Object.values(contentVocab).flat() as WordInfo[])
@@ -279,32 +278,25 @@ function VocabView({
                 .filter((w) => !knownWords.has(w)),
             ),
           )
+            .filter((w) =>
+              searchQuery === '' || w.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
             .slice(0, 100)
             .map((w: string) => {
               const info = (
                 Object.values(contentVocab).flat() as WordInfo[]
               ).find((x) => x.word === w);
               return (
-                <div key={`unknown-${w}`} className="flex items-center gap-1">
-                  <button
-                    onClick={() => navigateToWord(w)}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium group relative hover:bg-gray-100 transition-colors"
-                  >
-                    <span className="opacity-0 group-hover:opacity-100 absolute z-10 bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap transition-opacity">
-                      {info?.meaning || w}
-                    </span>
-                    {w}
-                  </button>
-                  {info && (
-                    <button
-                      onClick={() => setEditingWord(info)}
-                      className="px-1.5 py-1.5 text-gray-300 hover:text-gray-600 transition-colors text-xs font-medium"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                  )}
-                </div>
+                <button
+                  key={`unknown-${w}`}
+                  onClick={() => navigateToWord(w)}
+                  className="px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium group relative hover:bg-gray-100 transition-colors"
+                >
+                  <span className="opacity-0 group-hover:opacity-100 absolute z-10 bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap transition-opacity">
+                    {info?.meaning || w}
+                  </span>
+                  {w}
+                </button>
               );
             })}
 
@@ -392,7 +384,6 @@ function VocabView({
 type VocabViewProps = {
   setDisplayCount: React.Dispatch<React.SetStateAction<number>>;
   setIsConfirmingReset: React.Dispatch<React.SetStateAction<boolean>>;
-  setEditingWord: React.Dispatch<React.SetStateAction<WordInfo | null>>;
   clearContentVocab: () => void;
   clearKnownWords: () => void;
   navigateToWord: (word: string) => void;
