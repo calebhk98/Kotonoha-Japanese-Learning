@@ -371,13 +371,22 @@ export default function App() {
 
   if (selectedWord) {
     return (
-      <WordDetailPage
-        word={selectedWord}
-        onBack={navigateBack}
-        allWords={Object.values(contentVocab).flat() as WordInfo[]}
-        onNavigateWord={navigateToWord}
-        onEdit={(wordInfo) => setEditingWord(wordInfo)}
-      />
+      <>
+        <WordDetailPage
+          word={selectedWord}
+          onBack={navigateBack}
+          allWords={Object.values(contentVocab).flat() as WordInfo[]}
+          onNavigateWord={navigateToWord}
+          onEdit={(wordInfo) => setEditingWord(wordInfo)}
+        />
+        {editingWord && (
+          <WordDetailModal
+            w={editingWord}
+            onClose={() => setEditingWord(null)}
+            onSave={(wordStr, updatedMap) => updateWord(wordStr, updatedMap)}
+          />
+        )}
+      </>
     );
   }
 
