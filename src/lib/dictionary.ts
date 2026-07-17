@@ -124,142 +124,6 @@ export class KanjiDataDictionary implements Dictionary {
   }
 }
 
-// ==================== Unofficial Jisho API Dictionary ====================
-export class JishoApiDictionary implements Dictionary {
-  private initialized = false;
-  private cache = new Map<string, WordLookupResult | null>();
-  private requestQueue: Array<() => Promise<void>> = [];
-  private activeRequests = 0;
-  private maxConcurrent = 2; // Limit to 2 concurrent requests to avoid overwhelming Jisho
-  private persistentCache: Map<string, WordLookupResult | null>;
-  private onCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void;
-
-  constructor(persistentCache?: Map<string, WordLookupResult | null>, onCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void) {
-    this.persistentCache = persistentCache || new Map();
-    this.onCacheUpdate = onCacheUpdate;
-    // Load persistent cache into memory
-    for (const [key, value] of this.persistentCache.entries()) {
-      this.cache.set(key, value);
-    }
-  }
-
-  async initialize(): Promise<void> {
-    try {
-      // Test if we can reach Jisho API
-      const testRes = await this.fetchFromJisho("test");
-      if (testRes) {
-        this.initialized = true;
-        console.log(`[Dictionary] Jisho API initialized (max 2 concurrent requests, ${this.cache.size} cached)`);
-      }
-    } catch (e) {
-      console.warn("[Dictionary] Jisho API unavailable:", (e as any).message);
-      this.initialized = false;
-    }
-  }
-
-  private async fetchFromJisho(word: string): Promise<any> {
-    const encoded = encodeURIComponent(word);
-    const url = `https://jisho.org/api/v1/search/words?keyword=${encoded}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
-    return await res.json();
-  }
-
-  private async processQueue(): Promise<void> {
-    if (this.activeRequests >= this.maxConcurrent || this.requestQueue.length === 0) {
-      return;
-    }
-
-    this.activeRequests++;
-    const task = this.requestQueue.shift();
-    if (task) {
-      try {
-        await task();
-      } catch (e) {
-        console.error("[Dictionary] Queue task error:", (e as any).message);
-      }
-    }
-    this.activeRequests--;
-
-    if (this.requestQueue.length > 0) {
-      this.processQueue();
-    }
-  }
-
-  isInitialized(): boolean {
-    return this.initialized;
-  }
-
-  async lookup(word: string, quiet: boolean = false): Promise<WordLookupResult | null> {
-    if (!this.initialized) {
-      return null;
-    }
-
-    // Check cache first
-    if (this.cache.has(word)) {
-      const cached = this.cache.get(word);
-      return cached || null;
-    }
-
-    // Queue the request
-    return new Promise((resolve) => {
-      this.requestQueue.push(async () => {
-        try {
-          const result = await this.fetchFromJisho(word);
-          let lookupResult: WordLookupResult | null = null;
-
-          if (result?.data && result.data.length > 0) {
-            // Pick the best result: prefer particles/grammar (no word field), or entry with most senses
-            let bestResult = result.data[0];
-
-            // Look for entries without a word (these are particles/grammar words)
-            const particleEntry = result.data.find((entry: any) => !entry.japanese?.[0]?.word);
-            if (particleEntry) {
-              bestResult = particleEntry;
-            } else {
-              // Otherwise pick the entry with the most senses (usually the most common/complete)
-              bestResult = result.data.reduce((best: any, current: any) => {
-                const bestSenseCount = best.senses?.length || 0;
-                const currentSenseCount = current.senses?.length || 0;
-                return currentSenseCount > bestSenseCount ? current : best;
-              });
-            }
-
-            const meanings = bestResult.senses
-              ?.flatMap((sense: any) => sense.english_definitions || [])
-              .filter(Boolean);
-
-            if (meanings && meanings.length > 0) {
-              lookupResult = {
-                meaning: meanings[0],
-                meanings,
-                reading: word,
-              };
-            }
-          }
-
-          this.cache.set(word, lookupResult);
-          this.persistentCache.set(word, lookupResult);
-          this.onCacheUpdate?.(this.persistentCache);
-          resolve(lookupResult);
-        } catch (e) {
-          console.error("[Dictionary.Jisho] Lookup error for", word, ":", (e as any).message);
-          this.cache.set(word, null);
-          this.persistentCache.set(word, null);
-          this.onCacheUpdate?.(this.persistentCache);
-          resolve(null);
-        } finally {
-          this.processQueue();
-        }
-      });
-
-      this.processQueue();
-    });
-  }
-}
-
-// ==================== JMDict Helpers (exported for testing) ====================
-
 // ==================== JMDict Helpers (exported for testing) ====================
 
 /**
@@ -564,7 +428,7 @@ export class JmdictDictionary implements Dictionary {
       }
 
       // Return null when no English meanings were found — this lets DictionaryManager
-      // try the fallback chain (JMnedict → Jisho) rather than returning "Unknown".
+      // try the fallback chain (JMnedict → kanji-data) rather than returning "Unknown".
       if (meanings.length === 0) return null;
 
       // Beginner-facing ambiguity: when a homograph scores within a hair of
@@ -692,15 +556,12 @@ export class DictionaryManager {
   private primary: Dictionary | null = null;
   private fallback1: Dictionary | null = null;
   private fallback2: Dictionary | null = null;
-  private fallback3: Dictionary | null = null;
 
   async initialize(
-    usePrimary: "jmdict" | "jisho" | "kanjidata" = "jisho",
+    usePrimary: "jmdict" | "kanjidata" = "kanjidata",
     jmdictPath?: string,
     jmdictFile?: string,
-    jmnedictFile?: string,
-    jishoCache?: Map<string, WordLookupResult | null>,
-    onJishoCacheUpdate?: (cache: Map<string, WordLookupResult | null>) => void
+    jmnedictFile?: string
   ): Promise<void> {
     if (usePrimary === "jmdict" && jmdictPath && jmdictFile) {
       const jmdictDict = new JmdictDictionary();
@@ -713,34 +574,12 @@ export class DictionaryManager {
         await jmnedictDict.initialize(jmnedictFile);
         this.fallback1 = jmnedictDict;
 
-        // Jisho API as second fallback
-        this.fallback2 = new JishoApiDictionary(jishoCache, onJishoCacheUpdate);
-        await (this.fallback2 as JishoApiDictionary).initialize();
-
-        // KanjiData as third fallback
-        this.fallback3 = new KanjiDataDictionary();
-        await (this.fallback3 as KanjiDataDictionary).initialize();
-        return;
-      }
-      // If jmdict failed, fall through to try jisho
-    }
-
-    if (usePrimary === "jisho" || usePrimary === "jmdict") {
-      const jishoDict = new JishoApiDictionary(jishoCache, onJishoCacheUpdate);
-      await jishoDict.initialize();
-      if (jishoDict.isInitialized()) {
-        this.primary = jishoDict;
-
-        // Add JMnedict as first fallback
-        const jmnedictDict = new JmnedictDictionary();
-        await jmnedictDict.initialize(jmnedictFile);
-        this.fallback1 = jmnedictDict;
-
         // KanjiData as second fallback
         this.fallback2 = new KanjiDataDictionary();
         await (this.fallback2 as KanjiDataDictionary).initialize();
         return;
       }
+      // If jmdict failed, fall through to kanji-data below.
     }
 
     // Fall back to kanji-data as primary
@@ -770,15 +609,10 @@ export class DictionaryManager {
       if (jmnedictResult) return jmnedictResult;
     }
 
-    // Try remaining fallback chain: KanjiData
+    // Try remaining fallback: KanjiData
     if (this.fallback2) {
       const result2 = await this.fallback2.lookup(word);
       if (result2) return result2;
-    }
-
-    if (this.fallback3) {
-      const result3 = await this.fallback3.lookup(word);
-      if (result3) return result3;
     }
 
     return null;

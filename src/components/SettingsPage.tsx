@@ -277,7 +277,7 @@ export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }
           {clearCacheStatus === 'done' && (
             <div className="flex items-center gap-2 text-green-700 text-sm bg-green-50 border border-green-100 rounded-lg px-3 py-2">
               <CheckCircle className="w-4 h-4 shrink-0" />
-              Cache cleared! Next lookup will re-fetch from Jisho API.
+              Cache cleared! Next lookup will re-resolve definitions.
             </div>
           )}
           {clearCacheStatus === 'error' && (

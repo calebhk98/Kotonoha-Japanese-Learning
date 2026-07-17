@@ -7,7 +7,7 @@ Utility and maintenance scripts for Kotonoha. Run with `npx tsx <script>` unless
 | Script | Command | What it does |
 |--------|---------|--------------|
 | `setup-sudachi.sh` | `npm run setup-sudachi` | Builds Sudachi WASM from source (needs Rust). Safe to re-run; skips if already built. |
-| `setup-cache.sh` | `npm run setup-cache` | Decompresses `.word-cache.json.gz` and `.jisho-cache.json.gz` into working files. |
+| `setup-cache.sh` | `npm run setup-cache` | Decompresses `.word-cache.json.gz` into a working file. |
 | `compress-cache.sh` | `npm run compress-cache` | Recompresses the working cache files for committing. Run after extending the cache. |
 | `setup-jmnedict.ts` | `npx tsx scripts/setup-jmnedict.ts` | Downloads and prepares the JMnedict proper-noun dictionary. |
 | `print-version.js` | (called by `npm run dev`) | Prints git branch, commit hash, and subject to the console at startup. |

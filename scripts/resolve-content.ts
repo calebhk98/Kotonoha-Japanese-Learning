@@ -15,10 +15,10 @@
  * Run `npm run setup-sudachi` first (needs the WASM + system.dic) and make
  * sure jmdict-all-*.json is extracted (first `npm run dev` does this).
  *
- * Determinism: the Jisho web fallback is disabled here — committed artifacts
- * must not depend on network responses. Words JMDict/JMnedict can't resolve
- * fall back to kanji-data or the generic kana fallback, same as offline
- * runtime behavior.
+ * Determinism: the dictionary waterfall is entirely local (JMDict -> JMnedict
+ * -> kanji-data; see #256) so resolution never depends on network responses.
+ * Words none of those can resolve fall back to the generic kana fallback,
+ * same as offline runtime behavior.
  */
 
 import fs from 'fs';
@@ -54,9 +54,6 @@ async function main() {
     jmdictFile,
     (jmnedictFile as string) ?? undefined
   );
-  // Determinism: strip the Jisho web-API fallback (fallback2 in the jmdict
-  // waterfall). Committed artifacts must not vary with network state.
-  (dictionary as any).fallback2 = null;
 
   const resolver = new WordResolver(dictionary);
   const lookupCache = new Map<string, any>();

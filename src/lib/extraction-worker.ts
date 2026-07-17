@@ -33,9 +33,6 @@ export interface WorkerInitData {
   jmdictPath: string;
   jmdictFile: string | null;
   jmnedictFile: string | null;
-  /** Serialised entries from the main thread's JishoCache, to avoid re-fetching
-   *  lookups already in the persistent cache. */
-  jishoCacheEntries: [string, any][];
 }
 
 export type WorkerOutMessage =
@@ -55,8 +52,8 @@ let tokenizer: Tokenizer | null = null;
 let dictionary: DictionaryManager | null = null;
 let wordResolver: WordResolver | null = null;
 
-// In-memory kana lookup cache, seeded from the main thread's persistent cache.
-// Avoids redundant Jisho HTTP calls for words already looked up previously.
+// In-memory kana lookup cache, shared across batches processed by this
+// worker's lifetime. Avoids re-resolving the same kana word for every chunk.
 const kanaCache = new Map<string, any>();
 
 // ---------------------------------------------------------------------------
@@ -159,38 +156,30 @@ async function extractBatch(items: BatchItem[]): Promise<BatchResult[]> {
     }
   }
 
-  // Step 3: look up kana words with a concurrency cap; seed from warm cache
+  // Step 3: look up kana words, seeding from (and refilling) the warm cache.
+  //
+  // This used to run through a hand-rolled concurrency-limiting queue whose
+  // only purpose was throttling calls to the since-removed Jisho web
+  // fallback (#256) — dictionary.lookup() is now entirely local
+  // (JMDict/JMnedict/kanji-data), so a plain concurrent lookup is both
+  // simpler and correct.
   const kanaLookupCache = new Map<string, any>(
     Array.from(kanaCache.entries()).filter(([k]) => uniqueKanaWords.has(k)),
   );
 
   if (dictionary && uniqueKanaWords.size > 0) {
     const uncached = Array.from(uniqueKanaWords).filter(w => !kanaLookupCache.has(w));
-    const CONCURRENCY = 5;
-    let active = 0;
-    let idx = 0;
-
-    await new Promise<void>((resolve, reject) => {
-      const next = async () => {
+    await Promise.all(
+      uncached.map(async (word) => {
         try {
-          if (idx >= uncached.length && active === 0) { resolve(); return; }
-          while (active < CONCURRENCY && idx < uncached.length) {
-            const word = uncached[idx++];
-            active++;
-            dictionary!.lookup(word)
-              .then(result => {
-                const val = result ?? false;
-                kanaLookupCache.set(word, val);
-                if (result) kanaCache.set(word, result);
-              })
-              .catch(() => { kanaLookupCache.set(word, false); })
-              .finally(() => { active--; next().catch(reject); });
-          }
-          if (idx >= uncached.length && active === 0) resolve();
-        } catch (err) { reject(err); }
-      };
-      next().catch(reject);
-    });
+          const result = await dictionary!.lookup(word);
+          kanaLookupCache.set(word, result ?? false);
+          if (result) kanaCache.set(word, result);
+        } catch {
+          kanaLookupCache.set(word, false);
+        }
+      }),
+    );
   }
 
   // Step 3.5: pre-populate kanji words from kanji-data (synchronous, fast)
@@ -230,16 +219,7 @@ async function extractBatch(items: BatchItem[]): Promise<BatchResult[]> {
 // ---------------------------------------------------------------------------
 
 async function runWorker(data: WorkerInitData) {
-  // Seed the kana cache from entries the main thread already has persisted.
-  for (const [word, result] of data.jishoCacheEntries) {
-    kanaCache.set(word, result);
-  }
-
   tokenizer = await createTokenizer();
-
-  const onJishoCacheUpdate = (cache: Map<string, any>) => {
-    for (const [k, v] of cache) kanaCache.set(k, v);
-  };
 
   dictionary = new DictionaryManager();
   if (data.jmdictFile && fs.existsSync(data.jmdictFile)) {
@@ -248,17 +228,13 @@ async function runWorker(data: WorkerInitData) {
       data.jmdictPath,
       data.jmdictFile,
       data.jmnedictFile ?? undefined,
-      kanaCache as any,
-      onJishoCacheUpdate,
     );
   } else {
     await dictionary.initialize(
-      'jisho',
+      'kanjidata',
       undefined,
       undefined,
       data.jmnedictFile ?? undefined,
-      kanaCache as any,
-      onJishoCacheUpdate,
     );
   }
 
