@@ -13,7 +13,8 @@ import { WordResolver } from "./src/lib/wordResolver.js";
 import { DictionaryManager } from "./src/lib/dictionary.js";
 import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
-import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk } from "./src/lib/storyLoader.js";
+import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk, loadResolvedContent } from "./src/lib/storyLoader.js";
+import { resolveContent, buildStoryResponse, buildWordsResponse } from "./src/lib/contentResolver.js";
 import { initDatabase, WordsCache, JishoCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
 import { isPunctuation, isSingleKana, looksLikePartialStem, getGrammarDefinition } from "./src/lib/extraction-helpers.js";
 import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
@@ -406,106 +407,12 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
 
 async function processStoryText(text: string) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
-  const tokenInfos = await tokenizer.segment(text);
-
-  // Find positions of each segment in the original text
-  const tokens: any[] = [];
-  let searchStart = 0;
-
-  for (const tokenInfo of tokenInfos) {
-    const surface = tokenInfo.surface;
-    const segmentIndex = text.indexOf(surface, searchStart);
-    if (segmentIndex === -1) {
-      console.warn(`[API] Could not find segment "${surface}" in text starting from position ${searchStart}`);
-      continue;
-    }
-
-    // Every Japanese token gets a meaning in the reader — readers hovering
-    // over は or ました must see what it does, not dead text. Three classes:
-    //   - grammar morphemes (particle / auxiliary, incl. conjugated surfaces
-    //     like でし・たく via the base form) → morpheme-table definition
-    //   - everything else Japanese → full dictionary resolution
-    //   - single kana with no table entry → generic fallback (never JMDict:
-    //     homograph lookup on ね/よ returns nonsense like 根 "root")
-    const isJapanese = surface.trim() !== '' && !isPunctuation(surface);
-    const isMorpheme = isJapanese && getGrammarDefinition(surface, tokenInfo.baseForm) !== undefined;
-    const isVocabWord = isJapanese && !isMorpheme && !isSingleKana(surface);
-
-    tokens.push({
-      surface: surface,
-      baseForm: tokenInfo.baseForm,
-      pos: tokenInfo.pos,
-      reading: tokenInfo.reading,
-      startIndex: segmentIndex,
-      endIndex: segmentIndex + surface.length,
-      isVocabWord,
-      isMorpheme,
-      isJapanese,
-    });
-
-    searchStart = segmentIndex + surface.length;
-  }
-
-  // Look up vocab words
-  const vocabTokens = tokens.filter(t => t.isVocabWord);
-  const tokenMap = new Map<string, any>();
-
-  for (const token of vocabTokens) {
-    if (tokenMap.has(token.surface)) continue;
-
-    const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-      await wordResolver!.resolve(token.surface, token.baseForm, undefined, token.pos, token.reading);
-
-    tokenMap.set(token.surface, { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown, meanings, ...(token.pos ? { pos: token.pos } : {}) });
-  }
-
-  // Add morpheme definitions to tokenMap
-  const emptyBreakdown = { jlptScore: 0, joyoPenalty: 0, highestGrade: null, freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [] };
-  for (const token of tokens) {
-    if (tokenMap.has(token.surface)) continue;
-    if (token.isMorpheme) {
-      tokenMap.set(token.surface, {
-        word: token.surface,
-        reading: token.surface,
-        meaning: getGrammarDefinition(token.surface, token.baseForm) || "Grammatical morpheme",
-        jlpt: 0,
-        joyo: false,
-        score: 0,
-        breakdown: emptyBreakdown,
-        isMorpheme: true
-      });
-    } else if (token.isJapanese && !token.isVocabWord) {
-      // Single kana with no morpheme-table entry — still hoverable.
-      tokenMap.set(token.surface, {
-        word: token.surface,
-        reading: token.surface,
-        meaning: "Kana particle / expression",
-        jlpt: 0,
-        joyo: false,
-        score: 0,
-        breakdown: emptyBreakdown,
-        isMorpheme: true
-      });
-    }
-  }
-
-  // Enrich tokens with word info. isVocabWord doubles as the client's
-  // "hoverable" flag (ContentReader shows the tooltip when isVocabWord &&
-  // wordInfo), so every Japanese token that got an entry above is marked.
-  const enrichedTokens = tokens.map(({ isJapanese, ...token }) => {
-    if (isJapanese && tokenMap.has(token.surface)) {
-      return {
-        ...token,
-        isVocabWord: true,
-        wordInfo: tokenMap.get(token.surface),
-      };
-    }
-    return token;
-  });
-
-  return enrichedTokens;
+  // Single shared pipeline (src/lib/contentResolver.ts) — the same code the
+  // build-time resolve-content script uses to write resolved.json, so the
+  // live fallback and precomputed artifacts cannot drift (#252).
+  const resolved = await resolveContent(text, tokenizer, wordResolver!);
+  return buildStoryResponse(resolved);
 }
-
 type BatchResult = { id: string; words?: any[]; elapsed?: number; error?: string };
 
 async function runBatchExtract(texts: { id: string; text: string }[]): Promise<BatchResult[]> {
@@ -967,9 +874,45 @@ async function startServer() {
     }
   });
 
+  // Reader tokens for one content item (issue #252): serves the precomputed
+  // resolved.json when present; falls back to live resolution of the item's
+  // text (same shared pipeline either way).
+  app.get("/api/content/:contentId/story", async (req, res) => {
+    try {
+      const { contentId } = req.params;
+      const resolved = loadResolvedContent(contentId);
+      if (resolved) {
+        res.json({ tokens: buildStoryResponse(resolved), precomputed: true });
+        return;
+      }
+      const item = [
+        ...loadStoriesFromDisk(),
+        ...loadMusicFromDisk(),
+        ...loadVideosFromDisk(),
+      ].find(c => c.id === contentId);
+      if (!item) {
+        return res.status(404).json({ error: `Unknown content id: ${contentId}` });
+      }
+      await tokenizerReady;
+      await dictionaryReady;
+      const tokens = await processStoryText(item.text);
+      res.json({ tokens, precomputed: false });
+    } catch (e: any) {
+      console.error(`[API Error] /api/content/${req.params.contentId}/story failed:`, e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get("/api/content/:contentId/words", (req, res) => {
     try {
       const { contentId } = req.params;
+      // Precomputed resolution (issue #252) wins: it was produced by the same
+      // pipeline at build time and needs no cache warmup or refresh passes.
+      const resolved = loadResolvedContent(contentId);
+      if (resolved) {
+        res.json(buildWordsResponse(resolved));
+        return;
+      }
       const words = contentWordsStore.getContentWords(contentId);
       res.json(words);
       scheduleRefreshIfNeeded(contentId, words);
@@ -1151,7 +1094,11 @@ async function startServer() {
         ...loadMusicFromDisk(),
         ...loadVideosFromDisk(),
       ];
-      const missing = allContent.filter(c => !contentWordsStore.hasContent(c.id));
+      // Items with a committed resolved.json (issue #252) are served from it
+      // directly and need no content_words extraction at all.
+      const missing = allContent.filter(
+        c => !contentWordsStore.hasContent(c.id) && !loadResolvedContent(c.id)
+      );
       if (missing.length === 0) {
         console.log('[Server] All content already extracted — skipping startup extraction');
         return;

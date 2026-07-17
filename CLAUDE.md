@@ -270,7 +270,27 @@ the count drifts as stories are added — don't rely on the README number.
 ```bash
 npx tsx scripts/add-story.ts --title "..." --description "..." --level n5
 # then edit src/stories/<new-folder>/content.md
+npm run resolve-content   # writes resolved.json for the new item (see below)
 ```
+
+### Precomputed resolution (issue #252)
+
+Every disk content item carries a committed `resolved.json` — the
+deterministic output of the tokenize+resolve pipeline
+(`src/lib/contentResolver.ts`), written by `npm run resolve-content`. The
+server serves these directly (`GET /api/content/:id/story`, and
+`/api/content/:id/words` prefers them), so disk content needs **no runtime
+extraction, no cache warmup, and no Jisho calls**. Live resolution remains
+the fallback for custom/imported content only.
+
+Consequences worth knowing:
+- **If you change anything in the resolution pipeline** (tokenizers,
+  wordResolver, dictionary, morphemeDefinitions, scoring), re-run
+  `npm run resolve-content -- --all` and commit the artifact diffs — the
+  diff over resolved.json files IS the regression review.
+- The resolve script disables the Jisho web fallback for determinism.
+- `resolved.json` positions are computed against the **trimmed** text, same
+  as `/api/content` serves it.
 
 After adding content, `STORIES_LIST.md` is hand-maintained; update it if
 relevant. There is no automatic regeneration.

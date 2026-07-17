@@ -39,15 +39,20 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
     }
   }, [isPlaying]);
 
-  // Process story text with API to get tokenized content
+  // Get tokenized content: disk content is served from its precomputed
+  // resolved.json (issue #252) — instant, no warmup; custom/imported content
+  // (unknown id → 404) falls back to live processing of the raw text.
   useEffect(() => {
     const processStory = async () => {
       try {
-        const response = await fetch('/api/process-story', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: content.text }),
-        });
+        let response = await fetch(`/api/content/${encodeURIComponent(content.id)}/story`);
+        if (!response.ok) {
+          response = await fetch('/api/process-story', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: content.text }),
+          });
+        }
 
         if (!response.ok) throw new Error('Failed to process story');
         const data = await response.json();

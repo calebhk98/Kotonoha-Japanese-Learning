@@ -401,3 +401,73 @@ export function getSeriesStories(
 
   return seriesStories;
 }
+
+// ---------------------------------------------------------------------------
+// Precomputed resolution artifacts (issue #252)
+//
+// scripts/resolve-content.ts writes a deterministic `resolved.json` next to
+// each content item (tokens + resolved vocab). The server serves those
+// instead of re-tokenizing at runtime; items without one fall back to live
+// resolution. Content ids come from metadata.id and can differ from folder
+// names, so lookups go through a lazily-built id → folder index.
+// ---------------------------------------------------------------------------
+
+const CONTENT_TYPE_DIRS: Record<string, string> = {
+  story: 'stories',
+  music: 'music',
+  video: 'videos',
+};
+
+let contentFolderIndex: Map<string, string> | null = null;
+
+/** Lists every content folder on disk with its metadata id and type. */
+export function listContentEntries(): Array<{ id: string; type: string; dir: string }> {
+  const entries: Array<{ id: string; type: string; dir: string }> = [];
+  for (const [type, dirName] of Object.entries(CONTENT_TYPE_DIRS)) {
+    const base = path.join(process.cwd(), 'src', dirName);
+    if (!fs.existsSync(base)) continue;
+    for (const folder of fs.readdirSync(base)) {
+      const dir = path.join(base, folder);
+      const metaPath = path.join(dir, 'metadata.json');
+      if (!fs.statSync(dir).isDirectory() || !fs.existsSync(metaPath)) continue;
+      try {
+        const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+        if (meta.id) entries.push({ id: meta.id, type, dir });
+      } catch {
+        // unparseable metadata is reported by the content loaders already
+      }
+    }
+  }
+  return entries;
+}
+
+/** Drops the cached id → folder index (call after adding content at runtime). */
+export function refreshContentIndex(): void {
+  contentFolderIndex = null;
+}
+
+function getContentFolder(contentId: string): string | null {
+  if (!contentFolderIndex) {
+    contentFolderIndex = new Map(listContentEntries().map((e) => [e.id, e.dir]));
+  }
+  return contentFolderIndex.get(contentId) ?? null;
+}
+
+/**
+ * Reads the precomputed resolution for a content item, or null when the item
+ * has none (custom content, or `npm run resolve-content` not run yet).
+ * Reads from disk on every call — the file is small and this keeps a
+ * long-running dev server consistent with re-runs of the resolve script.
+ */
+export function loadResolvedContent(contentId: string): any | null {
+  const dir = getContentFolder(contentId);
+  if (!dir) return null;
+  const p = path.join(dir, 'resolved.json');
+  if (!fs.existsSync(p)) return null;
+  try {
+    const resolved = JSON.parse(fs.readFileSync(p, 'utf-8'));
+    return resolved && resolved.formatVersion === 1 ? resolved : null;
+  } catch {
+    return null;
+  }
+}
