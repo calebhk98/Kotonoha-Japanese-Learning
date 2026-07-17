@@ -119,7 +119,7 @@ export class LinderaImpl implements Tokenizer {
   }
 }
 
-// Hiogawa Sudachi WASM implementation (with built-in dictionary)
+// Hiogawa Sudachi WASM implementation
 export class SudachiWasmImpl implements Tokenizer {
   name = 'Sudachi WASM';
   private tokenizer: any = null;
@@ -128,19 +128,36 @@ export class SudachiWasmImpl implements Tokenizer {
     try {
       const fs = await import('fs');
       const path = await import('path');
+      const join = (path.default || path).join;
 
-      // Load the built WASM module with embedded dictionary
-      const wasmPath = (path.default || path).join(process.cwd(), 'sudachi-wasm-built', 'index_bg.wasm');
+      const wasmPath = join(process.cwd(), 'sudachi-wasm-built', 'index_bg.wasm');
+      // The UniDic dictionary ships as a separate file (issue #254) so glue
+      // changes don't require recommitting a 200MB blob. Older builds embed
+      // the dictionary inside the wasm itself; both are supported.
+      const dictPath = join(process.cwd(), 'sudachi-wasm-built', 'system.dic');
       const wasmModule = await import('../../sudachi-wasm-built/index.js');
       const { initSync, Tokenizer } = wasmModule;
 
       const wasmBuffer = (fs.readFileSync as any)(wasmPath);
-
-      // Initialize the WASM module with embedded dictionary
       initSync({ module: wasmBuffer });
 
-      // Create tokenizer (no dictionary needed - it's embedded)
-      this.tokenizer = Tokenizer.create();
+      if ((fs.existsSync as any)(dictPath)) {
+        // Split build: pass the dictionary explicitly. The buffer is copied
+        // into wasm linear memory by the binding (Storage::Owned), so the
+        // Node-side buffer can be garbage-collected afterwards.
+        const dictBuffer = (fs.readFileSync as any)(dictPath);
+        this.tokenizer = Tokenizer.create(dictBuffer);
+      } else {
+        // Legacy embedded build (or missing dictionary — the binding throws
+        // a clear "requires 'dict_data'" error in that case).
+        try {
+          this.tokenizer = Tokenizer.create();
+        } catch (e: any) {
+          throw new Error(
+            `${e.message ?? e} — sudachi-wasm-built/system.dic is missing; run: npm run setup-sudachi`
+          );
+        }
+      }
       console.log(`[Tokenizer] ${this.name} ready`);
     } catch (e: any) {
       console.warn(`[Tokenizer] ${this.name} initialization failed:`, e.message);

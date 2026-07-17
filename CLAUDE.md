@@ -318,9 +318,14 @@ Sudachi WASM fails to load:
    differences. Fix Sudachi.
 
 Sudachi WASM lives in `sudachi-wasm-built/` (built by
-`scripts/setup-sudachi.sh`). The `index_bg.wasm` blob is ~208 MB and includes
-the UniDic dictionary. Sudachi tokenization mode C (compound) is the default
-for accuracy; see `TOKENIZER_SETUP.md` for modes.
+`scripts/setup-sudachi.sh` from a **pinned commit** of hi-ogawa/sudachi.rs —
+see `SUDACHI_RS_COMMIT` in the script). Since issue #254 the UniDic
+dictionary ships as a separate `system.dic` (~215 MB, committed as
+`system.dic.gz`) loaded at runtime via `Tokenizer.create(dictData)`; the
+wasm binary itself is ~2 MB, so glue changes no longer recommit a 200 MB
+blob. Legacy embedded builds (single >100 MB `index_bg.wasm`) still load.
+Sudachi tokenization mode C (compound) is the default for accuracy; see
+`TOKENIZER_SETUP.md` for modes.
 
 **The WASM build is patched.** `scripts/setup-sudachi.sh` applies
 `scripts/sudachi-wasm-reading.patch` after cloning upstream, adding
