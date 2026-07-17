@@ -512,3 +512,126 @@ describe('homograph entry selection – pickBestEntry', () => {
     expect(pickBestEntry([only], '猫').id).toBe('x');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Homograph selection for PURE-KANA searches + part-of-speech hints
+//
+// Kana-heavy beginner stories exposed a systematic error class: when a token
+// is written in kana, entry selection rewarded entries whose CANONICAL form
+// is kanji, so the wrong homograph won on database order:
+//   こぶ → 鼓舞 "encouragement"  (wanted 瘤 "lump", marked uk)
+//   たち → 太刀 "long sword"     (wanted 達 pluralizing suffix, uk)
+//   そこ → 底 "bottom"           (wanted 其処 "there", pn + uk)
+//   おく → 奥 "inner part"       (wanted 置く "to put" — token was a VERB)
+//   頭(かしら) → "counter for large animals" (wanted the plain noun "head")
+// Fixtures mirror the real JMDict entries (ids, common flags, uk, POS tags).
+// ---------------------------------------------------------------------------
+
+describe('homograph entry selection – kana searches prefer usually-kana entries', () => {
+  const kobuEncourage = {
+    id: '1268020',
+    kanji: [{ text: '鼓舞', common: true }],
+    kana: [{ text: 'こぶ', common: true }],
+    sense: [{ partOfSpeech: ['n', 'vs', 'vt'], misc: [] }, {}],
+  };
+  const kobuLump = {
+    id: '1569660',
+    kanji: [{ text: '瘤', common: true }],
+    kana: [{ text: 'こぶ', common: true }],
+    sense: [{ partOfSpeech: ['n'], misc: ['uk'] }, {}],
+  };
+
+  it('こぶ: picks 瘤 "lump" (usually-kana) over 鼓舞 "encouragement"', () => {
+    expect(pickBestEntry([kobuEncourage, kobuLump], 'こぶ').id).toBe('1569660');
+  });
+
+  it('そこ: picks 其処 "there" (pn, usually-kana) over 底 "bottom"', () => {
+    const soko = {
+      id: '1006670',
+      kanji: [{ text: '其処', common: false }, { text: '其所', common: false }],
+      kana: [{ text: 'そこ', common: true }],
+      sense: [{ partOfSpeech: ['pn'], misc: ['uk'] }, {}],
+    };
+    const bottom = {
+      id: '1436050',
+      kanji: [{ text: '底', common: true }],
+      kana: [{ text: 'そこ', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([soko, bottom], 'そこ', { pos: '代名詞' }).id).toBe('1006670');
+    // uk alone should carry it even without a POS hint
+    expect(pickBestEntry([soko, bottom], 'そこ').id).toBe('1006670');
+  });
+
+  it('たち: picks the 達 pluralizing suffix (uk) over 太刀 "long sword"', () => {
+    const longSword = {
+      id: '1408340',
+      kanji: [{ text: '太刀', common: true }, { text: '大刀', common: false }],
+      kana: [{ text: 'たち', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    const pluralSuffix = {
+      id: '1416220',
+      kanji: [{ text: '達', common: true }],
+      kana: [{ text: 'たち', common: true }],
+      sense: [{ partOfSpeech: ['suf'], misc: ['uk'] }, {}],
+    };
+    expect(pickBestEntry([longSword, pluralSuffix], 'たち', { pos: '接尾辞' }).id).toBe('1416220');
+  });
+
+  it('おく as a VERB: picks 置く "to put" over 奥 "inner part" and 億', () => {
+    const oku = {
+      id: '1179320',
+      kanji: [{ text: '奥', common: true }],
+      kana: [{ text: 'おく', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    const hundredMillion = {
+      id: '1182620',
+      kanji: [{ text: '億', common: true }],
+      kana: [{ text: 'おく', common: true }],
+      sense: [{ partOfSpeech: ['num'], misc: [] }, {}],
+    };
+    const put = {
+      id: '1421850',
+      kanji: [{ text: '置く', common: true }],
+      kana: [{ text: 'おく', common: true }],
+      sense: [{ partOfSpeech: ['v5k', 'vt'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([oku, hundredMillion, put], 'おく', { pos: '動詞' }).id).toBe('1421850');
+  });
+
+  it('頭 as a NOUN: picks "head" over the large-animal counter', () => {
+    const counter = {
+      id: '1450690',
+      kanji: [{ text: '頭', common: true }],
+      kana: [{ text: 'とう', common: true }],
+      sense: [{ partOfSpeech: ['ctr'], misc: [] }, {}],
+    };
+    const head = {
+      id: '1582310',
+      kanji: [{ text: '頭', common: true }],
+      kana: [{ text: 'あたま', common: true }, { text: 'かしら', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([counter, head], '頭', { pos: '名詞' }).id).toBe('1582310');
+  });
+
+  it('kanji-primary entries still win kana searches when nothing marks the competitor', () => {
+    // あめ: 飴 vs 雨 — neither is uk, both common; selection stays stable
+    // (first in index order) rather than flipping on the new signals.
+    const candy = {
+      id: '1153520',
+      kanji: [{ text: '飴', common: true }],
+      kana: [{ text: 'あめ', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    const rain = {
+      id: '1171900',
+      kanji: [{ text: '雨', common: true }],
+      kana: [{ text: 'あめ', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([candy, rain], 'あめ', { pos: '名詞' }).id).toBe('1153520');
+  });
+});

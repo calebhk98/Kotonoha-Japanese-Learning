@@ -376,3 +376,42 @@ describe('WordResolver – morpheme guard checks base form for conjugated auxili
     expect(result.meaning).toBe('to see');
   });
 });
+
+// ── POS hint pass-through (kana homograph disambiguation) ────────────────────
+
+describe('WordResolver – POS hint reaches the dictionary', () => {
+  it('passes the token part-of-speech through to dictionary.lookup', async () => {
+    const calls: any[] = [];
+    const dict = {
+      lookup: async (word: string, hint?: any) => {
+        calls.push([word, hint]);
+        return { meaning: 'to put', reading: 'おく' };
+      },
+    };
+    const resolver = new WordResolver(dict as any);
+    const result = await resolver.resolve('おい', '置く', undefined, '動詞');
+    expect(result.meaning).toBe('to put');
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls[0][1]).toEqual({ pos: '動詞' });
+  });
+
+  it('caches per (word, pos) so a noun lookup cannot poison a verb lookup', async () => {
+    let n = 0;
+    const dict = { lookup: async () => ({ meaning: `m${n++}`, reading: 'x' }) };
+    const resolver = new WordResolver(dict as any);
+    const cache = new Map();
+    await resolver.resolve('おく', 'おく', cache, '名詞');
+    await resolver.resolve('おく', 'おく', cache, '動詞');
+    expect(n).toBe(2); // distinct lookups, not a single cached value
+  });
+});
+
+describe('WordResolver – して resolves as grammar, not a JMDict homograph', () => {
+  it('して (base form 為る): returns the する te-form definition', async () => {
+    const dict = makeMockDictionary({ 為る: { meaning: 'to become', reading: 'なる' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('して', '為る');
+    expect(result.meaning).toMatch(/to do|te-form/i);
+    expect(result.meaning).not.toBe('to become');
+  });
+});
