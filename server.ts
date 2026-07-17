@@ -17,6 +17,7 @@ import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk, loadResolve
 import { resolveContent, buildStoryResponse, buildWordsResponse } from "./src/lib/contentResolver.js";
 import { initDatabase, WordsCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
 import { isPunctuation, isSingleKana, looksLikePartialStem, getGrammarDefinition } from "./src/lib/extraction-helpers.js";
+import { glossLangPriority } from "./src/lib/i18n.js";
 import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
 import type { WordInfo } from "./src/types.js";
 
@@ -222,7 +223,7 @@ function scheduleRefreshIfNeeded(contentId: string, words: WordInfo[]): void {
   });
 }
 
-async function processText(text: string, kanaLookupCache?: Map<string, any>) {
+async function processText(text: string, kanaLookupCache?: Map<string, any>, glossLang?: string[]) {
   if (!tokenizer) throw new Error("Tokenizer not ready");
   const tokens = await tokenizer.segment(text);
 
@@ -261,7 +262,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     const cacheHit = wordsCache.has(baseForm) || wordsCache.has(wordStr);
 
     const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos, tokenReading);
+      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos, tokenReading, glossLang);
 
     const lookupTime = Date.now() - start;
     if (cacheHit) {
@@ -548,7 +549,7 @@ async function startServer() {
   app.post("/api/extract", async (req, res) => {
     const start = Date.now();
     try {
-      const { text } = req.body;
+      const { text, lang } = req.body;
       if (!text) {
         return res.status(400).json({ error: "No text provided" });
       }
@@ -559,9 +560,14 @@ async function startServer() {
         return res.status(400).json({ error: "Text must contain Japanese characters" });
       }
 
+      // Native-language gloss selection (#260); English stays the default so
+      // the cache and output are byte-identical unless a language is requested.
+      const nativeLang = typeof lang === 'string' && /^[a-z]{2,3}$/.test(lang) ? lang : 'en';
+      const priority = nativeLang === 'en' ? undefined : glossLangPriority(nativeLang);
+
       const cacheSizeBefore = wordsCache.size;
       console.log(`[API] /api/extract: START - cache has ${cacheSizeBefore} words`);
-      const words = await processText(text);
+      const words = await processText(text, undefined, priority);
       const cacheSizeAfter = wordsCache.size;
       const elapsed = Date.now() - start;
       console.log(`[API] /api/extract: DONE - added ${cacheSizeAfter - cacheSizeBefore} words to cache (total: ${cacheSizeAfter}) in ${elapsed}ms`);
@@ -800,11 +806,23 @@ async function startServer() {
         pos = queryPos;
       }
 
-      const { reading, meaning, meanings, variant, entry, jlpt, joyo, score, breakdown } =
-        await wordResolver!.resolve(word, baseForm, undefined, pos, tokenReading);
+      // Native-language gloss selection (#260): ?lang=es serves Spanish glosses
+      // where JMDict has them, English otherwise. Unset / 'en' keeps the old
+      // English-only behaviour.
+      const queryLang = req.query.lang;
+      const nativeLang = typeof queryLang === 'string' && /^[a-z]{2,3}$/.test(queryLang) ? queryLang : 'en';
+      const priority = nativeLang === 'en' ? undefined : glossLangPriority(nativeLang);
+
+      const { reading, meaning, meanings, variant, entry, jlpt, joyo, score, breakdown, glossLang } =
+        await wordResolver!.resolve(word, baseForm, undefined, pos, tokenReading, priority);
 
       const wordData: any = { word, reading, meaning, jlpt, joyo, score, breakdown, entry };
       if (meanings) wordData.meanings = meanings;
+      // Which language the served gloss is actually in, and what the client
+      // asked for — lets the UI flag "shown in English" when Spanish was
+      // requested but unavailable for this word.
+      if (glossLang) wordData.glossLang = glossLang;
+      wordData.requestedLang = nativeLang;
 
       const elapsed = Date.now() - start;
       console.log(`[API] /api/word/${word}: completed in ${elapsed}ms`);

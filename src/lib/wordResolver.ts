@@ -18,6 +18,10 @@ export interface WordResolution {
   jlpt: number;
   joyo: boolean;
   score: number;
+  // The gloss language actually served (#260), e.g. 'spa' | 'eng'. Undefined
+  // when the meaning came from a non-JMDict source (kanji-data, morpheme,
+  // compositional fallback), which are English-only for now.
+  glossLang?: string;
   breakdown: {
     jlptScore: number;
     joyoPenalty: number;
@@ -32,8 +36,8 @@ export interface WordResolution {
 interface DictionaryLike {
   lookup(
     word: string,
-    hint?: { pos?: string; reading?: string }
-  ): Promise<{ reading?: string; meaning?: string; meanings?: string[] } | null | false>;
+    hint?: { pos?: string; reading?: string; lang?: string[] }
+  ): Promise<{ reading?: string; meaning?: string; meanings?: string[]; glossLang?: string } | null | false>;
 }
 
 /**
@@ -64,7 +68,10 @@ export class WordResolver {
     baseForm: string,
     lookupCache?: Map<string, any>,
     pos?: string,
-    tokenReading?: string
+    tokenReading?: string,
+    // Native-language gloss priority (#260), e.g. ['spa','eng']. Defaults to
+    // English-only, so every existing caller keeps byte-identical behaviour.
+    glossLang?: string[]
   ): Promise<WordResolution> {
     // (1) Early-return for known grammatical morphemes.
     //
@@ -148,17 +155,28 @@ export class WordResolver {
     // are sorted by getSenseCommonness() which deprioritises those senses.
     let meaning = kanjiMeaning;
     let meanings = kanjiMeanings;
+    // The language the served gloss is actually in (#260); undefined unless a
+    // JMDict hit set it. Lets callers flag English fallback when the learner
+    // asked for another language.
+    let servedGlossLang: string | undefined;
 
     if (this.dictionary) {
       // The POS/reading hints change homograph selection (おく as a noun vs
       // as a verb; 前 read まえ vs ぜん), so they must be part of the key.
       const hintReading =
         tokenReading && pos && NON_CONJUGATING_POS.has(pos) ? tokenReading : undefined;
-      let hint: { pos?: string; reading?: string } | undefined;
+      let hint: { pos?: string; reading?: string; lang?: string[] } | undefined;
       if (pos && hintReading) hint = { pos, reading: hintReading };
       else if (pos) hint = { pos };
       else if (hintReading) hint = { reading: hintReading };
-      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}|${hintReading ?? ''}`;
+      // Native-language gloss priority (#260) only when a non-default language
+      // was requested — leaving hint.lang unset keeps English lookups (and
+      // their cache keys) byte-identical.
+      if (glossLang && glossLang.length > 0) hint = { ...(hint ?? {}), lang: glossLang };
+      // Different languages must not share a cache slot, or a Spanish lookup
+      // would serve an English-cached gloss (and vice versa).
+      const langKey = glossLang ? glossLang.join(',') : '';
+      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}|${hintReading ?? ''}|${langKey}`;
       let dictResult: any = lookupCache?.get(cacheKey) ?? null;
 
       if (dictResult === null) {
@@ -182,6 +200,7 @@ export class WordResolver {
           }
           meaning = jmdictMeaning;
           meanings = dictResult.meanings;
+          if (dictResult.glossLang) servedGlossLang = dictResult.glossLang;
         }
       }
     }
@@ -213,7 +232,7 @@ export class WordResolver {
     // (5) Score calculation — always uses the same variant selected above.
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
 
-    return { reading, meaning, meanings, variant, entry, jlpt, joyo, score, breakdown };
+    return { reading, meaning, meanings, variant, entry, jlpt, joyo, score, breakdown, glossLang: servedGlossLang };
   }
 
   /** Dictionary lookup that only returns real glosses (never "Unknown"). */
