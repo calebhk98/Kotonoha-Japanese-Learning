@@ -487,30 +487,50 @@ export class JmdictDictionary implements Dictionary {
     return this.initialized && this.db !== null;
   }
 
+  /**
+   * Exact-match index scan. The wrapper's index keys are
+   * `indexes/{kana|kanji}/{text}-{id}`, so the range [`text-`, `text-️`)
+   * yields exactly the entries whose element text IS the word — the previous
+   * prefix scan (readingBeginning/kanjiBeginning + filter) fetched every
+   * entry merely STARTING with the word first: 13,459 full-entry fetches for
+   * し where the exact range holds 40. That made cold lookups take seconds
+   * and full-corpus resolution (issue #252) take hours.
+   */
+  private async searchExact(word: string, kind: 'kana' | 'kanji'): Promise<any[]> {
+    const gte = `indexes/${kind}/${word}-`;
+    const lt = `indexes/${kind}/${word}-\uFE0F`;
+    const ids: string[] = [];
+    for await (const id of this.db.values({ gte, lt })) ids.push(id);
+    return Promise.all(
+      ids.map((i) => this.db.get(`raw/words/${i}`).then((x: string) => JSON.parse(x)))
+    );
+  }
+
   async lookup(word: string, quiet: boolean = false, hint?: LookupHint): Promise<WordLookupResult | null> {
-    if (!this.db || !this.readingBeginning || !this.kanjiBeginning) return null;
+    if (!this.db) return null;
 
     try {
-      // Use the exact-form indexes (indexes/kana/{word}-* and indexes/kanji/{word}-*)
-      // rather than the partial indexes. The partial scan (readingAnywhere / kanjiAnywhere)
-      // is limited to 20 results and may miss the target entry when many other words
-      // contain the search string as a substring (e.g. 'いい' in おおきい, etc.).
-      // readingBeginning / kanjiBeginning scan the prefix-keyed exact-form index which
-      // only returns entries where the kana/kanji text STARTS WITH the search word, so
-      // we then filter to exact matches. No artificial result limit needed here.
-      const [readingCandidates, kanjiCandidates] = await Promise.all([
-        this.readingBeginning(this.db, word, -1),
-        this.kanjiBeginning(this.db, word, -1),
-      ]);
-
-      const allCandidates = [...readingCandidates, ...kanjiCandidates];
-
-      // Keep only entries where a kana or kanji text is EXACTLY the search word.
-      const exactMatches = allCandidates.filter(
-        (r) =>
-          r.kana.some((k: any) => k.text === word) ||
-          r.kanji.some((k: any) => k.text === word)
-      );
+      let exactMatches: any[];
+      if (typeof this.db.values === 'function') {
+        const [kanaMatches, kanjiMatches] = await Promise.all([
+          this.searchExact(word, 'kana'),
+          this.searchExact(word, 'kanji'),
+        ]);
+        exactMatches = [...kanaMatches, ...kanjiMatches];
+      } else {
+        // Fallback for a db without async value iteration: prefix scan + filter
+        // (slow for short kana words, but correct).
+        if (!this.readingBeginning || !this.kanjiBeginning) return null;
+        const [readingCandidates, kanjiCandidates] = await Promise.all([
+          this.readingBeginning(this.db, word, -1),
+          this.kanjiBeginning(this.db, word, -1),
+        ]);
+        exactMatches = [...readingCandidates, ...kanjiCandidates].filter(
+          (r) =>
+            r.kana.some((k: any) => k.text === word) ||
+            r.kanji.some((k: any) => k.text === word)
+        );
+      }
 
       if (exactMatches.length === 0) return null;
 
