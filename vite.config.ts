@@ -20,6 +20,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    exclude: ['**/node_modules/**', '**/.claude/**'],
+    // tests/api/** is a separate, much slower suite (spawns the real server
+    // as a subprocess) run via `npm run test:api` / vitest.api.config.ts —
+    // keep it out of the default `npm test` run.
+    exclude: ['**/node_modules/**', '**/.claude/**', 'tests/api/**'],
   },
 });
