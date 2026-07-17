@@ -588,3 +588,181 @@ describe('WordResolver – #257 refinements', { timeout: 30000 }, () => {
     expect(result.meaning).toMatch(/room/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #257 follow-up — the remaining 150 unknown occurrences.
+//
+// Scan of the committed artifacts (2026-07-17) found 118 distinct unknowns.
+// Classes, with the probe-verified Sudachi (surface, baseForm, pos) triples:
+//   1. Honorific-prefix HOLE: Sudachi normalizes お財布→御財布, ご自分→御自分,
+//      so /^[おご]/ on the base form never fires. Actual bug in the #257 fix.
+//   2. Compound verbs the aux table misses: base forms use kanji aux
+//      (傾き掛ける not 傾きかける) or non-aux second verbs (掴み殺す, 流し入れる).
+//      Needs a generalized V1-stem + V2 split, not a bigger aux table.
+//   3. Passives: base 揺られる — needs base-candidate stripping (揺られる→揺る).
+//   4. Noun-noun compounds (largest class, ~55 words): ガラスケース, 変更点,
+//      子兎, 東京都渋谷区 — needs a generic split with recursion for addresses.
+//   5. Reduplicated onomatopoeia: パチパチパチ — JMDict has the doubled unit
+//      (ぱちぱち); needs a reduplication retry, then an honest generic label.
+//   6. Verbal nouns: 振り返り — the masu-stem used as a noun (→振り返る).
+// ---------------------------------------------------------------------------
+
+describe('WordResolver – #257 follow-up: honorific-prefix hole (御-normalized base forms)', { timeout: 30000 }, () => {
+  it('お財布 (base 御財布): honorific rule fires despite Sudachi normalizing お→御', async () => {
+    const dict = makeMockDictionary({ 財布: { meaning: 'wallet', reading: 'さいふ' } });
+    const result = await new WordResolver(dict).resolve('お財布', '御財布', undefined, '名詞');
+    expect(result.meaning).toMatch(/wallet/);
+    expect(result.meaning).toMatch(/polite|honorific/i);
+  });
+
+  it('ご自分 (base 御自分): honorific rule fires for ご+御 too', async () => {
+    const dict = makeMockDictionary({ 自分: { meaning: 'oneself', reading: 'じぶん' } });
+    const result = await new WordResolver(dict).resolve('ご自分', '御自分', undefined, '名詞');
+    expect(result.meaning).toMatch(/oneself/);
+    expect(result.meaning).toMatch(/polite|honorific/i);
+  });
+});
+
+describe('WordResolver – #257 follow-up: generalized compound verbs', { timeout: 30000 }, () => {
+  it('流し入れました (base 流し入れる): splits into 流す + 入れる even though 入れる is not an aux', async () => {
+    const dict = makeMockDictionary({
+      流す: { meaning: 'to pour', reading: 'ながす' },
+      入れる: { meaning: 'to put in', reading: 'いれる' },
+    });
+    const result = await new WordResolver(dict).resolve('流し入れました', '流し入れる', undefined, '動詞');
+    expect(result.meaning).toMatch(/pour/);
+    expect(result.meaning).toMatch(/put in/);
+  });
+
+  it('傾きかけている (base 傾き掛ける): kanji aux 掛ける still gets the かける gloss', async () => {
+    const dict = makeMockDictionary({
+      傾く: { meaning: 'to lean', reading: 'かたむく' },
+      掛ける: { meaning: 'to hang', reading: 'かける' },
+    });
+    const result = await new WordResolver(dict).resolve('傾きかけている', '傾き掛ける', undefined, '動詞');
+    expect(result.meaning).toMatch(/lean/);
+    expect(result.meaning).toMatch(/verge|partially/i);
+  });
+
+  it('つかみ殺してしまう (base 掴み殺す): generic V2 uses its own dictionary gloss', async () => {
+    const dict = makeMockDictionary({
+      掴む: { meaning: 'to grab', reading: 'つかむ' },
+      殺す: { meaning: 'to kill', reading: 'ころす' },
+    });
+    const result = await new WordResolver(dict).resolve('つかみ殺してしまう', '掴み殺す', undefined, '動詞');
+    expect(result.meaning).toMatch(/grab/);
+    expect(result.meaning).toMatch(/kill/);
+  });
+
+  it('揺られていた (base 揺られる): passive strips to 揺る', async () => {
+    const dict = makeMockDictionary({ 揺る: { meaning: 'to shake', reading: 'ゆる' } });
+    const result = await new WordResolver(dict).resolve('揺られていた', '揺られる', undefined, '動詞');
+    expect(result.meaning).toMatch(/shake/);
+    expect(result.meaning).toMatch(/passive|potential/i);
+  });
+});
+
+describe('WordResolver – #257 follow-up: noun compounds', { timeout: 30000 }, () => {
+  it('ガラスケース: katakana compound splits into ガラス + ケース', async () => {
+    const dict = makeMockDictionary({
+      ガラス: { meaning: 'glass', reading: 'がらす' },
+      ケース: { meaning: 'case', reading: 'けーす' },
+    });
+    const result = await new WordResolver(dict).resolve('ガラスケース', 'ガラスケース', undefined, '名詞');
+    expect(result.meaning).toMatch(/glass/);
+    expect(result.meaning).toMatch(/case/);
+  });
+
+  it('子うさぎ (base 子兎): prefix 子 composes with 兎 "rabbit"', async () => {
+    const dict = makeMockDictionary({ 兎: { meaning: 'rabbit', reading: 'うさぎ' } });
+    const result = await new WordResolver(dict).resolve('子うさぎ', '子兎', undefined, '名詞');
+    expect(result.meaning).toMatch(/child|young/i);
+    expect(result.meaning).toMatch(/rabbit/);
+  });
+
+  it('ある夜: prenominal ある glosses as "a certain", not the verb "to exist"', async () => {
+    const dict = makeMockDictionary({
+      ある: { meaning: 'to exist', reading: 'ある' },
+      夜: { meaning: 'night', reading: 'よる' },
+    });
+    const result = await new WordResolver(dict).resolve('ある夜', 'ある夜', undefined, '名詞');
+    expect(result.meaning).toMatch(/certain|one/i);
+    expect(result.meaning).toMatch(/night/);
+    expect(result.meaning).not.toMatch(/exist/);
+  });
+
+  it('東京都渋谷区: address recurses into 東京都 + 渋谷 + 区', async () => {
+    const dict = makeMockDictionary({
+      東京都: { meaning: 'Tokyo Metropolis', reading: 'とうきょうと' },
+      渋谷: { meaning: 'Shibuya', reading: 'しぶや' },
+      区: { meaning: 'ward', reading: 'く' },
+    });
+    const result = await new WordResolver(dict).resolve('東京都渋谷区', '東京都渋谷区', undefined, '名詞');
+    expect(result.meaning).toMatch(/Tokyo/);
+    expect(result.meaning).toMatch(/Shibuya/);
+    expect(result.meaning).toMatch(/ward/);
+  });
+
+  it('変更点: new suffix 点 composes with 変更 "change"', async () => {
+    const dict = makeMockDictionary({ 変更: { meaning: 'change', reading: 'へんこう' } });
+    const result = await new WordResolver(dict).resolve('変更点', '変更点', undefined, '名詞');
+    expect(result.meaning).toMatch(/change/);
+    expect(result.meaning).toMatch(/point/);
+  });
+
+  it('出し方: suffix 方 resolves the stem as a VERB (出す), not the noun だし "broth"', async () => {
+    const dict = makeMockDictionary({
+      出し: { meaning: 'broth', reading: 'だし' },
+      出す: { meaning: 'to put out', reading: 'だす' },
+    });
+    const result = await new WordResolver(dict).resolve('出し方', '出し方', undefined, '名詞');
+    expect(result.meaning).toMatch(/put out/);
+    expect(result.meaning).toMatch(/way|how to/i);
+    expect(result.meaning).not.toMatch(/broth/);
+  });
+
+  it('揚げたて: suffix たて "freshly done" resolves the stem as 揚げる', async () => {
+    const dict = makeMockDictionary({ 揚げる: { meaning: 'to deep-fry', reading: 'あげる' } });
+    const result = await new WordResolver(dict).resolve('揚げたて', '揚げたて', undefined, '名詞');
+    expect(result.meaning).toMatch(/deep-fry/);
+    expect(result.meaning).toMatch(/fresh|just/i);
+  });
+
+  it('振り返り: verbal noun resolves via its verb 振り返る', async () => {
+    const dict = makeMockDictionary({ 振り返る: { meaning: 'to look back', reading: 'ふりかえる' } });
+    const result = await new WordResolver(dict).resolve('振り返り', '振り返り', undefined, '名詞');
+    expect(result.meaning).toMatch(/look back/);
+  });
+});
+
+describe('WordResolver – #257 follow-up: onomatopoeia & vocalizations', { timeout: 30000 }, () => {
+  it('パチパチパチ (base ぱちぱちぱち): reduplication retries the doubled unit', async () => {
+    const dict = makeMockDictionary({ ぱちぱち: { meaning: 'clapping sound', reading: 'ぱちぱち' } });
+    const result = await new WordResolver(dict).resolve('パチパチパチ', 'ぱちぱちぱち', undefined, '副詞');
+    expect(result.meaning).toMatch(/clap/);
+  });
+
+  it('チチチ: unresolvable kana adverb gets an honest onomatopoeia label', async () => {
+    const result = await new WordResolver(makeMockDictionary({})).resolve('チチチ', 'ちちち', undefined, '副詞');
+    expect(result.meaning).toMatch(/onomatopoeia|sound/i);
+    expect(result.meaning).not.toBe('Unknown meaning');
+  });
+
+  it('まーー: stretched kana vocalization gets an honest label, not Unknown', async () => {
+    const result = await new WordResolver(makeMockDictionary({})).resolve('まーー', 'まーー', undefined, '名詞');
+    expect(result.meaning).toMatch(/vocalization|stretched|sound/i);
+    expect(result.meaning).not.toBe('Unknown meaning');
+  });
+});
+
+describe('WordResolver – #257 follow-up: supplementary additions', { timeout: 30000 }, () => {
+  it('入禅: Mimi-nashi Hoichi ritual word gets a curated gloss', async () => {
+    const result = await new WordResolver(makeMockDictionary({})).resolve('入禅', '入禅', undefined, '名詞');
+    expect(result.meaning).toMatch(/zen|meditation/i);
+  });
+
+  it('ポカリ: brand name gets a curated gloss', async () => {
+    const result = await new WordResolver(makeMockDictionary({})).resolve('ポカリ', 'ポカリ', undefined, '名詞');
+    expect(result.meaning).toMatch(/pocari|drink/i);
+  });
+});
