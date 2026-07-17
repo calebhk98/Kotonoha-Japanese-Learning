@@ -563,3 +563,28 @@ describe('WordResolver – #257 supplementary dictionary', { timeout: 30000 }, (
     expect(result.meaning).toMatch(/chant|call/i);
   });
 });
+
+describe('WordResolver – #257 refinements', { timeout: 30000 }, () => {
+  it('次の日: の-compound composes 次 + 日', async () => {
+    const dict = makeMockDictionary({
+      次: { meaning: 'next', reading: 'つぎ' },
+      日: { meaning: 'day', reading: 'ひ' },
+    });
+    const result = await new WordResolver(dict).resolve('次の日', '次の日', undefined, '名詞');
+    expect(result.meaning).toMatch(/next/);
+    expect(result.meaning).toMatch(/day/);
+  });
+
+  it('ギュッ (katakana mimetic): retries as hiragana ぎゅっと', async () => {
+    const dict = makeMockDictionary({ ぎゅっと: { meaning: 'tightly', reading: 'ぎゅっと' } });
+    const result = await new WordResolver(dict).resolve('ギュッ', 'ギュッ');
+    expect(result.meaning).toMatch(/tight/);
+  });
+
+  it('実習室: suffix 室 composes with 実習 "practical training"', async () => {
+    const dict = makeMockDictionary({ 実習: { meaning: 'practical training', reading: 'じっしゅう' } });
+    const result = await new WordResolver(dict).resolve('実習室', '実習室', undefined, '名詞');
+    expect(result.meaning).toMatch(/training/);
+    expect(result.meaning).toMatch(/room/);
+  });
+});
