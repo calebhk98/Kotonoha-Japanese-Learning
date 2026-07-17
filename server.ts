@@ -13,10 +13,9 @@ import { WordResolver } from "./src/lib/wordResolver.js";
 import { DictionaryManager } from "./src/lib/dictionary.js";
 import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
-import { getMorphemeDefinition } from "./src/lib/morphemeDefinitions.js";
 import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk } from "./src/lib/storyLoader.js";
 import { initDatabase, WordsCache, JishoCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
-import { isPunctuation, isSingleKana, looksLikePartialStem } from "./src/lib/extraction-helpers.js";
+import { isPunctuation, isSingleKana, looksLikePartialStem, getGrammarDefinition } from "./src/lib/extraction-helpers.js";
 import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
 import type { WordInfo } from "./src/types.js";
 
@@ -202,7 +201,16 @@ async function refreshUnknownMeanings(contentId: string, words: WordInfo[]): Pro
 
   for (const w of unknownWords) {
     try {
-      const resolution = await wordResolver.resolve(w.word, w.word);
+      // Same base-form derivation as /api/word: conjugated surfaces need the
+      // Sudachi normalized form or the JMDict lookup misses again.
+      let baseForm = w.word;
+      if (tokenizer) {
+        try {
+          const toks = await tokenizer.segment(w.word);
+          if (toks.length === 1 && toks[0].baseForm) baseForm = toks[0].baseForm;
+        } catch { /* fall back to the raw word */ }
+      }
+      const resolution = await wordResolver.resolve(w.word, baseForm);
       if (resolution.meaning !== 'Unknown meaning') {
         wordMap.set(w.word, {
           ...wordMap.get(w.word)!,
@@ -248,17 +256,19 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
   const validWords = new Map<string, string>(); // Map surface form to baseForm for lookup
-  const morphemes = new Map<string, number>(); // Track morpheme frequencies
+  const morphemes = new Map<string, { meaning: string; frequency: number }>(); // Track morpheme frequencies
 
   for (const token of tokens) {
     const surface = token.surface;
     if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    const morphemeDef = getMorphemeDefinition(surface);
-    const isKanaMorpheme = morphemeDef && /^[ぁ-んー]+$/.test(surface);
-    if (isSingleKana(surface) || isKanaMorpheme) {
+    // Base-form-aware: catches conjugated auxiliary surfaces (たく→たい,
+    // なかっ→ない, でし→です) that used to fall through to homograph lookup.
+    const morphemeDef = getGrammarDefinition(surface, token.baseForm);
+    if (isSingleKana(surface) || morphemeDef) {
       if (morphemeDef) {
-        morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
+        const prev = morphemes.get(surface);
+        morphemes.set(surface, { meaning: morphemeDef, frequency: (prev?.frequency ?? 0) + 1 });
       }
     } else {
       validWords.set(surface, token.baseForm);
@@ -299,8 +309,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   }
 
   // Add morpheme definitions
-  for (const [morpheme, frequency] of morphemes) {
-    const meaning = getMorphemeDefinition(morpheme) || "Grammatical morpheme";
+  for (const [morpheme, { meaning, frequency }] of morphemes) {
     const morphemeData: any = {
       word: morpheme,
       reading: morpheme,
@@ -323,17 +332,19 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
   const validWords = new Map<string, string>(); // Map surface form to baseForm for lookup
-  const morphemes = new Map<string, number>(); // Track morpheme frequencies
+  const morphemes = new Map<string, { meaning: string; frequency: number }>(); // Track morpheme frequencies
 
   for (const token of tokens) {
     const surface = token.surface;
     if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    const morphemeDef = getMorphemeDefinition(surface);
-    const isKanaMorpheme = morphemeDef && /^[ぁ-んー]+$/.test(surface);
-    if (isSingleKana(surface) || isKanaMorpheme) {
+    // Base-form-aware: catches conjugated auxiliary surfaces (たく→たい,
+    // なかっ→ない, でし→です) that used to fall through to homograph lookup.
+    const morphemeDef = getGrammarDefinition(surface, token.baseForm);
+    if (isSingleKana(surface) || morphemeDef) {
       if (morphemeDef) {
-        morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
+        const prev = morphemes.get(surface);
+        morphemes.set(surface, { meaning: morphemeDef, frequency: (prev?.frequency ?? 0) + 1 });
       }
     } else {
       validWords.set(surface, token.baseForm);
@@ -369,8 +380,7 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
   }
 
   // Add morpheme definitions
-  for (const [morpheme, frequency] of morphemes) {
-    const meaning = getMorphemeDefinition(morpheme) || "Grammatical morpheme";
+  for (const [morpheme, { meaning, frequency }] of morphemes) {
     const morphemeData: any = {
       word: morpheme,
       reading: morpheme,
@@ -404,8 +414,16 @@ async function processStoryText(text: string) {
       continue;
     }
 
-    const isMorpheme = isSingleKana(surface) && getMorphemeDefinition(surface) !== undefined;
-    const isVocabWord = !(surface.trim() === '' || isPunctuation(surface) || isSingleKana(surface));
+    // Every Japanese token gets a meaning in the reader — readers hovering
+    // over は or ました must see what it does, not dead text. Three classes:
+    //   - grammar morphemes (particle / auxiliary, incl. conjugated surfaces
+    //     like でし・たく via the base form) → morpheme-table definition
+    //   - everything else Japanese → full dictionary resolution
+    //   - single kana with no table entry → generic fallback (never JMDict:
+    //     homograph lookup on ね/よ returns nonsense like 根 "root")
+    const isJapanese = surface.trim() !== '' && !isPunctuation(surface);
+    const isMorpheme = isJapanese && getGrammarDefinition(surface, tokenInfo.baseForm) !== undefined;
+    const isVocabWord = isJapanese && !isMorpheme && !isSingleKana(surface);
 
     tokens.push({
       surface: surface,
@@ -414,6 +432,7 @@ async function processStoryText(text: string) {
       endIndex: segmentIndex + surface.length,
       isVocabWord,
       isMorpheme,
+      isJapanese,
     });
 
     searchStart = segmentIndex + surface.length;
@@ -433,29 +452,43 @@ async function processStoryText(text: string) {
   }
 
   // Add morpheme definitions to tokenMap
-  const morphemeTokens = tokens.filter(t => t.isMorpheme);
-  for (const token of morphemeTokens) {
-    if (!tokenMap.has(token.surface)) {
-      const meaning = getMorphemeDefinition(token.surface) || "Grammatical morpheme";
+  const emptyBreakdown = { jlptScore: 0, joyoPenalty: 0, highestGrade: null, freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [] };
+  for (const token of tokens) {
+    if (tokenMap.has(token.surface)) continue;
+    if (token.isMorpheme) {
       tokenMap.set(token.surface, {
         word: token.surface,
         reading: token.surface,
-        meaning,
+        meaning: getGrammarDefinition(token.surface, token.baseForm) || "Grammatical morpheme",
         jlpt: 0,
         joyo: false,
         score: 0,
-        breakdown: { jlptScore: 0, joyoPenalty: 0, highestGrade: null, freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [] },
+        breakdown: emptyBreakdown,
+        isMorpheme: true
+      });
+    } else if (token.isJapanese && !token.isVocabWord) {
+      // Single kana with no morpheme-table entry — still hoverable.
+      tokenMap.set(token.surface, {
+        word: token.surface,
+        reading: token.surface,
+        meaning: "Kana particle / expression",
+        jlpt: 0,
+        joyo: false,
+        score: 0,
+        breakdown: emptyBreakdown,
         isMorpheme: true
       });
     }
   }
 
-  // Enrich tokens with word info
-  const enrichedTokens = tokens.map(token => {
-    if ((token.isVocabWord || token.isMorpheme) && tokenMap.has(token.surface)) {
+  // Enrich tokens with word info. isVocabWord doubles as the client's
+  // "hoverable" flag (ContentReader shows the tooltip when isVocabWord &&
+  // wordInfo), so every Japanese token that got an entry above is marked.
+  const enrichedTokens = tokens.map(({ isJapanese, ...token }) => {
+    if (isJapanese && tokenMap.has(token.surface)) {
       return {
         ...token,
-        isVocabWord: token.isVocabWord || token.isMorpheme,
+        isVocabWord: true,
         wordInfo: tokenMap.get(token.surface),
       };
     }
@@ -962,8 +995,20 @@ async function startServer() {
         return res.status(400).json({ error: 'No word provided' });
       }
 
+      // Derive the dictionary base form the same way the extraction paths do
+      // (Sudachi normalized form), so the detail page shows the same meaning
+      // as the vocab list and reader. Without this, conjugated surfaces like
+      // 読みました missed JMDict entirely (no entry keys on the surface form).
+      let baseForm = word;
+      if (tokenizer) {
+        try {
+          const toks = await tokenizer.segment(word);
+          if (toks.length === 1 && toks[0].baseForm) baseForm = toks[0].baseForm;
+        } catch { /* fall back to the raw word */ }
+      }
+
       const { reading, meaning, meanings, variant, entry, jlpt, joyo, score, breakdown } =
-        await wordResolver!.resolve(word, word);
+        await wordResolver!.resolve(word, baseForm);
 
       const wordData: any = { word, reading, meaning, jlpt, joyo, score, breakdown, entry };
       if (meanings) wordData.meanings = meanings;

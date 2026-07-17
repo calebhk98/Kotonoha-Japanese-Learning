@@ -247,17 +247,15 @@ export function getSenseCommonness(sense: any): number {
     score -= 10;
   }
 
-  // Small flat bonus when a sense has more than one English synonym. JMDict
-  // editors tend to add glosses for well-established meanings (e.g. 可愛い
-  // "cute/adorable/charming" beats the sparse "dainty" sense). The bonus is
-  // deliberately small (+2) so it only acts as a tiebreaker between senses
-  // that are otherwise indistinguishable — not a primary ordering signal.
-  // A progressive bonus (+5 / +10 for more glosses) caused regression: 春
-  // "prime (of life)" (3 glosses, +10) outranked "spring (season)" (2 glosses,
-  // +5), and 買う "to value (highly)" (3 glosses) outranked "to buy" (1 gloss).
-  const enGlosses = getEnglishGlosses(sense);
-  if (enGlosses.length > 1) score += 2;
-
+  // Penalties ONLY — no bonuses. JMDict already lists the fundamental sense
+  // first (verified against 読む, 食べる, 泳ぐ, 走る, 春, 買う, 可愛い), and
+  // lookup() falls back to original position for equal scores, so unmarked
+  // senses keep their native order. An earlier +2 "more synonyms" bonus was
+  // meant as a tiebreaker but became the dominant signal (most senses score 0
+  // otherwise) and demoted single-gloss primaries: 読む→"to recite (e.g. a
+  // sutra)", 食べる→"to live on (e.g. a salary)", 泳ぐ→"to make one's way
+  // through the world". This function's only job is to sink explicitly-marked
+  // rare/slang/domain senses below the everyday ones.
   return score;
 }
 
@@ -286,6 +284,23 @@ export function getEntryCommonness(entry: any, word?: string): number {
   else if (hasCommonKana) score += 5;            // common reading of a kanji word
 
   if (entry.sense && entry.sense.length > 1) score += 2;
+
+  // Prefer entries where the searched form is the entry's PRIMARY written
+  // form. Multiple common entries can exactly match one written form, and
+  // without this the tie was broken by database index order:
+  //   本  matched both 元/本/… (もと, "origin") and 本 (ほん, "book") at equal
+  //       scores — もと came first in the index, so 本 meant "origin".
+  //   たい matched 対 ("versus"), 鯛, 隊, 体, … as well as the kana-only
+  //       auxiliary ("want to do") — 対 won and たい meant "versus".
+  // JMDict lists the canonical form first within an entry, so kanji[0]===word
+  // identifies "this entry IS the word" vs "this entry can also be written as
+  // the word". The kana check is restricted to kanji-less entries so that
+  // shared readings (対/鯛/体 all read たい) don't earn the same boost.
+  if (word) {
+    if (hasKanji && entry.kanji[0]?.text === word) score += 8;
+    if (!hasKanji && entry.kana?.[0]?.text === word) score += 8;
+  }
+
   return score;
 }
 

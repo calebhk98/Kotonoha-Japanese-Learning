@@ -266,9 +266,11 @@ describe('mixed kanji+kana sense ordering – real-world cases (#191)', () => {
   });
 
   it('可愛い: primary definition contains "cute" or "adorable" — not a slang/archaic term', () => {
+    // Fixture mirrors real JMDict order (cute is sense 0, dainty sense 3);
+    // the point of this test is that a slang sense can never become primary.
     const senses = [
-      { gloss: [{ text: 'dainty', lang: 'en' }], misc: [] },
       { gloss: [{ text: 'cute', lang: 'en' }, { text: 'adorable', lang: 'en' }], misc: [] },
+      { gloss: [{ text: 'dainty', lang: 'en' }], misc: [] },
       { gloss: [{ text: 'spoiled child (slang)', lang: 'en' }], misc: ['sl'] },
     ];
     const ranked = rankSenses(senses);

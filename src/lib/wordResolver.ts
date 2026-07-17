@@ -6,6 +6,7 @@ import {
   DictionaryEntry,
 } from './scoring.js';
 import { getMorphemeDefinition } from './morphemeDefinitions.js';
+import { getGrammarDefinition } from './extraction-helpers.js';
 
 export interface WordResolution {
   reading: string;
@@ -53,9 +54,12 @@ export class WordResolver {
     //
     // For pure-kana words like ます/ない, the waterfall reaches JMnedict which
     // stores them as proper nouns ("Masu", "Nai"). Checking morphemeDefinitions
-    // first prevents that from ever running (#188).
-    if (/^[ぁ-んー]+$/.test(wordStr)) {
-      const morphemeDef = getMorphemeDefinition(wordStr);
+    // first prevents that from ever running (#188). The base form is consulted
+    // too (via getGrammarDefinition) so conjugated auxiliary surfaces like
+    // たく(たい) / なかっ(ない) / でし(です) don't fall through to homograph
+    // dictionary lookup (たく used to resolve to 対 "versus").
+    {
+      const morphemeDef = getGrammarDefinition(wordStr, baseForm);
       if (morphemeDef) {
         const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, null);
         return {

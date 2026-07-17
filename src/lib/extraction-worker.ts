@@ -22,13 +22,8 @@ import { workerData, parentPort, isMainThread } from 'worker_threads';
 import fs from 'fs';
 import { createTokenizer, Tokenizer } from './tokenizers.js';
 import { DictionaryManager } from './dictionary.js';
-import {
-  getCachedDictionaryEntries,
-  findBestVariant,
-  getWordScoreBreakdown,
-} from './scoring.js';
-import { getMorphemeDefinition } from './morphemeDefinitions.js';
-import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem } from './extraction-helpers.js';
+import { WordResolver } from './wordResolver.js';
+import { isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem, getGrammarDefinition } from './extraction-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Public types (imported by server.ts for type-safety on the message channel)
@@ -58,6 +53,7 @@ export type WorkerInMessage =
 
 let tokenizer: Tokenizer | null = null;
 let dictionary: DictionaryManager | null = null;
+let wordResolver: WordResolver | null = null;
 
 // In-memory kana lookup cache, seeded from the main thread's persistent cache.
 // Avoids redundant Jisho HTTP calls for words already looked up previously.
@@ -65,73 +61,13 @@ const kanaCache = new Map<string, any>();
 
 // ---------------------------------------------------------------------------
 // Extraction logic (mirrors runBatchExtract in server.ts minus DB writes)
+//
+// Word resolution goes through the shared WordResolver class — this file used
+// to carry its own near-verbatim copy of the pipeline, which meant the vocab
+// lists extracted here could silently diverge from what /api/extract and
+// /api/word returned (the exact multiple-sources-of-truth failure #188/#197
+// were about).
 // ---------------------------------------------------------------------------
-
-async function resolveWordMeaning(
-  wordStr: string,
-  baseForm: string,
-  lookupCache: Map<string, any>,
-): Promise<{ reading: string; meaning: string; meanings: string[] | undefined }> {
-  if (/^[ぁ-んー]+$/.test(wordStr)) {
-    const morphemeDef = getMorphemeDefinition(wordStr);
-    if (morphemeDef) return { reading: wordStr, meaning: morphemeDef, meanings: undefined };
-  }
-
-  let entries = getCachedDictionaryEntries(baseForm);
-  if (entries.length === 0 && baseForm !== wordStr) {
-    entries = getCachedDictionaryEntries(wordStr);
-  }
-  const { variant, entry } = findBestVariant(baseForm, entries);
-
-  let reading = wordStr;
-  let kanjiMeaning = 'Unknown meaning';
-  let kanjiMeanings: string[] | undefined;
-
-  if (entry && variant) {
-    reading = variant.pronounced || wordStr;
-    kanjiMeaning = entry.meanings[0]?.glosses?.join(', ') || kanjiMeaning;
-    const allKanjiMeanings: string[] = [];
-    const seen = new Set<string>();
-    for (const m of entry.meanings) {
-      for (const g of (m.glosses || [])) {
-        if (!seen.has(g)) { seen.add(g); allKanjiMeanings.push(g); }
-      }
-    }
-    if (allKanjiMeanings.length > 1) kanjiMeanings = allKanjiMeanings;
-  }
-
-  let meaning = kanjiMeaning;
-  let meanings = kanjiMeanings;
-
-  if (dictionary) {
-    const cacheKey = baseForm !== wordStr ? baseForm : wordStr;
-    let dictResult: any = lookupCache.get(cacheKey) ?? null;
-
-    if (dictResult === null) {
-      dictResult = await dictionary.lookup(baseForm);
-      if (!dictResult && baseForm !== wordStr) {
-        dictResult = await dictionary.lookup(wordStr);
-      }
-      lookupCache.set(cacheKey, dictResult ?? false);
-    }
-
-    if (dictResult && dictResult !== false) {
-      const jmdictMeaning = dictResult.meaning;
-      if (jmdictMeaning && jmdictMeaning !== 'Unknown') {
-        if (!reading || reading === wordStr) reading = dictResult.reading || reading;
-        meaning = jmdictMeaning;
-        meanings = dictResult.meanings;
-      }
-    }
-  }
-
-  if (meaning === 'Unknown meaning' && /^[ぁ-ん]+$/.test(wordStr)) {
-    const morphemeFallback = getMorphemeDefinition(wordStr);
-    meaning = morphemeFallback || 'Kana particle / expression';
-  }
-
-  return { reading, meaning, meanings };
-}
 
 async function processTokens(
   tokens: any[],
@@ -140,16 +76,20 @@ async function processTokens(
 ): Promise<any[]> {
   const baseFormCounts = new Map<string, number>();
   const validWords = new Map<string, string>();
-  const morphemes = new Map<string, number>();
+  const morphemes = new Map<string, { meaning: string; frequency: number }>();
 
   for (const token of tokens) {
     const surface = token.surface;
     if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    const morphemeDef = getMorphemeDefinition(surface);
-    const isKanaMorpheme = morphemeDef && /^[ぁ-んー]+$/.test(surface);
-    if (isSingleKana(surface) || isKanaMorpheme) {
-      if (morphemeDef) morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
+    // Base-form-aware: catches conjugated auxiliary surfaces (たく→たい,
+    // なかっ→ない, でし→です) that used to fall through to homograph lookup.
+    const morphemeDef = getGrammarDefinition(surface, token.baseForm);
+    if (isSingleKana(surface) || morphemeDef) {
+      if (morphemeDef) {
+        const prev = morphemes.get(surface);
+        morphemes.set(surface, { meaning: morphemeDef, frequency: (prev?.frequency ?? 0) + 1 });
+      }
     } else {
       const baseForm = wordStr_baseFormMap.get(surface) ?? token.baseForm;
       validWords.set(surface, baseForm);
@@ -160,18 +100,15 @@ async function processTokens(
   const results: any[] = [];
 
   for (const [wordStr, baseForm] of validWords) {
-    const { reading, meaning, meanings } = await resolveWordMeaning(wordStr, baseForm, kanaLookupCache);
-    const entries = getCachedDictionaryEntries(baseForm);
-    const { variant } = findBestVariant(baseForm, entries);
-    const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
+    const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
+      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
     const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
     if (meanings) wordData.meanings = meanings;
     results.push(wordData);
   }
 
-  for (const [morpheme, frequency] of morphemes) {
-    const meaning = getMorphemeDefinition(morpheme) || 'Grammatical morpheme';
+  for (const [morpheme, { meaning, frequency }] of morphemes) {
     results.push({
       word: morpheme,
       reading: morpheme,
@@ -324,6 +261,8 @@ async function runWorker(data: WorkerInitData) {
       onJishoCacheUpdate,
     );
   }
+
+  wordResolver = new WordResolver(dictionary);
 
   parentPort!.postMessage({ type: 'ready' } satisfies WorkerOutMessage);
 

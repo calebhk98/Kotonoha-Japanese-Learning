@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem } from './extraction-helpers.js';
+import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem, getGrammarDefinition } from './extraction-helpers.js';
 
 describe('extraction helpers', () => {
   describe('isPunctuation', () => {
@@ -153,5 +153,38 @@ describe('extraction helpers', () => {
       expect(PARTICLES.has('猫')).toBe(false);
       expect(PARTICLES.has('ありがとう')).toBe(false);
     });
+  });
+});
+
+describe('getGrammarDefinition', () => {
+  it('returns the surface definition for known morphemes (ます, は)', () => {
+    expect(getGrammarDefinition('ます', 'ます')).toMatch(/polite/i);
+    expect(getGrammarDefinition('は', 'は')).toMatch(/topic/i);
+  });
+
+  it('falls back to the base-form definition for conjugated auxiliaries', () => {
+    expect(getGrammarDefinition('たく', 'たい')).toMatch(/want to/i);
+    expect(getGrammarDefinition('なかっ', 'ない')).toMatch(/negat|not/i);
+    expect(getGrammarDefinition('でし', 'です')).toMatch(/copula|polite/i);
+  });
+
+  it('prefers the surface definition when both surface and base form are in the table', () => {
+    // ました "polite past form" must not be shadowed by ます "polite verb ending"
+    expect(getGrammarDefinition('ました', 'ます')).toMatch(/polite past/i);
+  });
+
+  it('returns undefined for kanji-containing surfaces', () => {
+    expect(getGrammarDefinition('見', '見る')).toBeUndefined();
+    expect(getGrammarDefinition('読みました', '読む')).toBeUndefined();
+  });
+
+  it('does not consult the table for kanji base forms', () => {
+    // し (surface) with base form 為る: 為る is not pure kana, so only the
+    // surface entry applies.
+    expect(getGrammarDefinition('ゆき', '行く')).toBeUndefined();
+  });
+
+  it('returns undefined for ordinary kana vocabulary not in the table', () => {
+    expect(getGrammarDefinition('さくら', 'さくら')).toBeUndefined();
   });
 });

@@ -16,6 +16,10 @@ export const morphemeDefinitions: Record<string, string> = {
   ぬ: "Negative form (classical)",
   ない: "not; negative form",
   なかった: "was not; past negative",
+  // Sudachi splits なかった into なかっ+た and normalizes なかっ to the
+  // kanji 無い, which the kana-keyed base-form guard can't catch — so the
+  // conjugated stem needs its own surface entry.
+  なかっ: "was not (negative stem of ない, 〜なかった)",
 
   // Copula and auxiliary verbs
   です: "polite copula; to be (is/are)",
@@ -43,6 +47,11 @@ export const morphemeDefinitions: Record<string, string> = {
   よ: "Sentence final particle (assertion/emphasis)",
   な: "Sentence final particle (prohibition/emphasis)",
   もの: "Sentence final particle (explanation)",
+  わ: "Sentence final particle (emphasis; feminine)",
+  ぞ: "Sentence final particle (strong emphasis; masculine)",
+  ぜ: "Sentence final particle (emphasis; casual masculine)",
+  かな: "Sentence final particle (I wonder...)",
+  っけ: "Sentence final particle (trying to recall)",
 
   // Other particles (that slipped through as single kana)
   も: "Also / too / even",
@@ -57,6 +66,14 @@ export const morphemeDefinitions: Record<string, string> = {
   と: "With / and",
   から: "From / because",
   まで: "Until / up to",
+  や: "And / or (non-exhaustive listing)",
+  けど: "But / although",
+  けれど: "But / although",
+  なら: "If / in the case of (conditional)",
+  たり: "Doing things like ... (listing actions)",
+
+  // Grammatical nouns / auxiliaries
+  よう: "Manner / way; (〜ように) so that, like; (〜ようになる) come to ...",
 
   // Less common but significant
   し: "Verb stem / conditional form",

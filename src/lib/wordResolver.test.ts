@@ -331,6 +331,16 @@ describe('WordResolver – morpheme guard checks base form for conjugated auxili
     expect(result.meaning).not.toBe('nonexistent');
   });
 
+  it('なかっ with the KANJI base form 無い (what Sudachi actually emits): still the negation definition', async () => {
+    // Sudachi normalizes なかっ to 無い; the kana base-form guard can't fire,
+    // so the surface form itself must be in the morpheme table.
+    const dict = makeMockDictionary({ 無い: { meaning: 'nonexistent', reading: 'ない' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('なかっ', '無い');
+    expect(result.meaning).toMatch(/negat|not/i);
+    expect(result.meaning).not.toBe('nonexistent');
+  });
+
   it('でし (base form です): returns the polite copula definition', async () => {
     const dict = makeMockDictionary({ です: { meaning: 'be', reading: 'です' } });
     const resolver = new WordResolver(dict);
