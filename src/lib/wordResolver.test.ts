@@ -473,3 +473,93 @@ describe('WordResolver – tokenizer reading is used for display and lookup', ()
     expect(calls[0]).toEqual({ pos: '動詞' });
   });
 });
+
+// ---------------------------------------------------------------------------
+// #257 – Compositional fallback + supplementary dictionary
+//
+// 0.117% of word-occurrences in the resolved artifacts were "Unknown
+// meaning". The dominant classes are fully derivable: transparent compounds
+// (試合後, ご利用), compound verbs (入れ直す, 動き始める), mimetics whose
+// JMDict entry carries a と (ぎゅっ→ぎゅっと), and story character names
+// (なつき resolved to the WRONG entry, "summer season"). See the issue for
+// the measured breakdown.
+// ---------------------------------------------------------------------------
+
+describe('WordResolver – #257 compositional fallback', { timeout: 30000 }, () => {
+  it('試合後: suffix 後 composes with 試合 "match"', async () => {
+    const dict = makeMockDictionary({ 試合: { meaning: 'match', reading: 'しあい' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('試合後', '試合後', undefined, '名詞');
+    expect(result.meaning).toMatch(/match/);
+    expect(result.meaning).toMatch(/after/);
+  });
+
+  it('ご利用: honorific prefix strips and composes with 利用 "use"', async () => {
+    const dict = makeMockDictionary({ 利用: { meaning: 'use', reading: 'りよう' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('ご利用', 'ご利用', undefined, '名詞');
+    expect(result.meaning).toMatch(/use/);
+    expect(result.meaning).toMatch(/polite|honorific/i);
+  });
+
+  it('チーム内: suffix 内 composes with the katakana stem', async () => {
+    const dict = makeMockDictionary({ チーム: { meaning: 'team', reading: 'チーム' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('チーム内', 'チーム内', undefined, '名詞');
+    expect(result.meaning).toMatch(/team/);
+    expect(result.meaning).toMatch(/within|inside/);
+  });
+
+  it('入れ直した (base 入れ直す): compound verb splits into 入れる + 直す "re-do"', async () => {
+    const dict = makeMockDictionary({ 入れる: { meaning: 'to put in', reading: 'いれる' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('入れ直した', '入れ直す', undefined, '動詞');
+    expect(result.meaning).toMatch(/put in/);
+    expect(result.meaning).toMatch(/again|re-?do/i);
+  });
+
+  it('動き始めました (base 動き始める): godan stem 動き maps back to 動く', async () => {
+    const dict = makeMockDictionary({ 動く: { meaning: 'to move', reading: 'うごく' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('動き始めました', '動き始める', undefined, '動詞');
+    expect(result.meaning).toMatch(/move/);
+    expect(result.meaning).toMatch(/begin|start/i);
+  });
+
+  it('ぎゅっ: mimetic retries as ぎゅっと', async () => {
+    const dict = makeMockDictionary({ ぎゅっと: { meaning: 'tightly', reading: 'ぎゅっと' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('ぎゅっ', 'ぎゅっ');
+    expect(result.meaning).toMatch(/tight/);
+  });
+
+  it('compositional fallback does NOT fire when a direct lookup succeeded', async () => {
+    // 食後 has its own JMDict entry — must use it, not compose 食+後.
+    const dict = makeMockDictionary({ 食後: { meaning: 'after a meal', reading: 'しょくご' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('食後', '食後', undefined, '名詞');
+    expect(result.meaning).toBe('after a meal');
+  });
+});
+
+describe('WordResolver – #257 supplementary dictionary', { timeout: 30000 }, () => {
+  it('なつき: resolves as the story protagonist name, not 夏季 "summer season"', async () => {
+    const dict = makeMockDictionary({ なつき: { meaning: 'summer season', reading: 'なつき' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('なつき', 'なつき', undefined, '名詞');
+    expect(result.meaning).toMatch(/natsuki/i);
+    expect(result.meaning).not.toBe('summer season');
+  });
+
+  it('雪童: Miyazawa coinage gets its curated gloss', async () => {
+    const resolver = new WordResolver(makeMockDictionary({}));
+    const result = await resolver.resolve('雪童', '雪童', undefined, '名詞');
+    expect(result.meaning).toMatch(/snow/i);
+  });
+
+  it('ヤーレン: folk-song chant is labeled as such instead of Unknown', async () => {
+    const resolver = new WordResolver(makeMockDictionary({}));
+    const result = await resolver.resolve('ヤーレン', 'ヤーレン');
+    expect(result.meaning).toMatch(/chant|call/i);
+  });
+});
