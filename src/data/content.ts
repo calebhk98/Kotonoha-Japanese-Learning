@@ -13,6 +13,7 @@ export interface Content {
   level?: string;     // JLPT level / difficulty band from metadata (e.g. "N5", "beginner")
   tags?: string[];    // Free-form tags from metadata
   dateAdded?: string; // ISO date string from metadata (when content was added)
+  language?: string;  // BCP-47-ish target-language code; absent = 'ja' (#258)
 }
 
 export interface Story extends Content {

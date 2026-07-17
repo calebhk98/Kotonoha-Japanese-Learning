@@ -20,7 +20,9 @@
 
 import type { Tokenizer, TokenInfo } from './tokenizers.js';
 import type { WordResolver } from './wordResolver.js';
-import { isPunctuation, isSingleKana, getGrammarDefinition } from './extraction-helpers.js';
+import { getGrammarDefinition } from './extraction-helpers.js';
+import { getDisplayProfile } from './language/registry.js';
+import type { LanguageDisplayProfile } from './language/types.js';
 
 export const RESOLVED_FORMAT_VERSION = 1;
 
@@ -59,7 +61,8 @@ export async function resolveContent(
   text: string,
   tokenizer: Tokenizer,
   wordResolver: WordResolver,
-  lookupCache?: Map<string, any>
+  lookupCache?: Map<string, any>,
+  profile: LanguageDisplayProfile = getDisplayProfile()
 ): Promise<ResolvedContent> {
   const tokenInfos = await tokenizer.segment(text);
 
@@ -73,9 +76,12 @@ export async function resolveContent(
     const segmentIndex = text.indexOf(surface, searchStart);
     if (segmentIndex === -1) continue;
 
-    const isJapanese = surface.trim() !== '' && !isPunctuation(surface);
+    // Script decisions go through the language profile (#258). The grammar
+    // guard (getGrammarDefinition) is still the Japanese table directly —
+    // it becomes a profile member when a second language actually exists.
+    const isJapanese = surface.trim() !== '' && !profile.script.isPunctuation(surface);
     const isMorpheme = isJapanese && getGrammarDefinition(surface, t.baseForm) !== undefined;
-    const isVocabWord = isJapanese && !isMorpheme && !isSingleKana(surface);
+    const isVocabWord = isJapanese && !isMorpheme && !profile.script.isGrammarFragment(surface);
 
     tokens.push({
       surface,

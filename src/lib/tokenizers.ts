@@ -23,10 +23,13 @@ export interface TokenInfo {
   reading?: string;
 }
 
-/** Converts katakana to hiragana (ー and other marks pass through). */
-export function katakanaToHiragana(s: string): string {
-  return s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
-}
+/**
+ * Converts katakana to hiragana (ー and other marks pass through).
+ * Canonical implementation lives in the browser-safe language profile
+ * (#258); aliased here for the existing server-side call sites.
+ */
+import { katakanaToHiraganaJa } from './language/japanese.js';
+export const katakanaToHiragana = katakanaToHiraganaJa;
 
 export interface Tokenizer {
   name: string;

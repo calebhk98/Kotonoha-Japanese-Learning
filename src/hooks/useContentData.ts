@@ -3,6 +3,7 @@ import { WordInfo } from '../types';
 import { extractVocabulary, getContentWords } from '../lib/api';
 import { Content } from '../data/content';
 import { WaniKaniData, getWaniKaniMultiplier, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
+import { getDisplayProfile } from '../lib/language/registry';
 
 export function applyWaniKaniToWords(words: WordInfo[], wkData: WaniKaniData): WordInfo[] {
   return words.map(word => {
@@ -44,11 +45,14 @@ export function useContentData() {
     if (savedVocab) {
       try {
         const parsed = JSON.parse(savedVocab);
-        // Validate if old cache format uses baseScore instead of jlptScore
+        // Validate the cached breakdown schema via the language profile
+        // (#258) — same rule as always for ja: legacy pre-jlptScore caches
+        // are discarded.
+        const profile = getDisplayProfile();
         let isValid = true;
         for (const key of Object.keys(parsed)) {
           const arr = parsed[key];
-          if (arr.length > 0 && (!arr[0].breakdown || arr[0].breakdown.jlptScore === undefined || arr[0].breakdown.highestGrade === undefined)) {
+          if (arr.length > 0 && !profile.isValidBreakdown(arr[0].breakdown)) {
             isValid = false;
             break;
           }

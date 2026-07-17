@@ -11,7 +11,9 @@ import {
 } from "./src/lib/scoring.js";
 import { WordResolver } from "./src/lib/wordResolver.js";
 import { DictionaryManager } from "./src/lib/dictionary.js";
-import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
+import { Tokenizer } from "./src/lib/tokenizers.js";
+import { getServerProfile } from "./src/lib/language/serverProfile.js";
+import { getDisplayProfile, DEFAULT_LANGUAGE } from "./src/lib/language/registry.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk, loadResolvedContent, listContentEntries } from "./src/lib/storyLoader.js";
 import { resolveContent, buildStoryResponse, buildWordsResponse } from "./src/lib/contentResolver.js";
@@ -63,7 +65,7 @@ let wordResolver: WordResolver | null = null;
 
 const tokenizerReady = (async () => {
   try {
-    tokenizer = await createTokenizer();
+    tokenizer = await getServerProfile(DEFAULT_LANGUAGE).createTokenizer();
     console.log(`[Server] Tokenizer ready: ${tokenizer.name}`);
   } catch (e: any) {
     console.error(`[Server] Failed to initialize tokenizer: ${e.message}`);
@@ -543,7 +545,9 @@ async function startServer() {
   });
 
   const MAX_TEXT_LENGTH = 50000;
-  const JAPANESE_SCRIPT = /[぀-ゟ゠-ヿ一-鿿]/;
+  // Target-language content check via the language profile (#258); for ja
+  // this is the same codepoint test as always.
+  const containsTargetText = getDisplayProfile(DEFAULT_LANGUAGE).script.containsContentChar;
 
   app.post("/api/extract", async (req, res) => {
     const start = Date.now();
@@ -555,7 +559,7 @@ async function startServer() {
       if (typeof text !== "string" || text.length > MAX_TEXT_LENGTH) {
         return res.status(400).json({ error: `Text exceeds the ${MAX_TEXT_LENGTH} character limit` });
       }
-      if (!JAPANESE_SCRIPT.test(text)) {
+      if (!containsTargetText(text)) {
         return res.status(400).json({ error: "Text must contain Japanese characters" });
       }
 
@@ -596,7 +600,7 @@ async function startServer() {
       if (typeof text !== "string" || text.length > MAX_TEXT_LENGTH) {
         return res.status(400).json({ error: `Text exceeds the ${MAX_TEXT_LENGTH} character limit` });
       }
-      if (!JAPANESE_SCRIPT.test(text)) {
+      if (!containsTargetText(text)) {
         return res.status(400).json({ error: "Text must contain Japanese characters" });
       }
 

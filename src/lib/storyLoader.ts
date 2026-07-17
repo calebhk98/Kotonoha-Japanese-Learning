@@ -15,6 +15,7 @@ interface SeriesMetadata {
   title: string;
   type: 'series';
   description: string;
+  language?: string; // target-language code; absent = 'ja' (#258)
   level?: string;
   imageUrl?: string;
   tags?: string[];
@@ -27,6 +28,7 @@ interface StoryMetadata {
   title: string;
   type: 'story';
   description: string;
+  language?: string; // target-language code; absent = 'ja' (#258)
   level?: string;
   imageUrl?: string;
   tags?: string[];
@@ -47,6 +49,7 @@ interface MusicMetadata {
   title: string;
   type: 'music';
   description: string;
+  language?: string; // target-language code; absent = 'ja' (#258)
   level?: string;
   imageUrl?: string;
   mediaUrl?: string;
@@ -60,6 +63,7 @@ interface VideoMetadata {
   title: string;
   type: 'video';
   description: string;
+  language?: string; // target-language code; absent = 'ja' (#258)
   level?: string;
   imageUrl?: string;
   mediaUrl?: string;
@@ -157,6 +161,7 @@ export function loadStoriesFromDisk(): Content[] {
         level: metadata.level,
         tags: metadata.tags,
         dateAdded: metadata.dateAdded,
+        language: metadata.language,
       });
     } catch (error) {
       console.warn(`⚠️  Error loading story from ${folder}:`, error);
@@ -214,6 +219,7 @@ export function loadMusicFromDisk(): Content[] {
         level: metadata.level,
         tags: metadata.tags,
         dateAdded: metadata.dateAdded,
+        language: metadata.language,
       });
     } catch (error) {
       console.warn(`⚠️  Error loading music from ${folder}:`, error);
@@ -271,6 +277,7 @@ export function loadVideosFromDisk(): Content[] {
         level: metadata.level,
         tags: metadata.tags,
         dateAdded: metadata.dateAdded,
+        language: metadata.language,
       });
     } catch (error) {
       console.warn(`⚠️  Error loading video from ${folder}:`, error);
