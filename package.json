@@ -22,7 +22,9 @@
     "transcribe": "npx tsx scripts/transcribe.ts",
     "transcribe-missing": "npx tsx scripts/transcribe-missing.ts",
     "index-copyrighted": "npx tsx scripts/index-copyrighted.ts",
-    "populate-cache": "npx tsx scripts/populate-cache.ts"
+    "populate-cache": "npx tsx scripts/populate-cache.ts",
+    "fetch-lyrics": "npx tsx scripts/fetch-lyrics.ts",
+    "scrape-captions": "npx tsx scripts/background/scrape-video-captions.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
