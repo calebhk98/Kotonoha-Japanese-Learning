@@ -10,6 +10,7 @@ coverage/
 .word-cache.json
 .jisho-cache.json
 .cache.db
+.caption-scrape-state.json
 !.word-cache.json.gz
 !.jisho-cache.json.gz
 jmdict-all-3.6.2.json
