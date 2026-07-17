@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEnglishGlosses, getSenseCommonness, pickBestEntry, DictionaryManager } from './dictionary';
+import { getEnglishGlosses, getSenseCommonness, pickBestEntry, findCloseAlternatives, DictionaryManager } from './dictionary';
 import { getMorphemeDefinition } from './morphemeDefinitions';
 
 // ---------------------------------------------------------------------------
@@ -658,5 +658,105 @@ describe('homograph entry selection – uk bonus is gated by POS compatibility',
       sense: [{ partOfSpeech: ['v5r', 'vi'], misc: [] }, {}],
     };
     expect(pickBestEntry([frog, goHome], 'かえる', { pos: '動詞' }).id).toBe('1512150');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reading hints (from the rebuilt Sudachi WASM's reading_form)
+//
+// UniDic knows the contextual reading of every token. When available it is
+// the strongest homograph signal: 家の前 reads まえ (not ぜん), 鬼のかしら
+// reads かしら (so 頭 must resolve to the head/leader entry, not あたま via
+// tie-break or the とう counter).
+// ---------------------------------------------------------------------------
+
+describe('homograph entry selection – reading hints', () => {
+  const zenEntry = {
+    id: '1387310',
+    kanji: [{ text: '前', common: true }],
+    kana: [{ text: 'ぜん', common: true }],
+    sense: [{ partOfSpeech: ['n-pref'], misc: [] }, {}],
+  };
+  const maeEntry = {
+    id: '1392580',
+    kanji: [{ text: '前', common: true }],
+    kana: [{ text: 'まえ', common: true }],
+    sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+  };
+
+  it('前 read まえ: picks the まえ entry over ぜん', () => {
+    expect(pickBestEntry([zenEntry, maeEntry], '前', { pos: '名詞', reading: 'まえ' }).id).toBe('1392580');
+  });
+
+  it('頭 read かしら: reading beats both the counter and the plain-noun tiebreak', () => {
+    const counter = {
+      id: '1450690',
+      kanji: [{ text: '頭', common: true }],
+      kana: [{ text: 'とう', common: true }],
+      sense: [{ partOfSpeech: ['ctr'], misc: [] }, {}],
+    };
+    const head = {
+      id: '1582310',
+      kanji: [{ text: '頭', common: true }],
+      kana: [{ text: 'あたま', common: true }, { text: 'かしら', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([counter, head], '頭', { pos: '名詞', reading: 'かしら' }).id).toBe('1582310');
+  });
+
+  it('人 read にん after a numeral: picks the people-counter entry', () => {
+    const hito = {
+      id: '1580640',
+      kanji: [{ text: '人', common: true }],
+      kana: [{ text: 'ひと', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    const nin = {
+      id: '1580645',
+      kanji: [{ text: '人', common: true }],
+      kana: [{ text: 'にん', common: true }],
+      sense: [{ partOfSpeech: ['ctr'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([hito, nin], '人', { reading: 'にん' }).id).toBe('1580645');
+    expect(pickBestEntry([hito, nin], '人', { reading: 'ひと' }).id).toBe('1580640');
+  });
+});
+
+describe('findCloseAlternatives – ambiguous homographs surface the runner-up', () => {
+  const candy = {
+    id: '1153520',
+    kanji: [{ text: '飴', common: true }],
+    kana: [{ text: 'あめ', common: true }],
+    sense: [{ partOfSpeech: ['n'], misc: [], gloss: [{ text: '(hard) candy', lang: 'eng' }] }, {}],
+  };
+  const rain = {
+    id: '1171900',
+    kanji: [{ text: '雨', common: true }],
+    kana: [{ text: 'あめ', common: true }],
+    sense: [{ partOfSpeech: ['n'], misc: [], gloss: [{ text: 'rain', lang: 'eng' }] }, {}],
+  };
+
+  it('あめ: the losing 雨 "rain" entry is reported as a close alternative', () => {
+    const alts = findCloseAlternatives([candy, rain], candy, 'あめ', { pos: '名詞' });
+    expect(alts.length).toBe(1);
+    expect(alts[0]).toMatch(/rain/);
+    expect(alts[0]).toMatch(/雨/);
+  });
+
+  it('clear winners produce no alternatives (瘤 vs 鼓舞)', () => {
+    const kobuLump = {
+      id: '1569660',
+      kanji: [{ text: '瘤', common: true }],
+      kana: [{ text: 'こぶ', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: ['uk'], gloss: [{ text: 'bump', lang: 'eng' }] }, {}],
+    };
+    const kobuEncourage = {
+      id: '1268020',
+      kanji: [{ text: '鼓舞', common: true }],
+      kana: [{ text: 'こぶ', common: true }],
+      sense: [{ partOfSpeech: ['n', 'vs'], misc: [], gloss: [{ text: 'encouragement', lang: 'eng' }] }, {}],
+    };
+    const alts = findCloseAlternatives([kobuEncourage, kobuLump], kobuLump, 'こぶ', { pos: '名詞' });
+    expect(alts).toEqual([]);
   });
 });

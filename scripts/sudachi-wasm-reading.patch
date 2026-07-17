@@ -1,0 +1,39 @@
+Expose reading_form and dictionary_form on the WASM Morpheme binding.
+
+The upstream binding only exports surface / part_of_speech / normalized_form.
+Kotonoha needs the per-token reading (katakana, from UniDic) to
+disambiguate kana homographs (家の前 まえ vs ぜん, かしら vs あたま vs とう
+for 頭) and to display accurate furigana, and the dictionary form as a
+better conjugation base. Applied by scripts/setup-sudachi.sh after cloning
+https://github.com/hi-ogawa/sudachi.rs — regenerate with `git diff` in the
+clone if upstream drifts.
+
+--- a/sudachi-wasm/src/lib.rs
++++ b/sudachi-wasm/src/lib.rs
+@@ -26,6 +26,8 @@ export interface Morpheme {
+     surface: string;
+     part_of_speech: string[];
+     normalized_form: string;
++    reading_form: string;
++    dictionary_form: string;
+ }
+
+ "#;
+@@ -77,6 +79,8 @@ impl Tokenizer {
+                 surface: m.surface().to_string(),
+                 part_of_speech: m.part_of_speech().iter().map(|v| v.to_string()).collect(),
+                 normalized_form: m.normalized_form().to_string(),
++                reading_form: m.reading_form().to_string(),
++                dictionary_form: m.dictionary_form().to_string(),
+             })
+             .collect();
+         Ok(serde_wasm_bindgen::to_value(&result)?)
+@@ -87,6 +91,8 @@ pub struct Morpheme {
+     pub surface: String,
+     pub part_of_speech: Vec<String>,
+     pub normalized_form: String,
++    pub reading_form: String,
++    pub dictionary_form: String,
+ }
+
+ // create dictionary without accessing file system

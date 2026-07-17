@@ -442,3 +442,34 @@ describe('WordResolver – pure-kana surfaces keep their own reading', () => {
     expect(result.reading).toBe('ことば');
   });
 });
+
+// ── Contextual reading from the tokenizer ────────────────────────────────────
+
+describe('WordResolver – tokenizer reading is used for display and lookup', () => {
+  it('displays the surface reading when the tokenizer provides one', async () => {
+    const dict = makeMockDictionary({ 読む: { meaning: 'to read', reading: 'よむ' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('読みました', '読む', undefined, '動詞', 'よみました');
+    expect(result.reading).toBe('よみました');
+  });
+
+  it('passes the reading hint to the dictionary for non-conjugating tokens', async () => {
+    const calls: any[] = [];
+    const dict = {
+      lookup: async (word: string, hint?: any) => { calls.push(hint); return { meaning: 'head', reading: 'かしら' }; },
+    };
+    const resolver = new WordResolver(dict as any);
+    await resolver.resolve('かしら', '頭', undefined, '名詞', 'かしら');
+    expect(calls[0]).toEqual({ pos: '名詞', reading: 'かしら' });
+  });
+
+  it('does NOT pass a reading hint for conjugating tokens (surface reading ≠ base reading)', async () => {
+    const calls: any[] = [];
+    const dict = {
+      lookup: async (word: string, hint?: any) => { calls.push(hint); return { meaning: 'to read', reading: 'よむ' }; },
+    };
+    const resolver = new WordResolver(dict as any);
+    await resolver.resolve('読みました', '読む', undefined, '動詞', 'よみました');
+    expect(calls[0]).toEqual({ pos: '動詞' });
+  });
+});
