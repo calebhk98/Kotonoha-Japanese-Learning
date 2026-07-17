@@ -1,3 +1,6 @@
+// @ts-nocheck — dev-only comparison script; imports the removed `kuromoji`
+// package (see tokenizers.ts for reinstall instructions) so it does not
+// typecheck against the current dependency set.
 import TinySegmenter from 'tiny-segmenter';
 import { loadDefaultJapaneseParser } from 'budoux';
 import kuromoji from 'kuromoji';

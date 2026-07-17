@@ -42,6 +42,8 @@ export class SudachiTSImpl implements Tokenizer {
 
   async ready(): Promise<void> {
     try {
+      // @ts-expect-error — the sudachi-ts package was removed (deprecated
+      // fallback; see the class-level notes for reinstall instructions).
       const { DictionaryFactory } = await import('sudachi-ts');
       const path = await import('path');
       const configPath = path.join(process.cwd(), 'sudachi.json');

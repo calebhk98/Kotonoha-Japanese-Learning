@@ -59,7 +59,7 @@ describe('Database Write Queue', () => {
         jlpt: 5,
         joyo: true,
         score: 15,
-        breakdown: { jlptScore: 15, highestGrade: 1, frequencyPenalty: -5 },
+        breakdown: { jlptScore: 15, joyoPenalty: 5, highestGrade: 1, freqPenalty: -5, jlptValues: [], gradeValues: [1], priorities: [] },
         frequencyInContent: 2,
       },
       {
@@ -69,7 +69,7 @@ describe('Database Write Queue', () => {
         jlpt: 5,
         joyo: true,
         score: 20,
-        breakdown: { jlptScore: 15, highestGrade: 2, frequencyPenalty: 0 },
+        breakdown: { jlptScore: 15, joyoPenalty: 5, highestGrade: 2, freqPenalty: 0, jlptValues: [], gradeValues: [2], priorities: [] },
         frequencyInContent: 1,
       },
     ];
@@ -111,7 +111,7 @@ describe('Database Write Queue', () => {
       jlpt: 5,
       joyo: true,
       score: 10,
-      breakdown: { jlptScore: 15, highestGrade: 1, frequencyPenalty: -5 },
+      breakdown: { jlptScore: 15, joyoPenalty: 5, highestGrade: 1, freqPenalty: -5, jlptValues: [], gradeValues: [1], priorities: [] },
       frequencyInContent: 3,
     }];
 
@@ -194,7 +194,7 @@ describe('Database Write Queue', () => {
       jlpt: 4,
       joyo: true,
       score: 25,
-      breakdown: { jlptScore: 30, highestGrade: 2, frequencyPenalty: 0 },
+      breakdown: { jlptScore: 30, joyoPenalty: 7, highestGrade: 2, freqPenalty: 0, jlptValues: [4], gradeValues: [2], priorities: [] },
       frequencyInContent: 5,
     }];
 
@@ -235,7 +235,7 @@ describe('Database Write Queue', () => {
             jlpt: 5,
             joyo: true,
             score: 10,
-            breakdown: { jlptScore: 15, highestGrade: 1, frequencyPenalty: 0 },
+            breakdown: { jlptScore: 15, joyoPenalty: 5, highestGrade: 1, freqPenalty: 0, jlptValues: [5], gradeValues: [1], priorities: [] },
             frequencyInContent: 1,
           }])
         );
