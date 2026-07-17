@@ -1,9 +1,17 @@
 import { useEffect, Dispatch, SetStateAction } from "react";
 
 export function useUrlRouting({ setSelectedWord }: UseUrlRoutingParams): UseUrlRoutingReturn {
-  const navigateToWord = (word: string) => {
+  const navigateToWord = (word: string, reading?: string, pos?: string) => {
     setSelectedWord(word);
-    window.history.pushState({ type: 'word', word, scrollPos: window.scrollY }, '', `/word/${encodeURIComponent(word)}`);
+    // Carry the in-context reading and POS so the detail page resolves the
+    // same homograph the reader/vocab list showed (人 in 六人 reads にん;
+    // かしら in a sentence is the noun 頭, standalone it parses as the
+    // "I wonder" particle).
+    const params = new URLSearchParams();
+    if (reading && reading !== word) params.set('reading', reading);
+    if (pos) params.set('pos', pos);
+    const query = params.size > 0 ? `?${params.toString()}` : '';
+    window.history.pushState({ type: 'word', word, scrollPos: window.scrollY }, '', `/word/${encodeURIComponent(word)}${query}`);
   };
 
   useEffect(() => {
@@ -30,5 +38,5 @@ type UseUrlRoutingParams = {
 };
 
 type UseUrlRoutingReturn = {
-  navigateToWord: (word: string) => void;
+  navigateToWord: (word: string, reading?: string, pos?: string) => void;
 };

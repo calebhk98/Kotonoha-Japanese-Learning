@@ -11,6 +11,9 @@ export interface ScoreBreakdown {
 export interface WordInfo {
   word: string;
   reading: string;
+  /** Sudachi part-of-speech of the token (名詞, 動詞, …) — carried so
+   *  click-through navigation can re-resolve the same homograph. */
+  pos?: string;
   meaning: string;               // primary meaning (most common)
   meanings?: string[];           // all meanings from dictionary, ordered by frequency
   jlpt: number;                  // 1 to 5, where 5 is N5, 1 is N1, 0 if NA

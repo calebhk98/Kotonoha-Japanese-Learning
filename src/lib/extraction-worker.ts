@@ -103,7 +103,7 @@ async function processTokens(
     const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
       await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos, tokenReading);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
-    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
+    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent, ...(pos ? { pos } : {}) };
     if (meanings) wordData.meanings = meanings;
     results.push(wordData);
   }

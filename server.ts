@@ -309,7 +309,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
     }
 
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
-    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
+    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent, ...(pos ? { pos } : {}) };
     if (meanings) wordData.meanings = meanings;
     results.push(wordData);
   }
@@ -380,7 +380,7 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
     }
 
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
-    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
+    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent, ...(pos ? { pos } : {}) };
     if (meanings) wordData.meanings = meanings;
     results.push(wordData);
   }
@@ -456,7 +456,7 @@ async function processStoryText(text: string) {
     const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
       await wordResolver!.resolve(token.surface, token.baseForm, undefined, token.pos, token.reading);
 
-    tokenMap.set(token.surface, { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown, meanings });
+    tokenMap.set(token.surface, { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown, meanings, ...(token.pos ? { pos: token.pos } : {}) });
   }
 
   // Add morpheme definitions to tokenMap
@@ -1019,6 +1019,18 @@ async function startServer() {
             tokenReading = toks[0].reading;
           }
         } catch { /* fall back to the raw word */ }
+      }
+
+      // An explicit ?reading= from the client (the in-context reading of the
+      // token the user clicked) beats the standalone segmentation: 人 clicked
+      // inside 六人 reads にん and must show the counter, not ひと "person".
+      const queryReading = req.query.reading;
+      if (typeof queryReading === 'string' && /^[ぁ-んーァ-ヴ]+$/.test(queryReading)) {
+        tokenReading = queryReading;
+      }
+      const queryPos = req.query.pos;
+      if (typeof queryPos === 'string' && /^[぀-ヿ一-鿿]{1,8}$/.test(queryPos)) {
+        pos = queryPos;
       }
 
       const { reading, meaning, meanings, variant, entry, jlpt, joyo, score, breakdown } =

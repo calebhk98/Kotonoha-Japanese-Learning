@@ -39,7 +39,7 @@ export function ContentDetail({
   onUpdateContent?: (updatedContent: Content) => void;
   onAddWord?: (addedWordStr: string) => void;
   knownWordSet?: Set<string>;
-  onWordClick?: (word: string) => void;
+  onWordClick?: (word: string, reading?: string, pos?: string) => void;
 }) {
   const [view, setView] = useState<'intro' | 'lesson' | 'consume'>('intro');
   const [isEditing, setIsEditing] = useState(false);
@@ -213,7 +213,7 @@ export function ContentDetail({
                   ).map((w, i) => (
                     <button
                       key={i}
-                      onClick={() => onWordClick?.(w.word)}
+                      onClick={() => onWordClick?.(w.word, w.reading, w.pos)}
                       className="border border-gray-100 bg-gray-50 hover:bg-gray-100 hover:border-indigo-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 transition-colors text-left w-full cursor-pointer"
                     >
                       <div>
@@ -290,7 +290,7 @@ export function ContentDetail({
                   {(showAllWords ? status.knownWords : status.knownWords.slice(0, 10)).map((w, i) => (
                     <button
                       key={i}
-                      onClick={() => onWordClick?.(w.word)}
+                      onClick={() => onWordClick?.(w.word, w.reading, w.pos)}
                       className="border border-green-100 bg-white/50 hover:bg-green-50/50 hover:border-green-200 rounded-xl p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 transition-colors text-left w-full cursor-pointer"
                     >
                       <div>

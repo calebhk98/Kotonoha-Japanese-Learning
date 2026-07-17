@@ -22,7 +22,7 @@ interface ParagraphTokens {
   tokens: Token[];
 }
 
-export function ContentReader({ content, vocab, onBack, onWordClick }: { content: Content; vocab?: WordInfo[]; onBack: () => void; onWordClick?: (word: string) => void }) {
+export function ContentReader({ content, vocab, onBack, onWordClick }: { content: Content; vocab?: WordInfo[]; onBack: () => void; onWordClick?: (word: string, reading?: string, pos?: string) => void }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showFurigana, setShowFurigana] = useState(true);
   const [showHoverDefs, setShowHoverDefs] = useState(true);
@@ -127,7 +127,7 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
             <span
               key={`word-${token.startIndex}`}
               className="relative group cursor-pointer inline-block mx-0.5 border-b border-dashed border-gray-300 hover:border-indigo-500 transition-colors"
-              onClick={() => onWordClick?.(info.word)}
+              onClick={() => onWordClick?.(info.word, info.reading, info.pos)}
             >
               {inner}
               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] sm:max-w-xs bg-gray-900 border border-gray-700 text-white p-3 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none text-left">
@@ -154,7 +154,7 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
             <span
               key={`word-${token.startIndex}`}
               className="cursor-pointer"
-              onClick={() => onWordClick?.(info.word)}
+              onClick={() => onWordClick?.(info.word, info.reading, info.pos)}
             >
               {inner}
             </span>

@@ -39,7 +39,17 @@ export function WordDetailPage({
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch(`/api/word/${encodeURIComponent(word)}`);
+        // The in-context reading (when navigation provided one) keeps this
+        // page consistent with the reader/vocab list that was clicked —
+        // without it, homographs re-resolve out of sentence context.
+        const urlParams = new URLSearchParams(window.location.search);
+        const apiParams = new URLSearchParams();
+        const contextReading = urlParams.get('reading');
+        const contextPos = urlParams.get('pos');
+        if (contextReading) apiParams.set('reading', contextReading);
+        if (contextPos) apiParams.set('pos', contextPos);
+        const query = apiParams.size > 0 ? `?${apiParams.toString()}` : '';
+        const response = await fetch(`/api/word/${encodeURIComponent(word)}${query}`);
         if (!response.ok) {
           throw new Error('Failed to fetch word details');
         }
