@@ -29,7 +29,10 @@ export interface WordResolution {
 }
 
 interface DictionaryLike {
-  lookup(word: string): Promise<{ reading?: string; meaning?: string; meanings?: string[] } | null | false>;
+  lookup(
+    word: string,
+    hint?: { pos?: string }
+  ): Promise<{ reading?: string; meaning?: string; meanings?: string[] } | null | false>;
 }
 
 /**
@@ -48,7 +51,8 @@ export class WordResolver {
   async resolve(
     wordStr: string,
     baseForm: string,
-    lookupCache?: Map<string, any>
+    lookupCache?: Map<string, any>,
+    pos?: string
   ): Promise<WordResolution> {
     // (1) Early-return for known grammatical morphemes.
     //
@@ -88,7 +92,10 @@ export class WordResolver {
     let kanjiMeanings: string[] | undefined = undefined;
 
     if (entry && variant) {
-      reading = variant.pronounced || wordStr;
+      // A pure-kana surface IS its own reading — kanji-data's variant reading
+      // only applies to kanji surfaces. Without this guard, ことば (base 言葉)
+      // displayed kanji-data's archaic variant reading けとば.
+      reading = /[一-鿿々]/.test(wordStr) ? (variant.pronounced || wordStr) : wordStr;
       kanjiMeaning = entry.meanings[0]?.glosses?.join(', ') || kanjiMeaning;
       const allKanjiMeanings: string[] = [];
       const seen = new Set<string>();
@@ -109,13 +116,16 @@ export class WordResolver {
     let meanings = kanjiMeanings;
 
     if (this.dictionary) {
-      const cacheKey = baseForm !== wordStr ? baseForm : wordStr;
+      // The POS hint changes homograph selection (おく as a noun vs as a
+      // verb resolve to different entries), so it must be part of the key.
+      const hint = pos ? { pos } : undefined;
+      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}`;
       let dictResult: any = lookupCache?.get(cacheKey) ?? null;
 
       if (dictResult === null) {
-        dictResult = await this.dictionary.lookup(baseForm);
+        dictResult = await this.dictionary.lookup(baseForm, hint);
         if (!dictResult && baseForm !== wordStr) {
-          dictResult = await this.dictionary.lookup(wordStr);
+          dictResult = await this.dictionary.lookup(wordStr, hint);
         }
         lookupCache?.set(cacheKey, dictResult ?? false); // false = "looked up, not found"
       }
@@ -123,9 +133,14 @@ export class WordResolver {
       if (dictResult && dictResult !== false) {
         const jmdictMeaning = dictResult.meaning;
         if (jmdictMeaning && jmdictMeaning !== 'Unknown') {
-          // Keep kanji-data reading for conjugated surface forms; only use JMDict
-          // reading for kana-only words where kanji-data had nothing.
-          if (!reading || reading === wordStr) reading = dictResult.reading || reading;
+          // For uninflected words the JMDict entry we're taking the meaning
+          // from also has the right reading (kana[0]) — kanji-data's variant
+          // picker often surfaces archaic readings (餅→あも, 誰→た, 家→け).
+          // Conjugated surfaces keep the kanji-data reading as before (the
+          // JMDict reading describes the base form, not the surface).
+          if (wordStr === baseForm || !reading || reading === wordStr) {
+            reading = dictResult.reading || reading;
+          }
           meaning = jmdictMeaning;
           meanings = dictResult.meanings;
         }

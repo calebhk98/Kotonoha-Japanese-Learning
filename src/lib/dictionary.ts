@@ -6,9 +6,65 @@ export interface WordLookupResult {
   reading?: string;
 }
 
+/**
+ * Optional disambiguation hints from the tokenizer. `pos` is Sudachi's
+ * first part-of-speech element for the token (名詞, 動詞, 助動詞, …) and is
+ * used to prefer JMDict entries whose senses are grammatically compatible —
+ * e.g. a verb token おく should resolve to 置く "to put", never 奥 or 億.
+ */
+export interface LookupHint {
+  pos?: string;
+}
+
 export interface Dictionary {
   isInitialized(): boolean;
-  lookup(word: string, quiet?: boolean): Promise<WordLookupResult | null>;
+  lookup(word: string, quiet?: boolean, hint?: LookupHint): Promise<WordLookupResult | null>;
+}
+
+/**
+ * Maps a Sudachi part-of-speech class to a predicate over JMDict sense
+ * partOfSpeech tags. Returns null for POS classes we don't map (punctuation,
+ * whitespace, unknown) so they contribute no signal.
+ */
+function jmdictPosMatcher(sudachiPos: string): ((tag: string) => boolean) | null {
+  switch (sudachiPos) {
+    case '動詞':   return (t) => t.startsWith('v');
+    case '形容詞': return (t) => t.startsWith('adj-i') || t === 'adj-ix';
+    case '形状詞': return (t) => t === 'adj-na' || t === 'adj-nari';
+    case '副詞':   return (t) => t === 'adv' || t === 'adv-to';
+    case '代名詞': return (t) => t === 'pn';
+    // 名詞 also accepts noun-like suffixes (suf/n-suf) because punctuation can
+    // break Sudachi's suffix attachment — 鬼（おに）たち tags たち as a plain
+    // noun even though it's the 達 pluralizing suffix. Counters (ctr) stay
+    // excluded: a standalone noun token is practically never a counter, and
+    // including them made 頭 resolve to "counter for large animals".
+    case '名詞':   return (t) => t === 'n' || t.startsWith('n-') || t === 'num' || t === 'suf';
+    case '接尾辞': return (t) => t === 'suf' || t === 'n-suf' || t === 'ctr';
+    case '接頭辞': return (t) => t === 'pref' || t === 'n-pref';
+    case '助動詞': return (t) => t.startsWith('aux');
+    case '助詞':   return (t) => t === 'prt';
+    case '接続詞': return (t) => t === 'conj';
+    case '連体詞': return (t) => t === 'adj-pn';
+    case '感動詞': return (t) => t === 'int';
+    default:       return null;
+  }
+}
+
+/** True when any sense of the entry carries a tag the token's POS accepts. */
+function entryMatchesPos(entry: any, sudachiPos: string | undefined): boolean {
+  if (!sudachiPos) return false;
+  const matches = jmdictPosMatcher(sudachiPos);
+  if (!matches) return false;
+  return (entry.sense || []).some((s: any) =>
+    Array.isArray(s.partOfSpeech) && s.partOfSpeech.some(matches)
+  );
+}
+
+/** True when any sense is marked uk ("word usually written using kana alone"). */
+function entryIsUsuallyKana(entry: any): boolean {
+  return (entry.sense || []).some(
+    (s: any) => Array.isArray(s.misc) && s.misc.includes('uk')
+  );
 }
 
 // ==================== Kanji Data Dictionary ====================
@@ -272,19 +328,46 @@ export function getSenseCommonness(sense: any): number {
  * heavily weighting the common flag, those obscure entries win on kanji count
  * alone and the canonical meaning ("good") is lost.
  */
-export function getEntryCommonness(entry: any, word?: string): number {
+export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint): number {
   const hasKanji = entry.kanji && entry.kanji.length > 0;
   const hasCommonKanji = hasKanji && entry.kanji.some((k: any) => k.common === true);
   const hasCommonKana = entry.kana && entry.kana.some((k: any) => k.common === true);
+  const wordIsKana = !!word && /^[ぁ-んーァ-ヴ]+$/.test(word);
 
   let score = 0;
-  if (hasCommonKanji) score += 20;           // canonical kanji form (e.g. 猫, 良い)
-  else if (hasKanji) score += 3;             // obscure/non-common kanji form
 
-  if (hasCommonKana && !hasKanji) score += 20;  // canonical kana-only word (e.g. いい)
-  else if (hasCommonKana) score += 5;            // common reading of a kanji word
+  if (wordIsKana) {
+    // The text chose to write this word in kana, so "has a canonical kanji
+    // form" is NOT evidence the entry is what the author meant — rewarding it
+    // made こぶ resolve to 鼓舞 "encouragement" instead of 瘤 "lump", たち to
+    // 太刀 "long sword" instead of the 達 pluralizing suffix, and そこ to
+    // 底 "bottom" instead of 其処 "there". For kana searches the signals are:
+    // a common kana reading, and JMDict's uk marker ("word usually written
+    // using kana alone" — exactly the entries that show up as kana in text).
+    // uk is worth more than a POS match (+10): it is direct evidence about
+    // the written form we observed. BUT it only applies when the entry is
+    // grammatically compatible with the token (or we have no POS at all) —
+    // otherwise the uk noun 蛙 "frog" would outrank 帰る for a VERB token
+    // かえる. Sudachi's POS classes are reliable; uk must never override them.
+    const posKnown = !!hint?.pos && jmdictPosMatcher(hint.pos) !== null;
+    if (hasCommonKana) score += 20;
+    if (entryIsUsuallyKana(entry) && (!posKnown || entryMatchesPos(entry, hint?.pos))) {
+      score += 12;
+    }
+  } else {
+    if (hasCommonKanji) score += 20;           // canonical kanji form (e.g. 猫, 良い)
+    else if (hasKanji) score += 3;             // obscure/non-common kanji form
+
+    if (hasCommonKana && !hasKanji) score += 20;  // canonical kana-only word
+    else if (hasCommonKana) score += 5;            // common reading of a kanji word
+  }
 
   if (entry.sense && entry.sense.length > 1) score += 2;
+
+  // Grammatical compatibility with the token: Sudachi knows おく in
+  // おいていきなさい is a VERB, which rules out 奥 "inner part" and 億
+  // "hundred million"; a NOUN 頭 rules out the large-animal counter (ctr).
+  if (entryMatchesPos(entry, hint?.pos)) score += 10;
 
   // Prefer entries where the searched form is the entry's PRIMARY written
   // form. Multiple common entries can exactly match one written form, and
@@ -309,10 +392,10 @@ export function getEntryCommonness(entry: any, word?: string): number {
  * Picks the JMDict entry a learner searching `word` most likely wants, from a
  * list of entries whose kanji or kana exactly match `word`.
  */
-export function pickBestEntry(exactMatches: any[], word: string): any {
+export function pickBestEntry(exactMatches: any[], word: string, hint?: LookupHint): any {
   return exactMatches.reduce((best: any, current: any) => {
-    const bestScore = getEntryCommonness(best, word);
-    const currentScore = getEntryCommonness(current, word);
+    const bestScore = getEntryCommonness(best, word, hint);
+    const currentScore = getEntryCommonness(current, word, hint);
     return currentScore > bestScore ? current : best;
   });
 }
@@ -355,7 +438,7 @@ export class JmdictDictionary implements Dictionary {
     return this.initialized && this.db !== null;
   }
 
-  async lookup(word: string, quiet: boolean = false): Promise<WordLookupResult | null> {
+  async lookup(word: string, quiet: boolean = false, hint?: LookupHint): Promise<WordLookupResult | null> {
     if (!this.db || !this.readingBeginning || !this.kanjiBeginning) return null;
 
     try {
@@ -385,7 +468,7 @@ export class JmdictDictionary implements Dictionary {
       // Among exact matches, pick the entry a learner most likely wants.
       // For words like 行く that have multiple variants (行く, 往く), all exact matches
       // refer to the same underlying word — pick the most common entry.
-      const bestMatch = pickBestEntry(exactMatches, word);
+      const bestMatch = pickBestEntry(exactMatches, word, hint);
 
       // Extract all meanings, deprioritising rare/slang/archaic senses (#187).
       const meanings: string[] = [];
@@ -586,11 +669,12 @@ export class DictionaryManager {
     this.fallback1 = jmnedictDict;
   }
 
-  async lookup(word: string): Promise<WordLookupResult | null> {
+  async lookup(word: string, hint?: LookupHint): Promise<WordLookupResult | null> {
     if (!this.primary) return null;
 
-    // Try primary dictionary first (Jisho API cache is fastest)
-    const result = await this.primary.lookup(word);
+    // Try primary dictionary first. The hint only means something to JMDict
+    // (homograph entry selection); the other dictionaries ignore extra args.
+    const result = await this.primary.lookup(word, false, hint);
     if (result) return result;
 
     // Try JMnedict for names and proper nouns — these can be hiragana, katakana,

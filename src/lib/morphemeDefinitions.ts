@@ -10,7 +10,7 @@ export const morphemeDefinitions: Record<string, string> = {
   // Verb forms
   す: "Causative marker",
   される: "Passive voice marker",
-  さ: "Passive voice marker",
+  さ: "Nominalizing suffix (-ness, e.g. 高さ); sentence-final emphasis; causative stem (させる)",
   せ: "Causative passive",
   ん: "Negative form / Emphatic particle",
   ぬ: "Negative form (classical)",
@@ -78,6 +78,13 @@ export const morphemeDefinitions: Record<string, string> = {
   // Less common but significant
   し: "Verb stem / conditional form",
   する: "To do",
+  // Sudachi normalizes して to the kanji 為る, whose JMDict homographs
+  // include 成る "to become" — so the te-form needs its own surface entry.
+  して: "te-form of する (to do); and then",
+  している: "is doing; progressive of する (〜している)",
+  // 〜について "about / concerning" is far more common than the verb 点く
+  // ("to be lit"), which homograph lookup used to pick for this surface.
+  ついて: "about; concerning (〜について); attached (付いて)",
   いる: "To be (animate) / Progressive form",
   ある: "To be (inanimate) / to exist",
   いく: "To go / to continue",
@@ -85,6 +92,9 @@ export const morphemeDefinitions: Record<string, string> = {
 
   // Small tsu variations
   っ: "Geminate consonant marker",
+
+  // Generic counter (五つ splits into 五 + つ)
+  つ: "Counter for things (一つ, 二つ, 三つ…)",
 
   // Additional verb forms
   られる: "Passive / potential form",

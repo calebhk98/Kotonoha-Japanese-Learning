@@ -5,6 +5,13 @@ const TinySegmenter = require('tiny-segmenter');
 export interface TokenInfo {
   surface: string;      // The actual word as it appears (with conjugations)
   baseForm: string;     // Dictionary form for lookup (base form)
+  /**
+   * First part-of-speech element from the tokenizer (名詞, 動詞, 助詞, …).
+   * Only Sudachi provides it. Used as a dictionary-lookup hint so kana
+   * homographs resolve to a grammatically compatible entry (verb おく →
+   * 置く "to put", not 奥 "inner part").
+   */
+  pos?: string;
 }
 
 export interface Tokenizer {
@@ -166,14 +173,16 @@ export class SudachiWasmImpl implements Tokenizer {
     ]);
     let groupSurface = '';
     let groupBaseForm = '';
+    let groupPos = '';
     let groupIsVerb = false;
     let tePending = false;
 
     const flush = () => {
       if (groupSurface) {
-        result.push({ surface: groupSurface, baseForm: groupBaseForm });
+        result.push({ surface: groupSurface, baseForm: groupBaseForm, pos: groupPos || undefined });
         groupSurface = '';
         groupBaseForm = '';
+        groupPos = '';
         groupIsVerb = false;
         tePending = false;
       }
@@ -194,6 +203,7 @@ export class SudachiWasmImpl implements Tokenizer {
       if (!groupSurface) {
         groupSurface = surface;
         groupBaseForm = baseForm;
+        groupPos = pos;
         groupIsVerb = pos === '動詞';
         tePending = false;
       } else if (groupIsVerb && pos === '助動詞' && GROUPABLE_AUX.has(m.normalized_form)) {
@@ -212,6 +222,7 @@ export class SudachiWasmImpl implements Tokenizer {
         flush();
         groupSurface = surface;
         groupBaseForm = baseForm;
+        groupPos = pos;
         groupIsVerb = pos === '動詞';
         tePending = false;
       }

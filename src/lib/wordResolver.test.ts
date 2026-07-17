@@ -433,3 +433,12 @@ describe('WordResolver – uninflected words take the JMDict reading', () => {
     expect(result.reading).toBe('だれ');
   });
 });
+
+describe('WordResolver – pure-kana surfaces keep their own reading', () => {
+  it('ことば (normalized to 言葉): reading is ことば, not kanji-data\'s けとば', async () => {
+    const dict = makeMockDictionary({ 言葉: { meaning: 'language', reading: 'ことば' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('ことば', '言葉');
+    expect(result.reading).toBe('ことば');
+  });
+});

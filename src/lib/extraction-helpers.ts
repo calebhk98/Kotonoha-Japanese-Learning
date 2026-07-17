@@ -58,14 +58,29 @@ export function isKatakanaWord(s: string): boolean {
  * Only pure-kana tokens qualify: a kanji base form (見る for the surface 見)
  * means the token is a content word and must use the dictionary waterfall.
  */
+/**
+ * Sudachi normalizes the highest-frequency grammatical verbs to KANJI base
+ * forms (しました→為る, いました→居る, あります→有る). Those kanji have
+ * JMDict homographs that mislead dictionary lookup (為る matches 成る "to
+ * become"), so kana surfaces with these bases route to the corresponding
+ * kana morpheme-table entry instead.
+ */
+const KANJI_GRAMMAR_BASES: Record<string, string> = {
+  '為る': 'する',
+  '居る': 'いる',
+  '有る': 'ある',
+};
+
 export function getGrammarDefinition(surface: string, baseForm: string): string | undefined {
   if (!/^[ぁ-んー]+$/.test(surface)) return undefined;
   const surfaceDef = getMorphemeDefinition(surface);
   if (surfaceDef) return surfaceDef;
-  if (baseForm && baseForm !== surface && /^[ぁ-んー]+$/.test(baseForm)) {
+  if (!baseForm || baseForm === surface) return undefined;
+  if (/^[ぁ-んー]+$/.test(baseForm)) {
     return getMorphemeDefinition(baseForm);
   }
-  return undefined;
+  const kanaBase = KANJI_GRAMMAR_BASES[baseForm];
+  return kanaBase ? getMorphemeDefinition(kanaBase) : undefined;
 }
 
 /**
