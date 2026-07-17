@@ -322,6 +322,15 @@ Sudachi WASM lives in `sudachi-wasm-built/` (built by
 the UniDic dictionary. Sudachi tokenization mode C (compound) is the default
 for accuracy; see `TOKENIZER_SETUP.md` for modes.
 
+**The WASM build is patched.** `scripts/setup-sudachi.sh` applies
+`scripts/sudachi-wasm-reading.patch` after cloning upstream, adding
+`reading_form` and `dictionary_form` to the exposed Morpheme interface.
+The contextual reading (UniDic) drives furigana display and homograph
+disambiguation (家の前→まえ, 頭 read かしら → head/leader entry) via
+`TokenInfo.reading` → `WordResolver` → `LookupHint.reading`. All code
+treats `reading_form` as optional, so an unpatched WASM build still works
+— it just falls back to the POS/uk-only selection.
+
 ### Word resolution (`resolveWordMeaning` in server.ts)
 
 Single source of truth introduced as fix for issue #188 — three earlier code

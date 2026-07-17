@@ -31,9 +31,19 @@ export interface WordResolution {
 interface DictionaryLike {
   lookup(
     word: string,
-    hint?: { pos?: string }
+    hint?: { pos?: string; reading?: string }
   ): Promise<{ reading?: string; meaning?: string; meanings?: string[] } | null | false>;
 }
+
+/**
+ * POS classes whose surface reading equals the word's reading (they don't
+ * conjugate), making the tokenizer reading a valid dictionary hint. Verbs,
+ * adjectives, and auxiliaries conjugate — their surface reading (よみました)
+ * doesn't describe the base form (よむ), so no reading hint is passed.
+ */
+const NON_CONJUGATING_POS = new Set([
+  '名詞', '代名詞', '副詞', '連体詞', '接続詞', '感動詞', '接頭辞', '接尾辞', '形状詞',
+]);
 
 /**
  * Single entry point for word resolution (#197).
@@ -52,7 +62,8 @@ export class WordResolver {
     wordStr: string,
     baseForm: string,
     lookupCache?: Map<string, any>,
-    pos?: string
+    pos?: string,
+    tokenReading?: string
   ): Promise<WordResolution> {
     // (1) Early-return for known grammatical morphemes.
     //
@@ -116,10 +127,15 @@ export class WordResolver {
     let meanings = kanjiMeanings;
 
     if (this.dictionary) {
-      // The POS hint changes homograph selection (おく as a noun vs as a
-      // verb resolve to different entries), so it must be part of the key.
-      const hint = pos ? { pos } : undefined;
-      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}`;
+      // The POS/reading hints change homograph selection (おく as a noun vs
+      // as a verb; 前 read まえ vs ぜん), so they must be part of the key.
+      const hintReading =
+        tokenReading && pos && NON_CONJUGATING_POS.has(pos) ? tokenReading : undefined;
+      let hint: { pos?: string; reading?: string } | undefined;
+      if (pos && hintReading) hint = { pos, reading: hintReading };
+      else if (pos) hint = { pos };
+      else if (hintReading) hint = { reading: hintReading };
+      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}|${hintReading ?? ''}`;
       let dictResult: any = lookupCache?.get(cacheKey) ?? null;
 
       if (dictResult === null) {
@@ -152,6 +168,12 @@ export class WordResolver {
       const morphemeFallback = getMorphemeDefinition(wordStr);
       meaning = morphemeFallback || 'Kana particle / expression';
     }
+
+    // (4.5) The tokenizer's contextual reading, when present, beats every
+    // other source: it is the reading of THIS surface in THIS sentence
+    // (読みました→よみました, 家→いえ), which is exactly what furigana
+    // should show.
+    if (tokenReading) reading = tokenReading;
 
     // (5) Score calculation — always uses the same variant selected above.
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);

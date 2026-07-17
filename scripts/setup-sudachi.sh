@@ -53,6 +53,7 @@ echo "✅ Prerequisites met"
 echo ""
 
 # Create temp directory for build
+PROJECT_DIR=$(pwd)
 TEMP_DIR=$(mktemp -d)
 
 echo "📥 Cloning Sudachi repository..."
@@ -61,6 +62,11 @@ cd "$TEMP_DIR"
 git clone --depth 1 https://github.com/hi-ogawa/sudachi.rs.git sudachi-rs
 echo "✅ Repository cloned"
 cd sudachi-rs
+
+echo ""
+echo "🩹 Applying Kotonoha patch (expose reading_form / dictionary_form)..."
+git apply "$PROJECT_DIR/scripts/sudachi-wasm-reading.patch"
+echo "✅ Patch applied"
 
 echo ""
 echo "📚 Downloading dictionary..."

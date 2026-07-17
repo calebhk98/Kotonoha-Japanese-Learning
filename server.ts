@@ -205,16 +205,18 @@ async function refreshUnknownMeanings(contentId: string, words: WordInfo[]): Pro
       // Sudachi normalized form or the JMDict lookup misses again.
       let baseForm = w.word;
       let pos: string | undefined;
+      let tokenReading: string | undefined;
       if (tokenizer) {
         try {
           const toks = await tokenizer.segment(w.word);
           if (toks.length === 1 && toks[0].baseForm) {
             baseForm = toks[0].baseForm;
             pos = toks[0].pos;
+            tokenReading = toks[0].reading;
           }
         } catch { /* fall back to the raw word */ }
       }
-      const resolution = await wordResolver.resolve(w.word, baseForm, undefined, pos);
+      const resolution = await wordResolver.resolve(w.word, baseForm, undefined, pos, tokenReading);
       if (resolution.meaning !== 'Unknown meaning') {
         wordMap.set(w.word, {
           ...wordMap.get(w.word)!,
@@ -259,7 +261,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
 
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
-  const validWords = new Map<string, { baseForm: string; pos?: string }>();
+  const validWords = new Map<string, { baseForm: string; pos?: string; reading?: string }>();
   const morphemes = new Map<string, { meaning: string; frequency: number }>(); // Track morpheme frequencies
 
   for (const token of tokens) {
@@ -275,7 +277,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
         morphemes.set(surface, { meaning: morphemeDef, frequency: (prev?.frequency ?? 0) + 1 });
       }
     } else {
-      validWords.set(surface, { baseForm: token.baseForm, pos: token.pos });
+      validWords.set(surface, { baseForm: token.baseForm, pos: token.pos, reading: token.reading });
       baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
     }
   }
@@ -286,13 +288,13 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   const missWords: string[] = [];
   const results = [];
   const processedWords: string[] = [];
-  for (const [wordStr, { baseForm, pos }] of validWords) {
+  for (const [wordStr, { baseForm, pos, reading: tokenReading }] of validWords) {
     processedWords.push(wordStr);
     const start = Date.now();
     const cacheHit = wordsCache.has(baseForm) || wordsCache.has(wordStr);
 
     const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos);
+      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos, tokenReading);
 
     const lookupTime = Date.now() - start;
     if (cacheHit) {
@@ -335,7 +337,7 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
 
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
-  const validWords = new Map<string, { baseForm: string; pos?: string }>();
+  const validWords = new Map<string, { baseForm: string; pos?: string; reading?: string }>();
   const morphemes = new Map<string, { meaning: string; frequency: number }>(); // Track morpheme frequencies
 
   for (const token of tokens) {
@@ -351,22 +353,22 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
         morphemes.set(surface, { meaning: morphemeDef, frequency: (prev?.frequency ?? 0) + 1 });
       }
     } else {
-      validWords.set(surface, { baseForm: token.baseForm, pos: token.pos });
+      validWords.set(surface, { baseForm: token.baseForm, pos: token.pos, reading: token.reading });
       baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
     }
   }
 
   const results = [];
-  for (const [wordStr, { baseForm, pos }] of validWords) {
+  for (const [wordStr, { baseForm, pos, reading: tokenReading }] of validWords) {
     const start = Date.now();
 
     // Check batch-level resolution cache first to avoid re-resolving the same word
-    const cacheKey = `${wordStr}|${baseForm}|${pos ?? ''}`;
+    const cacheKey = `${wordStr}|${baseForm}|${pos ?? ''}|${tokenReading ?? ''}`;
     let resolution;
     if (batchResolutionCache?.has(cacheKey)) {
       resolution = batchResolutionCache.get(cacheKey);
     } else {
-      resolution = await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos);
+      resolution = await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos, tokenReading);
       batchResolutionCache?.set(cacheKey, resolution);
     }
 
@@ -433,6 +435,7 @@ async function processStoryText(text: string) {
       surface: surface,
       baseForm: tokenInfo.baseForm,
       pos: tokenInfo.pos,
+      reading: tokenInfo.reading,
       startIndex: segmentIndex,
       endIndex: segmentIndex + surface.length,
       isVocabWord,
@@ -451,7 +454,7 @@ async function processStoryText(text: string) {
     if (tokenMap.has(token.surface)) continue;
 
     const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-      await wordResolver!.resolve(token.surface, token.baseForm, undefined, token.pos);
+      await wordResolver!.resolve(token.surface, token.baseForm, undefined, token.pos, token.reading);
 
     tokenMap.set(token.surface, { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown, meanings });
   }
@@ -1006,18 +1009,20 @@ async function startServer() {
       // 読みました missed JMDict entirely (no entry keys on the surface form).
       let baseForm = word;
       let pos: string | undefined;
+      let tokenReading: string | undefined;
       if (tokenizer) {
         try {
           const toks = await tokenizer.segment(word);
           if (toks.length === 1 && toks[0].baseForm) {
             baseForm = toks[0].baseForm;
             pos = toks[0].pos;
+            tokenReading = toks[0].reading;
           }
         } catch { /* fall back to the raw word */ }
       }
 
       const { reading, meaning, meanings, variant, entry, jlpt, joyo, score, breakdown } =
-        await wordResolver!.resolve(word, baseForm, undefined, pos);
+        await wordResolver!.resolve(word, baseForm, undefined, pos, tokenReading);
 
       const wordData: any = { word, reading, meaning, jlpt, joyo, score, breakdown, entry };
       if (meanings) wordData.meanings = meanings;

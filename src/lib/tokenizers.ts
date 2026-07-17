@@ -12,6 +12,20 @@ export interface TokenInfo {
    * 置く "to put", not 奥 "inner part").
    */
   pos?: string;
+  /**
+   * Contextual reading of the surface in hiragana (UniDic reading_form,
+   * converted from katakana). Requires a Sudachi WASM built with the
+   * scripts/sudachi-wasm-reading.patch — absent on older builds, in which
+   * case behavior falls back to pre-reading logic. Used for furigana
+   * display and (for non-conjugating tokens) homograph disambiguation:
+   * 家の前 reads まえ, 六人 reads にん.
+   */
+  reading?: string;
+}
+
+/** Converts katakana to hiragana (ー and other marks pass through). */
+export function katakanaToHiragana(s: string): string {
+  return s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 }
 
 export interface Tokenizer {
@@ -174,15 +188,33 @@ export class SudachiWasmImpl implements Tokenizer {
     let groupSurface = '';
     let groupBaseForm = '';
     let groupPos = '';
+    let groupReading = '';
+    let groupReadingValid = true;
     let groupIsVerb = false;
     let tePending = false;
 
+    // reading_form exists only on WASM builds patched via
+    // scripts/sudachi-wasm-reading.patch; older builds yield undefined and
+    // every token's reading stays undefined (pre-reading behavior).
+    const readingOf = (m: any): string | null => {
+      const r = m.reading_form;
+      if (typeof r !== 'string' || r === '' || r === '*') return null;
+      return katakanaToHiragana(r);
+    };
+
     const flush = () => {
       if (groupSurface) {
-        result.push({ surface: groupSurface, baseForm: groupBaseForm, pos: groupPos || undefined });
+        result.push({
+          surface: groupSurface,
+          baseForm: groupBaseForm,
+          pos: groupPos || undefined,
+          reading: groupReadingValid && groupReading ? groupReading : undefined,
+        });
         groupSurface = '';
         groupBaseForm = '';
         groupPos = '';
+        groupReading = '';
+        groupReadingValid = true;
         groupIsVerb = false;
         tePending = false;
       }
@@ -199,32 +231,42 @@ export class SudachiWasmImpl implements Tokenizer {
       }
 
       const baseForm = m.normalized_form || surface;
+      const reading = readingOf(m);
 
-      if (!groupSurface) {
+      const appendReading = () => {
+        if (reading === null) groupReadingValid = false;
+        else groupReading += reading;
+      };
+      const startGroup = () => {
         groupSurface = surface;
         groupBaseForm = baseForm;
         groupPos = pos;
+        groupReading = reading ?? '';
+        groupReadingValid = reading !== null;
         groupIsVerb = pos === '動詞';
         tePending = false;
+      };
+
+      if (!groupSurface) {
+        startGroup();
       } else if (groupIsVerb && pos === '助動詞' && GROUPABLE_AUX.has(m.normalized_form)) {
         groupSurface += surface;
+        appendReading();
         tePending = false;
       } else if (groupIsVerb && pos === '助詞' && (surface === 'て' || surface === 'で')) {
         // Conjunctive て/で — attach and wait for the continuation verb (いる, くれる, …)
         groupSurface += surface;
+        appendReading();
         tePending = true;
       } else if (tePending && pos === '動詞' && TE_CONTINUATION_VERBS.has(m.normalized_form)) {
         // Grammaticalized continuation verb after te-form (いる, くれる, しまう, …)
         // Content verbs (食べる, 走る, …) fall through to flush — they start a new clause.
         groupSurface += surface;
+        appendReading();
         tePending = false;
       } else {
         flush();
-        groupSurface = surface;
-        groupBaseForm = baseForm;
-        groupPos = pos;
-        groupIsVerb = pos === '動詞';
-        tePending = false;
+        startGroup();
       }
     }
 

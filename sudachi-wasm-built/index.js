@@ -51,26 +51,26 @@ if (Symbol.dispose) Tokenizer.prototype[Symbol.dispose] = Tokenizer.prototype.fr
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
-        __wbg_Error_3639a60ed15f87e7: function(arg0, arg1) {
+        __wbg_Error_92b29b0548f8b746: function(arg0, arg1) {
             const ret = Error(getStringFromWasm0(arg0, arg1));
             return ret;
         },
-        __wbg___wbindgen_throw_9c75d47bf9e7731e: function(arg0, arg1) {
+        __wbg___wbindgen_throw_344f42d3211c4765: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbg_new_2fad8ca02fd00684: function() {
-            const ret = new Object();
-            return ret;
-        },
-        __wbg_new_3baa8d9866155c79: function() {
+        __wbg_new_32b398fb48b6d94a: function() {
             const ret = new Array();
             return ret;
         },
+        __wbg_new_da52cf8fe3429cb2: function() {
+            const ret = new Object();
+            return ret;
+        },
+        __wbg_set_8a16b38e4805b298: function(arg0, arg1, arg2) {
+            arg0[arg1 >>> 0] = arg2;
+        },
         __wbg_set_d1cb61e9f39c870f: function(arg0, arg1, arg2) {
             arg0[arg1] = arg2;
-        },
-        __wbg_set_f614f6a0608d1d1d: function(arg0, arg1, arg2) {
-            arg0[arg1 >>> 0] = arg2;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
             // Cast intrinsic for `Ref(String) -> Externref`.

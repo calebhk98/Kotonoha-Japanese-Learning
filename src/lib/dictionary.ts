@@ -11,9 +11,13 @@ export interface WordLookupResult {
  * first part-of-speech element for the token (名詞, 動詞, 助動詞, …) and is
  * used to prefer JMDict entries whose senses are grammatically compatible —
  * e.g. a verb token おく should resolve to 置く "to put", never 奥 or 億.
+ * `reading` is the token's contextual reading in hiragana (from UniDic via
+ * the rebuilt Sudachi WASM) — the strongest homograph signal: 家の前 reads
+ * まえ, which rules out the ぜん entry entirely.
  */
 export interface LookupHint {
   pos?: string;
+  reading?: string;
 }
 
 export interface Dictionary {
@@ -369,6 +373,13 @@ export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint)
   // "hundred million"; a NOUN 頭 rules out the large-animal counter (ctr).
   if (entryMatchesPos(entry, hint?.pos)) score += 10;
 
+  // Contextual reading from UniDic — the strongest signal when present.
+  // 家の前 reads まえ, so the 前(ぜん) entry cannot match; 六人 reads にん,
+  // selecting the people-counter over the standalone-noun ひと entry.
+  if (hint?.reading && entry.kana?.some((k: any) => k.text === hint.reading)) {
+    score += 15;
+  }
+
   // Prefer entries where the searched form is the entry's PRIMARY written
   // form. Multiple common entries can exactly match one written form, and
   // without this the tie was broken by database index order:
@@ -398,6 +409,44 @@ export function pickBestEntry(exactMatches: any[], word: string, hint?: LookupHi
     const currentScore = getEntryCommonness(current, word, hint);
     return currentScore > bestScore ? current : best;
   });
+}
+
+/**
+ * Beginner-facing ambiguity: when a losing homograph scores within a small
+ * margin of the winner, we genuinely don't know which the author meant
+ * (kana あめ is 飴 or 雨 with identical signals). Rather than pick silently,
+ * surface the runner-up's primary gloss so the learner sees both options.
+ * Returns strings like "rain (雨)", capped at two.
+ */
+export function findCloseAlternatives(
+  exactMatches: any[],
+  best: any,
+  word: string,
+  hint?: LookupHint
+): string[] {
+  const MARGIN = 3;
+  const bestScore = getEntryCommonness(best, word, hint);
+  const alternatives: string[] = [];
+
+  for (const entry of exactMatches) {
+    if (entry === best || entry.id === best.id) continue;
+    if (getEntryCommonness(entry, word, hint) < bestScore - MARGIN) continue;
+
+    const firstSense = (entry.sense || []).find((s: any) => getEnglishGlosses(s).length > 0);
+    if (!firstSense) continue;
+    const gloss = getEnglishGlosses(firstSense)[0];
+
+    // Label with the written form that distinguishes it from the searched
+    // word: the kanji when the search was kana (雨), the kana otherwise (ぜん).
+    const kanjiText = entry.kanji?.[0]?.text;
+    const kanaText = entry.kana?.[0]?.text;
+    const form = kanjiText && kanjiText !== word ? kanjiText : kanaText !== word ? kanaText : kanjiText;
+    alternatives.push(form ? `${gloss} (${form})` : gloss);
+
+    if (alternatives.length >= 2) break;
+  }
+
+  return alternatives;
 }
 
 // ==================== JMDict Wrapper Dictionary ====================
@@ -498,10 +547,26 @@ export class JmdictDictionary implements Dictionary {
       // try the fallback chain (JMnedict → Jisho) rather than returning "Unknown".
       if (meanings.length === 0) return null;
 
+      // Beginner-facing ambiguity: when a homograph scores within a hair of
+      // the winner (kana あめ: 飴 vs 雨), say so instead of picking silently.
+      const alternatives = findCloseAlternatives(exactMatches, bestMatch, word, hint);
+      let meaning = meanings[0];
+      if (alternatives.length > 0) {
+        meaning = `${meaning} — or: ${alternatives.join('; ')}`;
+        meanings.push(...alternatives.map((a) => `Other possibility: ${a}`));
+      }
+
+      // Prefer the kana element matching the contextual reading (頭 read
+      // かしら shows かしら, not the entry-first あたま).
+      const matchedKana =
+        hint?.reading && bestMatch.kana?.some((k: any) => k.text === hint.reading)
+          ? hint.reading
+          : bestMatch.kana[0]?.text;
+
       return {
-        meaning: meanings[0],
+        meaning,
         meanings: meanings.length > 1 ? meanings : undefined,
-        reading: bestMatch.kana[0]?.text || word,
+        reading: matchedKana || word,
       };
     } catch (e) {
       console.error("[Dictionary] JMDict lookup error:", (e as any).message);

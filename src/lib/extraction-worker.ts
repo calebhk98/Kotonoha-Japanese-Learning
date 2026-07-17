@@ -75,7 +75,7 @@ async function processTokens(
   kanaLookupCache: Map<string, any>,
 ): Promise<any[]> {
   const baseFormCounts = new Map<string, number>();
-  const validWords = new Map<string, { baseForm: string; pos?: string }>();
+  const validWords = new Map<string, { baseForm: string; pos?: string; reading?: string }>();
   const morphemes = new Map<string, { meaning: string; frequency: number }>();
 
   for (const token of tokens) {
@@ -92,16 +92,16 @@ async function processTokens(
       }
     } else {
       const baseForm = wordStr_baseFormMap.get(surface) ?? token.baseForm;
-      validWords.set(surface, { baseForm, pos: token.pos });
+      validWords.set(surface, { baseForm, pos: token.pos, reading: token.reading });
       baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
     }
   }
 
   const results: any[] = [];
 
-  for (const [wordStr, { baseForm, pos }] of validWords) {
+  for (const [wordStr, { baseForm, pos, reading: tokenReading }] of validWords) {
     const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos);
+      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos, tokenReading);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
     const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
     if (meanings) wordData.meanings = meanings;
