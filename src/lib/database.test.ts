@@ -4,6 +4,7 @@ import type { WordInfo } from '../types.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import BetterSqlite3 from 'better-sqlite3';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEST_DB_PATH = path.join(__dirname, '../../.cache-test.db');
@@ -59,7 +60,7 @@ describe('Database Write Queue', () => {
         jlpt: 5,
         joyo: true,
         score: 15,
-        breakdown: { jlptScore: 15, highestGrade: 1, frequencyPenalty: -5 },
+        breakdown: { jlptScore: 15, joyoPenalty: 5, highestGrade: 1, freqPenalty: -5, jlptValues: [], gradeValues: [], priorities: [] },
         frequencyInContent: 2,
       },
       {
@@ -69,7 +70,7 @@ describe('Database Write Queue', () => {
         jlpt: 5,
         joyo: true,
         score: 20,
-        breakdown: { jlptScore: 15, highestGrade: 2, frequencyPenalty: 0 },
+        breakdown: { jlptScore: 15, joyoPenalty: 5, highestGrade: 2, freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [] },
         frequencyInContent: 1,
       },
     ];
@@ -111,7 +112,7 @@ describe('Database Write Queue', () => {
       jlpt: 5,
       joyo: true,
       score: 10,
-      breakdown: { jlptScore: 15, highestGrade: 1, frequencyPenalty: -5 },
+      breakdown: { jlptScore: 15, joyoPenalty: 5, highestGrade: 1, freqPenalty: -5, jlptValues: [], gradeValues: [], priorities: [] },
       frequencyInContent: 3,
     }];
 
@@ -194,7 +195,7 @@ describe('Database Write Queue', () => {
       jlpt: 4,
       joyo: true,
       score: 25,
-      breakdown: { jlptScore: 30, highestGrade: 2, frequencyPenalty: 0 },
+      breakdown: { jlptScore: 30, joyoPenalty: 5, highestGrade: 2, freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [] },
       frequencyInContent: 5,
     }];
 
@@ -235,7 +236,7 @@ describe('Database Write Queue', () => {
             jlpt: 5,
             joyo: true,
             score: 10,
-            breakdown: { jlptScore: 15, highestGrade: 1, frequencyPenalty: 0 },
+            breakdown: { jlptScore: 15, joyoPenalty: 5, highestGrade: 1, freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [] },
             frequencyInContent: 1,
           }])
         );
@@ -251,5 +252,127 @@ describe('Database Write Queue', () => {
     for (let i = 0; i < 50; i += 10) {
       expect(store.hasContent(`stress-content-${i}`)).toBe(true);
     }
+  });
+});
+
+// better-sqlite3 writes through to disk transactionally on every statement, so
+// none of these should require an explicit saveDatabase() call to survive a
+// "restart" (simulated here by opening a brand new connection to the same
+// file, bypassing the module's cached db handle entirely). This is the
+// behavior change from sql.js (issue #253): sql.js only persisted an
+// in-memory database when saveDatabase() ran, so a crash/SIGKILL between
+// writes and the next throttled save silently lost data.
+describe('Database durability without saveDatabase (issue #253)', () => {
+  beforeEach(async () => {
+    if (fs.existsSync(TEST_DB_PATH)) {
+      fs.unlinkSync(TEST_DB_PATH);
+    }
+    process.env.DATABASE_PATH = TEST_DB_PATH;
+    await initDatabase();
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(TEST_DB_PATH)) {
+      fs.unlinkSync(TEST_DB_PATH);
+    }
+    delete process.env.DATABASE_PATH;
+  });
+
+  it('WordsCache.set() writes survive on disk without calling saveDatabase()', async () => {
+    const cache = new WordsCache();
+    const entry = {
+      meanings: [{ glosses: ['durable'] }],
+      variants: [{ pronounced: 'test', written: 'test' }]
+    } as any;
+
+    await cache.set('durable-word', [entry]);
+
+    // Open a completely independent connection to the same file — this is
+    // what "the process got SIGKILLed and restarted" looks like, since the
+    // module-level `db` handle in database.ts is never consulted here.
+    const raw = new BetterSqlite3(TEST_DB_PATH, { readonly: true });
+    try {
+      const row = raw.prepare('SELECT entries FROM words_cache WHERE word = ?').get('durable-word') as { entries: string } | undefined;
+      expect(row).toBeDefined();
+      expect(JSON.parse(row!.entries)).toEqual([entry]);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('JishoCache.set() writes survive on disk without calling saveDatabase()', async () => {
+    const cache = new JishoCache();
+    const value = { meaning: 'durable', reading: 'てすと' };
+
+    await cache.set('durable-jisho-word', value);
+
+    const raw = new BetterSqlite3(TEST_DB_PATH, { readonly: true });
+    try {
+      const row = raw.prepare('SELECT result FROM jisho_cache WHERE word = ?').get('durable-jisho-word') as { result: string } | undefined;
+      expect(row).toBeDefined();
+      expect(JSON.parse(row!.result)).toEqual(value);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('ContentWordsStore.setContentWords() writes survive on disk without calling saveDatabase()', async () => {
+    const store = new ContentWordsStore();
+    const words: WordInfo[] = [{
+      word: 'durable',
+      reading: 'durable',
+      meaning: 'durable test',
+      jlpt: 5,
+      joyo: true,
+      score: 10,
+      breakdown: { jlptScore: 15, joyoPenalty: 5, highestGrade: 1, freqPenalty: -5, jlptValues: [], gradeValues: [], priorities: [] },
+      frequencyInContent: 1,
+    }];
+
+    await store.setContentWords('durable-content', words);
+
+    const raw = new BetterSqlite3(TEST_DB_PATH, { readonly: true });
+    try {
+      const rows = raw.prepare('SELECT word FROM content_words WHERE content_id = ?').all('durable-content') as { word: string }[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].word).toBe('durable');
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('saveDatabase() is safe to call (cheap no-op) and does not disturb already-durable data', async () => {
+    const cache = new WordsCache();
+    const entry = {
+      meanings: [{ glosses: ['noop'] }],
+      variants: [{ pronounced: 'test', written: 'test' }]
+    } as any;
+
+    await cache.set('noop-word', [entry]);
+    await expect(saveDatabase()).resolves.toBeUndefined();
+
+    const raw = new BetterSqlite3(TEST_DB_PATH, { readonly: true });
+    try {
+      const row = raw.prepare('SELECT entries FROM words_cache WHERE word = ?').get('noop-word') as { entries: string } | undefined;
+      expect(row).toBeDefined();
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('initDatabase() loads an existing on-disk database without wiping rows written before it ran', async () => {
+    // Simulate "server restarted, .cache.db already has rows from a prior run":
+    // write directly with a raw connection (no app code involved), then call
+    // initDatabase() again and confirm the row is still visible through the
+    // cache wrapper (the "Loaded existing database" branch must not truncate).
+    const raw = new BetterSqlite3(TEST_DB_PATH);
+    raw.prepare('INSERT OR REPLACE INTO words_cache (word, entries) VALUES (?, ?)')
+      .run('pre-existing-word', JSON.stringify([{ meanings: [{ glosses: ['pre-existing'] }], variants: [] }]));
+    raw.close();
+
+    await initDatabase();
+
+    const cache = new WordsCache();
+    expect(cache.get('pre-existing-word')).toEqual([{ meanings: [{ glosses: ['pre-existing'] }], variants: [] }]);
   });
 });
