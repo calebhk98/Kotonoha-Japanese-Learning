@@ -421,6 +421,22 @@ describe('sense ordering – single-gloss primary senses stay primary', () => {
     expect(getEnglishGlosses(ranked[0])[0]).toBe('to swim');
   });
 
+  it('飴: "(hard) candy" (tagged {food}) stays above the untagged "amber" sense', () => {
+    // Real JMDict entry 1153520: sense 0 "(hard) candy / toffee" carries
+    // field:['food']; a later "amber / yellowish-brown" colour sense is
+    // untagged. A flat domain-field penalty demoted the primary sense, so
+    // あめ showed "amber" as its meaning. With order-preserving ranking a
+    // later domain sense can never overtake earlier senses anyway, so the
+    // penalty's only observable effect was this kind of demotion.
+    const senses = [
+      { gloss: [{ text: '(hard) candy', lang: 'en' }, { text: 'toffee', lang: 'en' }], misc: [], field: ['food'] },
+      { gloss: [{ text: 'starch syrup', lang: 'en' }], misc: [], field: ['food'] },
+      { gloss: [{ text: 'amber', lang: 'en' }, { text: 'yellowish-brown', lang: 'en' }], misc: [] },
+    ];
+    const ranked = rankSenses(senses);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('(hard) candy');
+  });
+
   it('走る: "to run" stays above "to run (of a vehicle)"', () => {
     const senses = [
       { gloss: [{ text: 'to run', lang: 'en' }], misc: [] },
