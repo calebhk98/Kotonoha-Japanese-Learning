@@ -203,6 +203,29 @@ export function getGlossLang(sense: any, langPriority: string[] = DEFAULT_GLOSS_
 }
 
 /**
+ * Entry-level gloss-language choice (#260). JMDict-simplified "all" groups an
+ * entry's senses BY LANGUAGE (English senses first, then ger/spa/...), each
+ * sense carrying glosses in a single language. So the language must be decided
+ * once for the whole ENTRY — the first requested language present in ANY sense
+ * — and then only that language's senses are used. Per-sense fallback would
+ * always pick the leading English senses and never reach Spanish.
+ *
+ * Returns the normalised tag ('spa' | 'eng' | ...) or null when the entry has
+ * no gloss in any requested language.
+ */
+export function getEntryGlossLang(entry: any, langPriority: string[] = DEFAULT_GLOSS_LANGS): string | null {
+  const senses = (entry?.sense as any[]) || [];
+  for (const wanted of langPriority) {
+    const norm = normGlossLang(wanted);
+    const present = senses.some((s: any) =>
+      ((s.gloss as any[]) || []).some((g) => normGlossLang(g.lang) === norm && g.text)
+    );
+    if (present) return norm;
+  }
+  return null;
+}
+
+/**
  * Returns only the English-language gloss strings from a JMDict sense.
  *
  * Fix for #186: the original code had an `else if (sense.gloss[0]?.text)` fallback
@@ -373,9 +396,12 @@ export function findCloseAlternatives(
     if (entry === best || entry.id === best.id) continue;
     if (getEntryCommonness(entry, word, hint) < bestScore - MARGIN) continue;
 
-    const firstSense = (entry.sense || []).find((s: any) => getGlosses(s, langPriority).length > 0);
+    // Entry-level language choice (senses are grouped by language), then take
+    // the first sense in that language.
+    const entryLang = getEntryGlossLang(entry, langPriority) ?? DEFAULT_GLOSS_LANGS[0];
+    const firstSense = (entry.sense || []).find((s: any) => getGlosses(s, [entryLang]).length > 0);
     if (!firstSense) continue;
-    const gloss = getGlosses(firstSense, langPriority)[0];
+    const gloss = getGlosses(firstSense, [entryLang])[0];
 
     // Label with the written form that distinguishes it from the searched
     // word: the kanji when the search was kana (雨), the kana otherwise (ぜん).
@@ -484,10 +510,14 @@ export class JmdictDictionary implements Dictionary {
       // English-only behaviour byte-identical; ['spa','eng'] gives Spanish
       // where JMDict has it and English as the mandatory fallback.
       const langPriority = hint?.lang ?? DEFAULT_GLOSS_LANGS;
+      // Decide the gloss language once for the whole entry, then use only that
+      // language's senses — JMDict groups senses by language (English first),
+      // so per-sense selection would never reach the Spanish senses.
+      const primaryGlossLang = getEntryGlossLang(bestMatch, langPriority);
 
       // Extract all meanings, deprioritising rare/slang/archaic senses (#187).
       const meanings: string[] = [];
-      let primaryGlossLang: string | null = null;
+      const senseLangFilter = primaryGlossLang ? [primaryGlossLang] : DEFAULT_GLOSS_LANGS;
       const sensesWithScores = (bestMatch.sense || []).map((sense: any, idx: number) => ({
         sense,
         order: idx,
@@ -501,12 +531,11 @@ export class JmdictDictionary implements Dictionary {
       });
 
       for (const { sense } of sensesWithScores) {
-        // getGlosses() walks langPriority and returns the first available
-        // language, so non-requested-language senses are skipped rather than
-        // leaking text in the wrong language as a definition (fix for #186).
-        const glossTexts = getGlosses(sense, langPriority);
+        // Only the chosen language's senses contribute glosses; senses in other
+        // languages yield [] and are skipped, so text never leaks in the wrong
+        // language as a definition (fix for #186, generalised in #260).
+        const glossTexts = getGlosses(sense, senseLangFilter);
         if (glossTexts.length > 0) {
-          if (primaryGlossLang === null) primaryGlossLang = getGlossLang(sense, langPriority);
           meanings.push(...glossTexts);
         }
       }
