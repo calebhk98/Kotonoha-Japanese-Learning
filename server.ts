@@ -204,13 +204,17 @@ async function refreshUnknownMeanings(contentId: string, words: WordInfo[]): Pro
       // Same base-form derivation as /api/word: conjugated surfaces need the
       // Sudachi normalized form or the JMDict lookup misses again.
       let baseForm = w.word;
+      let pos: string | undefined;
       if (tokenizer) {
         try {
           const toks = await tokenizer.segment(w.word);
-          if (toks.length === 1 && toks[0].baseForm) baseForm = toks[0].baseForm;
+          if (toks.length === 1 && toks[0].baseForm) {
+            baseForm = toks[0].baseForm;
+            pos = toks[0].pos;
+          }
         } catch { /* fall back to the raw word */ }
       }
-      const resolution = await wordResolver.resolve(w.word, baseForm);
+      const resolution = await wordResolver.resolve(w.word, baseForm, undefined, pos);
       if (resolution.meaning !== 'Unknown meaning') {
         wordMap.set(w.word, {
           ...wordMap.get(w.word)!,
@@ -255,7 +259,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
 
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
-  const validWords = new Map<string, string>(); // Map surface form to baseForm for lookup
+  const validWords = new Map<string, { baseForm: string; pos?: string }>();
   const morphemes = new Map<string, { meaning: string; frequency: number }>(); // Track morpheme frequencies
 
   for (const token of tokens) {
@@ -271,7 +275,7 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
         morphemes.set(surface, { meaning: morphemeDef, frequency: (prev?.frequency ?? 0) + 1 });
       }
     } else {
-      validWords.set(surface, token.baseForm);
+      validWords.set(surface, { baseForm: token.baseForm, pos: token.pos });
       baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
     }
   }
@@ -282,13 +286,13 @@ async function processText(text: string, kanaLookupCache?: Map<string, any>) {
   const missWords: string[] = [];
   const results = [];
   const processedWords: string[] = [];
-  for (const [wordStr, baseForm] of validWords) {
+  for (const [wordStr, { baseForm, pos }] of validWords) {
     processedWords.push(wordStr);
     const start = Date.now();
     const cacheHit = wordsCache.has(baseForm) || wordsCache.has(wordStr);
 
     const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache);
+      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos);
 
     const lookupTime = Date.now() - start;
     if (cacheHit) {
@@ -331,7 +335,7 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
 
   // Count how many times each word appears (for frequencyInContent)
   const baseFormCounts = new Map<string, number>();
-  const validWords = new Map<string, string>(); // Map surface form to baseForm for lookup
+  const validWords = new Map<string, { baseForm: string; pos?: string }>();
   const morphemes = new Map<string, { meaning: string; frequency: number }>(); // Track morpheme frequencies
 
   for (const token of tokens) {
@@ -347,22 +351,22 @@ async function processTextWithTokens(text: string, tokens: any[], kanaLookupCach
         morphemes.set(surface, { meaning: morphemeDef, frequency: (prev?.frequency ?? 0) + 1 });
       }
     } else {
-      validWords.set(surface, token.baseForm);
+      validWords.set(surface, { baseForm: token.baseForm, pos: token.pos });
       baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
     }
   }
 
   const results = [];
-  for (const [wordStr, baseForm] of validWords) {
+  for (const [wordStr, { baseForm, pos }] of validWords) {
     const start = Date.now();
 
     // Check batch-level resolution cache first to avoid re-resolving the same word
-    const cacheKey = `${wordStr}|${baseForm}`;
+    const cacheKey = `${wordStr}|${baseForm}|${pos ?? ''}`;
     let resolution;
     if (batchResolutionCache?.has(cacheKey)) {
       resolution = batchResolutionCache.get(cacheKey);
     } else {
-      resolution = await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache);
+      resolution = await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos);
       batchResolutionCache?.set(cacheKey, resolution);
     }
 
@@ -428,6 +432,7 @@ async function processStoryText(text: string) {
     tokens.push({
       surface: surface,
       baseForm: tokenInfo.baseForm,
+      pos: tokenInfo.pos,
       startIndex: segmentIndex,
       endIndex: segmentIndex + surface.length,
       isVocabWord,
@@ -446,7 +451,7 @@ async function processStoryText(text: string) {
     if (tokenMap.has(token.surface)) continue;
 
     const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-      await wordResolver!.resolve(token.surface, token.baseForm);
+      await wordResolver!.resolve(token.surface, token.baseForm, undefined, token.pos);
 
     tokenMap.set(token.surface, { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown, meanings });
   }
@@ -1000,15 +1005,19 @@ async function startServer() {
       // as the vocab list and reader. Without this, conjugated surfaces like
       // 読みました missed JMDict entirely (no entry keys on the surface form).
       let baseForm = word;
+      let pos: string | undefined;
       if (tokenizer) {
         try {
           const toks = await tokenizer.segment(word);
-          if (toks.length === 1 && toks[0].baseForm) baseForm = toks[0].baseForm;
+          if (toks.length === 1 && toks[0].baseForm) {
+            baseForm = toks[0].baseForm;
+            pos = toks[0].pos;
+          }
         } catch { /* fall back to the raw word */ }
       }
 
       const { reading, meaning, meanings, variant, entry, jlpt, joyo, score, breakdown } =
-        await wordResolver!.resolve(word, baseForm);
+        await wordResolver!.resolve(word, baseForm, undefined, pos);
 
       const wordData: any = { word, reading, meaning, jlpt, joyo, score, breakdown, entry };
       if (meanings) wordData.meanings = meanings;
