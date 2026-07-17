@@ -47,6 +47,68 @@ const NON_CONJUGATING_POS = new Set([
 ]);
 
 /**
+ * First gloss only, alternatives stripped — composed meanings would otherwise
+ * balloon ("to exist, to live, to be located + …"). Cuts only at TOP-LEVEL
+ * commas/semicolons: "to fall (e.g. blossoms, petals)" must survive intact,
+ * not truncate to "to fall (e.g. blossoms".
+ */
+function shortGloss(meaning: string): string {
+  const head = meaning.split(' — or:')[0];
+  let depth = 0;
+  for (let i = 0; i < head.length; i++) {
+    const c = head[i];
+    if (c === '(') depth++;
+    else if (c === ')') depth = Math.max(0, depth - 1);
+    else if ((c === ',' || c === ';') && depth === 0) return head.slice(0, i).trim();
+  }
+  return head.trim();
+}
+
+/** Small kana, sokuon, long-vowel mark — never a valid part boundary start. */
+const STRETCH_CHARS = /[ぁぃぅぇぉゃゅょっゎァィゥェォャュョッヮー]/;
+
+/** Productive prefixes with fixed glosses (ある夜, 全頭, 同条, 子兎). */
+const PREFIX_GLOSSES: Record<string, string> = {
+  ある: 'a certain / one', 同: 'the same / said', 全: 'all / whole',
+  両: 'both', 各: 'each', 新: 'new', 再: 're- / again', 元: 'former',
+  副: 'vice- / assistant', 超: 'super / ultra', 半: 'half',
+  子: 'child / young', 大: 'big / great', 小: 'small',
+};
+
+/**
+ * Productive suffixes with fixed glosses. Multi-char keys (付き, たて) are
+ * matched longest-first. Verb-stem suffixes (方, たて) resolve the stem
+ * through headCandidates FIRST so 出し方 composes from 出す "to put out",
+ * not the noun だし "broth".
+ */
+const SUFFIX_GLOSSES: Record<string, string> = {
+  内: 'within / inside', 後: 'after', 中: 'during / throughout',
+  時: 'at the time of', 名: 'name of', 側: 'side',
+  費: 'cost / expense', 部: 'department / club', 課: 'section',
+  員: 'member / staff', 制: 'system', 産: 'produced in',
+  用: 'for use by/as', 式: 'style / ceremony', 的: '-like / -al (adjectival)',
+  さ: '-ness (degree noun)', 室: 'room', 棟: 'building / wing',
+  目: 'ordinal (-th)', 点: 'point', 展: 'exhibition', 者: 'person',
+  化: '-ization / becoming', 先: 'destination / recipient', 日: 'day',
+  表: 'chart / table', 着: 'clothing / outfit', 職: 'occupation',
+  姿: 'figure / appearance', 書: 'document', 末: 'end of',
+  前: 'before / in front of', 形: 'form / shape', 区: 'ward / district',
+  法: 'law / method', 条: 'article / clause', 料: 'fee / material',
+  付き: 'included / attached',
+  方: 'way of doing (how to)', たて: 'freshly / just done',
+};
+const VERB_STEM_SUFFIXES = new Set(['方', 'たて']);
+
+/** Compound-verb auxiliary glosses (kana form; kanji forms map via reading). */
+const AUX_VERB_GLOSSES: Record<string, string> = {
+  始める: 'begin to', 直す: 'redo / do again', 込む: 'in / thoroughly',
+  上がる: 'up / to completion', 上げる: 'finish doing / up',
+  出す: 'start suddenly / out', 続ける: 'continue to', 終わる: 'finish',
+  かける: 'be on the verge of / partially', きる: 'do completely',
+  すぎる: 'do too much', 合う: 'together / mutually', 回る: 'around',
+};
+
+/**
  * Single entry point for word resolution (#197).
  *
  * Bundles kanji-data lookup → JMDict lookup → morpheme fallback → score
@@ -198,10 +260,23 @@ export class WordResolver {
       }
     }
 
-    // (4) Final kana-only fallback.
+    // (4) Final kana-only fallbacks. The morpheme table is consulted first
+    // so real grammar definitions are never shadowed. Unresolvable kana
+    // adverbs/interjections and ー-stretched tokens get an honest label —
+    // they ARE sound effects (チチチ, まーー), and telling a beginner that is
+    // better than "Unknown meaning" and safer than guessing a homograph.
     if (meaning === 'Unknown meaning' && /^[ぁ-ん]+$/.test(wordStr)) {
       const morphemeFallback = getMorphemeDefinition(wordStr);
-      meaning = morphemeFallback || 'Kana particle / expression';
+      if (morphemeFallback) meaning = morphemeFallback;
+    }
+    if (meaning === 'Unknown meaning' && /^[ぁ-ゟ゠-ヿー〜]+$/.test(wordStr)) {
+      if (pos === '副詞' || pos === '感動詞') {
+        meaning = 'onomatopoeia / sound effect';
+      } else if (/[ー〜]/.test(wordStr)) {
+        meaning = 'stretched vocalization / sound (no lexical meaning)';
+      } else if (/^[ぁ-ん]+$/.test(wordStr)) {
+        meaning = 'Kana particle / expression';
+      }
     }
 
     // (4.5) The tokenizer's contextual reading, when present, beats every
@@ -227,6 +302,21 @@ export class WordResolver {
   }
 
   /**
+   * lookupPart for COMPOSITION parts. Additionally rejects proper-noun
+   * glosses on kana-only or single-character parts — those are nearly always
+   * JMnedict name noise (いしさ→"Ishisa", スケース→"Scase", 繋→"Kei") that
+   * turned review samples into false info. Multi-kanji proper nouns stay
+   * allowed: addresses NEED 東京 (Tokyo) / 渋谷区 (Shibuya Ward).
+   */
+  private async lookupPartStrict(part: string): Promise<{ meaning: string; reading?: string } | null> {
+    const r = await this.lookupPart(part);
+    if (!r) return null;
+    const kanaOnly = /^[ぁ-ゟ゠-ヿー]+$/.test(part);
+    if ((kanaOnly || part.length === 1) && /^[A-Z]/.test(r.meaning)) return null;
+    return r;
+  }
+
+  /**
    * Composes a meaning for an unknown word from its transparent parts
    * (#257). Ordered from most to least specific; every branch requires a
    * successful dictionary hit on the remainder, so nonsense can't compose.
@@ -244,14 +334,55 @@ export class WordResolver {
       if (r) return { meaning: r.meaning, reading: hira };
     }
 
-    // Honorific prefix: お財布 / ご利用 → (polite) + remainder.
-    if (/^[おご]./.test(baseForm) && baseForm.length >= 3) {
-      const r = await this.lookupPart(baseForm.slice(1));
-      if (r) {
-        return {
-          meaning: `(polite お/ご) ${r.meaning}`,
-          reading: r.reading ? baseForm[0] + r.reading : undefined,
-        };
+    // Reduplicated onomatopoeia: JMDict lists the doubled unit (ぱちぱち,
+    // どんどん) but stories triple it (パチパチパチ). Retry the doubled unit.
+    {
+      const hira = baseForm.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+      const m = /^[ぁ-ゟー]+$/.test(hira) ? hira.match(/^(.{2,4})\1+$/) : null;
+      if (m && m[1] + m[1] !== hira) {
+        const r = await this.lookupPartStrict(m[1] + m[1]);
+        if (r) return { meaning: `${shortGloss(r.meaning)} (repeated)` };
+      }
+    }
+
+    // Trailing vocal stretch (song dialect): 達ァ → 達, ぽっぽっ → ぽっぽ.
+    // Only sokuon/long-vowel marks strip after kana — small VOWELS are part
+    // of the preceding mora (ぷしゅっ must not decay to ぷし, which resolves
+    // to a homograph). After a kanji, small vowels are pure stretch (達ァ).
+    // The remainder must be ≥2 chars or a kanji — a single leftover kana
+    // (れー→れ) would resolve to a proverb headword, worse than no meaning.
+    {
+      const m =
+        wordStr.match(/^(.+[一-鿿々])[ぁぃぅぇぉゃゅょっゎァィゥェォャュョッヮー〜]+$/) ??
+        wordStr.match(/^(.+?)[っッー〜]+$/);
+      if (m && (m[1].length >= 2 || /[一-鿿々]/.test(m[1]))) {
+        const r = await this.lookupPartStrict(m[1]);
+        if (r) return { meaning: `${shortGloss(r.meaning)} (stretched)`, reading: r.reading };
+      }
+    }
+
+    // Honorific prefix: お財布 / ご利用 → (polite) + remainder. Sudachi
+    // normalizes お/ご to 御 in the base form (お財布→御財布), so the surface
+    // must be checked too — matching only the base form misses every
+    // kanji-normalized honorific (the #257 follow-up bug). Strict lookup:
+    // kana remainders otherwise surface JMnedict names (おいしさ→"Ishisa").
+    if (
+      (/^[おご御]./.test(baseForm) && baseForm.length >= 3) ||
+      (/^[おご]./.test(wordStr) && wordStr.length >= 3)
+    ) {
+      const remainders = [
+        /^[おご御]/.test(baseForm) ? baseForm.slice(1) : null,
+        /^[おご]/.test(wordStr) ? wordStr.slice(1) : null,
+      ].filter((s): s is string => !!s && s.length >= 2);
+      for (const remainder of remainders) {
+        const r = await this.lookupPartStrict(remainder);
+        if (r) {
+          const prefixChar = /^[おご]/.test(wordStr) ? wordStr[0] : 'お';
+          return {
+            meaning: `(polite お/ご) ${r.meaning}`,
+            reading: r.reading ? prefixChar + r.reading : undefined,
+          };
+        }
       }
     }
 
@@ -261,40 +392,53 @@ export class WordResolver {
       if (r) return { meaning: `how many / which + ${r.meaning}` };
     }
 
+    // Productive prefixes with fixed glosses (ある夜, 全頭, 同条, 子兎).
+    // The dictionary can't help with the prefix itself — ある would resolve
+    // to the verb "to exist", not the prenominal "a certain". A single-char
+    // remainder that is a known suffix uses the curated suffix gloss too:
+    // bare-kanji lookups pick homographs (同条 → 条 came back as "muscle").
+    for (const [pfx, gloss] of Object.entries(PREFIX_GLOSSES)) {
+      if (baseForm.length > pfx.length && baseForm.startsWith(pfx)) {
+        const rest = baseForm.slice(pfx.length);
+        if (rest.length === 1 && SUFFIX_GLOSSES[rest]) {
+          return { meaning: `${pfx} (${gloss}) + ${rest} (${SUFFIX_GLOSSES[rest]})` };
+        }
+        const r = await this.lookupPartStrict(rest);
+        if (r) return { meaning: `${pfx} (${gloss}) + ${shortGloss(r.meaning)}` };
+      }
+    }
+
     // の-compounds Sudachi keeps whole: 次の日 → next + day.
     {
       const m = baseForm.match(/^(.{1,6})の(.{1,6})$/);
       if (m) {
-        const [a, b] = await Promise.all([this.lookupPart(m[1]), this.lookupPart(m[2])]);
+        const [a, b] = await Promise.all([this.lookupPartStrict(m[1]), this.lookupPartStrict(m[2])]);
         if (a && b) return { meaning: `${a.meaning} + の + ${b.meaning}` };
       }
     }
 
-    // Productive single-kanji suffixes with fixed glosses.
-    const SUFFIX_GLOSSES: Record<string, string> = {
-      内: 'within / inside', 後: 'after', 中: 'during / throughout',
-      時: 'at the time of', 名: 'name of', 側: 'side',
-      費: 'cost / expense', 部: 'department / club', 課: 'section',
-      員: 'member / staff', 制: 'system', 産: 'produced in',
-      用: 'for use by/as', 式: 'style / ceremony', 的: '-like / -al (adjectival)',
-      さ: '-ness (degree noun)', 室: 'room', 棟: 'building / wing',
-      目: 'ordinal (-th)',
-    };
-    const lastChar = baseForm.slice(-1);
-    if (SUFFIX_GLOSSES[lastChar] && baseForm.length >= 2) {
-      const r = await this.lookupPart(baseForm.slice(0, -1));
-      if (r) return { meaning: `${r.meaning} + ${lastChar} (${SUFFIX_GLOSSES[lastChar]})` };
+    // Suffix composition; keys from the module table, longest first.
+    {
+      const suffixKeys = Object.keys(SUFFIX_GLOSSES).sort((a, b) => b.length - a.length);
+      for (const sfx of suffixKeys) {
+        if (baseForm.length > sfx.length && baseForm.endsWith(sfx)) {
+          const stem = baseForm.slice(0, -sfx.length);
+          const gloss = SUFFIX_GLOSSES[sfx];
+          if (VERB_STEM_SUFFIXES.has(sfx)) {
+            for (const head of WordResolver.headCandidates(stem)) {
+              const r = await this.lookupPart(head);
+              if (r) return { meaning: `${r.meaning} + ${sfx} (${gloss})` };
+            }
+          }
+          const r = await this.lookupPartStrict(stem);
+          if (r) return { meaning: `${r.meaning} + ${sfx} (${gloss})` };
+          break; // longest matching suffix only — don't cascade to shorter ones
+        }
+      }
     }
 
-    // Compound verbs: V-stem + productive auxiliary verb.
-    const AUX_VERB_GLOSSES: Record<string, string> = {
-      始める: 'begin to', 直す: 'redo / do again', 込む: 'in / thoroughly',
-      上がる: 'up / to completion', 上げる: 'finish doing / up',
-      出す: 'start suddenly / out', 続ける: 'continue to', 終わる: 'finish',
-      かける: 'be on the verge of / partially', きる: 'do completely',
-      すぎる: 'do too much', 合う: 'together / mutually', 回る: 'around',
-    };
     if (pos === '動詞') {
+      // Compound verbs, pass 1: V-stem + known auxiliary (kana form).
       for (const [aux, gloss] of Object.entries(AUX_VERB_GLOSSES)) {
         if (baseForm.length > aux.length && baseForm.endsWith(aux)) {
           const stem = baseForm.slice(0, -aux.length);
@@ -304,9 +448,140 @@ export class WordResolver {
           }
         }
       }
+
+      // Pass 2: passive/potential and causative base forms — BEFORE the
+      // generic split, which would otherwise cut them at a bogus boundary
+      // (行かす → 行(やる "to do") + かす "to lend").
+      const A_TO_U: Record<string, string> = {
+        か: 'く', が: 'ぐ', さ: 'す', た: 'つ', な: 'ぬ',
+        ば: 'ぶ', ま: 'む', わ: 'う', ら: 'る',
+      };
+      const derivedHeads: Array<{ head: string; label: string }> = [];
+      const ichidanPassive = baseForm.match(/^(.+)られる$/);
+      if (ichidanPassive) derivedHeads.push({ head: ichidanPassive[1] + 'る', label: 'passive/potential form' });
+      const godanPassive = baseForm.match(/^(.+)([かがさたなばまわら])れる$/);
+      if (godanPassive) derivedHeads.push({ head: godanPassive[1] + A_TO_U[godanPassive[2]], label: 'passive form' });
+      const causative = baseForm.match(/^(.+)([かがさたなばまわら])(?:す|せる)$/);
+      if (causative) derivedHeads.push({ head: causative[1] + A_TO_U[causative[2]], label: 'causative form' });
+      for (const { head, label } of derivedHeads) {
+        const r = await this.lookupPartStrict(head);
+        if (r) return { meaning: `${shortGloss(r.meaning)} (${label})` };
+      }
+
+      // Pass 3: generalized V1-stem + V2 split. The aux table only covers
+      // common auxiliaries in kana; Sudachi base forms use kanji (傾き掛ける)
+      // and stories are full of lexical two-verb compounds (流し入れる,
+      // 掴み殺す). The tail must START WITH KANJI: kana-initial tails split
+      // at the wrong boundary (解き捨てる → 解 + き捨てる). The tail's
+      // reading maps kanji aux forms back to the table (掛ける→かける) so
+      // they keep their curated gloss.
+      for (let i = 1; i <= baseForm.length - 2; i++) {
+        const stem = baseForm.slice(0, i);
+        const tail = baseForm.slice(i);
+        if (!/^[一-鿿々]/.test(tail)) continue;
+        const r2 = await this.lookupPart(tail);
+        if (!r2) continue;
+        for (const head of WordResolver.headCandidates(stem)) {
+          const r1 = await this.lookupPart(head);
+          if (r1) {
+            const auxGloss = AUX_VERB_GLOSSES[tail] ?? (r2.reading ? AUX_VERB_GLOSSES[r2.reading] : undefined);
+            return auxGloss
+              ? { meaning: `${r1.meaning} + ${tail} (${auxGloss})` }
+              : { meaning: `${shortGloss(r1.meaning)} + ${tail} (${shortGloss(r2.meaning)})` };
+          }
+        }
+      }
+    }
+
+    // Verbal nouns: the masu-stem used as a noun (振り返り→振り返る).
+    if (pos === '名詞' && /[きぎしじちにひびみりいえけげせぜてでねべめれ]$/.test(baseForm)) {
+      for (const head of WordResolver.headCandidates(baseForm)) {
+        const r = await this.lookupPartStrict(head);
+        if (r) return { meaning: `${shortGloss(r.meaning)} (noun form of ${head})` };
+      }
+    }
+
+    // Generic noun-noun compound split — the largest remaining unknown class
+    // (ガラスケース, 変更点… and recursive for addresses: 東京都渋谷区).
+    // Only for strings containing kanji or katakana: pure-hiragana "nouns"
+    // reaching this point are song dialect (あすだ, てぃんさぐ) and every
+    // split of them is a homograph accident. Every part must resolve, so
+    // nonsense can't compose; the best-scored covering wins (fewest parts,
+    // then most-balanced), which picks ガラス+ケース over ガラ+スケース.
+    if (pos === '名詞' && /[一-鿿々ァ-ヴ]/.test(baseForm) && !/\s/.test(baseForm)) {
+      // A trailing known suffix decomposes with its CURATED gloss first:
+      // 女性活躍推進法 must become 女性+活躍+推進 + 法 (law), not pick up a
+      // JMnedict entry for an unrelated statute whose name ends the same way.
+      const last = baseForm.slice(-1);
+      if (SUFFIX_GLOSSES[last] && baseForm.length > 3) {
+        const stemParts = await this.bestNounParts(baseForm.slice(0, -1), 3, new Map());
+        if (stemParts) {
+          const joined = stemParts.map((p) => `${p.surface} (${shortGloss(p.meaning)})`).join(' + ');
+          return { meaning: `${joined} + ${last} (${SUFFIX_GLOSSES[last]})` };
+        }
+      }
+      const parts = await this.bestNounParts(baseForm, 3, new Map());
+      if (parts && parts.length >= 2) {
+        return { meaning: parts.map((p) => `${p.surface} (${shortGloss(p.meaning)})`).join(' + ') };
+      }
     }
 
     return null;
+  }
+
+  /**
+   * A string is usable as a compound part when it can plausibly stand alone:
+   * no whitespace, no stretch-mark/ん start, single chars only if kanji, and
+   * no hiragana-leading mixed parts (い水 from 貰い水 is never a word).
+   */
+  private static isValidPart(p: string): boolean {
+    if (/\s/.test(p)) return false;
+    if (p.length === 1) return /[一-鿿々]/.test(p);
+    if (STRETCH_CHARS.test(p[0]) || p[0] === 'ん' || p[0] === 'ン' || p[0] === 'ー') return false;
+    if (/^[ぁ-ん]/.test(p) && /[一-鿿々]/.test(p)) return false;
+    return true;
+  }
+
+  /**
+   * Best full covering of `str` by dictionary-resolvable parts, or null.
+   * Scoring: fewer parts, then larger smallest-part. Memoized per top call.
+   */
+  private async bestNounParts(
+    str: string,
+    depth: number,
+    memo: Map<string, Array<{ surface: string; meaning: string }> | null>
+  ): Promise<Array<{ surface: string; meaning: string }> | null> {
+    const cached = memo.get(str);
+    if (cached !== undefined) return cached;
+    let best: Array<{ surface: string; meaning: string }> | null = null;
+    if (WordResolver.isValidPart(str)) {
+      const direct = await this.lookupPartStrict(str);
+      if (direct) best = [{ surface: str, meaning: direct.meaning }];
+    }
+    if (depth > 0 && str.length >= 2) {
+      for (let i = 1; i < str.length; i++) {
+        const left = str.slice(0, i);
+        if (!WordResolver.isValidPart(left)) continue;
+        const lr = await this.lookupPartStrict(left);
+        if (!lr) continue;
+        const sub = await this.bestNounParts(str.slice(i), depth - 1, memo);
+        if (!sub) continue;
+        const cand = [{ surface: left, meaning: lr.meaning }, ...sub];
+        if (WordResolver.betterParts(cand, best)) best = cand;
+      }
+    }
+    memo.set(str, best);
+    return best;
+  }
+
+  private static betterParts(
+    a: Array<{ surface: string }>,
+    b: Array<{ surface: string }> | null
+  ): boolean {
+    if (!b) return true;
+    if (a.length !== b.length) return a.length < b.length;
+    const minLen = (parts: Array<{ surface: string }>) => Math.min(...parts.map((p) => p.surface.length));
+    return minLen(a) > minLen(b);
   }
 
   /**

@@ -755,6 +755,108 @@ describe('WordResolver – #257 follow-up: onomatopoeia & vocalizations', { time
   });
 });
 
+describe('WordResolver – #257 follow-up: manual-review pins (no false info)', { timeout: 30000 }, () => {
+  // These pin garbage compositions found by manually reviewing the first
+  // regenerated artifact diff. Every case is a real output that shipped a
+  // wrong or nonsense meaning; the rules below must keep them dead.
+
+  it('ガラスケース: picks the balanced split, never ガラ + スケース (JMnedict "Scase")', async () => {
+    const dict = makeMockDictionary({
+      ガラ: { meaning: 'pattern', reading: 'がら' },
+      スケース: { meaning: 'Scase', reading: 'すけーす' },
+      ガラス: { meaning: 'glass', reading: 'がらす' },
+      ケース: { meaning: 'case', reading: 'けーす' },
+    });
+    const result = await new WordResolver(dict).resolve('ガラスケース', 'ガラスケース', undefined, '名詞');
+    expect(result.meaning).toMatch(/glass/);
+    expect(result.meaning).toMatch(/case/);
+    expect(result.meaning).not.toMatch(/Scase|pattern/);
+  });
+
+  it('おいしさ: suffix さ wins — the honorific rule must not surface JMnedict names for kana remainders', async () => {
+    const dict = makeMockDictionary({
+      いしさ: { meaning: 'Ishisa', reading: 'いしさ' },
+      おいし: { meaning: 'delicious', reading: 'おいし' },
+    });
+    const result = await new WordResolver(dict).resolve('おいしさ', 'おいしさ', undefined, '名詞');
+    expect(result.meaning).not.toMatch(/Ishisa/);
+    expect(result.meaning).toMatch(/-ness/);
+  });
+
+  it('ニャー: never splits into single-kana parts (ニ + ャー); gets a vocalization label', async () => {
+    const dict = makeMockDictionary({
+      ニ: { meaning: '4th (in a sequence)', reading: 'に' },
+      ャー: { meaning: 'after-look journalizing', reading: 'ゃー' },
+    });
+    const result = await new WordResolver(dict).resolve('ニャー', 'にゃー', undefined, '名詞');
+    expect(result.meaning).not.toMatch(/4th|journal/);
+    expect(result.meaning).toMatch(/vocalization|sound/i);
+  });
+
+  it('行かす (causative of 行く): resolves via the causative rule, not a bogus 行る+かす split', async () => {
+    const dict = makeMockDictionary({
+      行る: { meaning: 'to do', reading: 'やる' },
+      かす: { meaning: 'to lend', reading: 'かす' },
+      行く: { meaning: 'to go', reading: 'いく' },
+    });
+    const result = await new WordResolver(dict).resolve('行かす', '行かす', undefined, '動詞');
+    expect(result.meaning).toMatch(/go/);
+    expect(result.meaning).toMatch(/causative/i);
+    expect(result.meaning).not.toMatch(/lend/);
+  });
+
+  it('解き捨てました (base 解き捨てる): tail must start with kanji — 解き+捨てる, never 解+き捨てる', async () => {
+    const dict = makeMockDictionary({
+      解る: { meaning: 'to understand', reading: 'わかる' },
+      き捨てる: { meaning: 'to spit out', reading: 'きすてる' },
+      解く: { meaning: 'to untie', reading: 'とく' },
+      捨てる: { meaning: 'to throw away', reading: 'すてる' },
+    });
+    const result = await new WordResolver(dict).resolve('解き捨てました', '解き捨てる', undefined, '動詞');
+    expect(result.meaning).toMatch(/untie/);
+    expect(result.meaning).toMatch(/throw away/);
+    expect(result.meaning).not.toMatch(/spit/);
+  });
+
+  it('同条: single-kanji remainder uses the curated suffix gloss, not a homograph lookup ("muscle")', async () => {
+    const dict = makeMockDictionary({ 条: { meaning: 'muscle', reading: 'すじ' } });
+    const result = await new WordResolver(dict).resolve('同条', '同条', undefined, '名詞');
+    expect(result.meaning).toMatch(/same/);
+    expect(result.meaning).toMatch(/article|clause/i);
+    expect(result.meaning).not.toMatch(/muscle/);
+  });
+
+  it('ぷしゅっ: stretch-stripping never breaks a mora (ゅ stays; only っ/ー strip after kana)', async () => {
+    const dict = makeMockDictionary({ ぷし: { meaning: 'physical strength', reading: 'ぷし' } });
+    const result = await new WordResolver(dict).resolve('ぷしゅっ', 'ぷしゅっ', undefined, '副詞');
+    expect(result.meaning).not.toMatch(/physical/);
+    expect(result.meaning).toMatch(/onomatopoeia|sound/i);
+  });
+
+  it('女性活躍推進法: trailing known suffix uses its curated gloss, not a JMnedict statute name', async () => {
+    const dict = makeMockDictionary({
+      女性: { meaning: 'woman', reading: 'じょせい' },
+      活躍: { meaning: 'activity', reading: 'かつやく' },
+      推進: { meaning: 'promotion', reading: 'すいしん' },
+      推進法: { meaning: 'Act for the Promotion of Measures to Prevent Bullying', reading: 'すいしんほう' },
+    });
+    const result = await new WordResolver(dict).resolve('女性活躍推進法', '女性活躍推進法', undefined, '名詞');
+    expect(result.meaning).toMatch(/woman/);
+    expect(result.meaning).toMatch(/promotion/);
+    expect(result.meaning).toMatch(/law|method/);
+    expect(result.meaning).not.toMatch(/Bullying/);
+  });
+
+  it('あすだ: pure-hiragana nouns are never split into nonsense (あ + すだ "Suda")', async () => {
+    const dict = makeMockDictionary({
+      あ: { meaning: 'I', reading: 'あ' },
+      すだ: { meaning: 'Suda', reading: 'すだ' },
+    });
+    const result = await new WordResolver(dict).resolve('あすだ', 'あすだ', undefined, '名詞');
+    expect(result.meaning).not.toMatch(/Suda/);
+  });
+});
+
 describe('WordResolver – #257 follow-up: supplementary additions', { timeout: 30000 }, () => {
   it('入禅: Mimi-nashi Hoichi ritual word gets a curated gloss', async () => {
     const result = await new WordResolver(makeMockDictionary({})).resolve('入禅', '入禅', undefined, '名詞');
