@@ -51,6 +51,19 @@ const NON_CONJUGATING_POS = new Set([
 ]);
 
 /**
+ * UniDic lemma-reading corrections for STANDALONE single-kanji tokens.
+ * Sudachi reads standalone 米 as べい (the America abbreviation) even in
+ * 米を洗います — which then drives entry selection to "(United States of)
+ * America" inside rice-cooking stories. A standalone token is the ordinary
+ * word; the abbreviation reading only occurs in compounds (米大統領), which
+ * mode C keeps whole. Add entries here ONLY with corpus evidence of the
+ * wrong reading appearing in artifacts.
+ */
+const READING_CORRECTIONS: Record<string, { wrong: string; right: string }> = {
+  米: { wrong: 'べい', right: 'こめ' },
+};
+
+/**
  * First gloss only, alternatives stripped — composed meanings would otherwise
  * balloon ("to exist, to live, to be located + …"). Cuts only at TOP-LEVEL
  * commas/semicolons: "to fall (e.g. blossoms, petals)" must survive intact,
@@ -135,6 +148,12 @@ export class WordResolver {
     // English-only, so every existing caller keeps byte-identical behaviour.
     glossLang?: string[]
   ): Promise<WordResolution> {
+    // Curated corrections for UniDic's known-bad standalone readings (米→べい).
+    const correction = READING_CORRECTIONS[wordStr];
+    if (correction && tokenReading === correction.wrong && wordStr === baseForm) {
+      tokenReading = correction.right;
+    }
+
     // (1) Early-return for known grammatical morphemes.
     //
     // For pure-kana words like ます/ない, the waterfall reaches JMnedict which

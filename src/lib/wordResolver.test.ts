@@ -857,6 +857,27 @@ describe('WordResolver – #257 follow-up: manual-review pins (no false info)', 
   });
 });
 
+describe('WordResolver – #257 follow-up: UniDic single-kanji reading corrections', { timeout: 30000 }, () => {
+  it('米 (standalone, Sudachi misreads べい): hint and furigana corrected to こめ "rice"', async () => {
+    // UniDic lemmatizes standalone 米 as べい (America) in many contexts —
+    // even 米を洗います "wash the rice". 9 committed story artifacts showed
+    // "(United States of) America" inside rice-cooking stories. A standalone
+    // 米 token is rice; the べい reading only occurs in compound
+    // abbreviations (米大統領) which Sudachi keeps as compounds anyway.
+    let capturedHint: any;
+    const dict = {
+      lookup: async (_w: string, hint?: any) => {
+        capturedHint = hint;
+        return { meaning: 'rice', reading: 'こめ' };
+      },
+    };
+    const result = await new WordResolver(dict).resolve('米', '米', undefined, '名詞', 'べい');
+    expect(capturedHint?.reading).toBe('こめ');
+    expect(result.reading).toBe('こめ');
+    expect(result.reading).not.toBe('べい');
+  });
+});
+
 describe('WordResolver – #257 follow-up: supplementary additions', { timeout: 30000 }, () => {
   it('入禅: Mimi-nashi Hoichi ritual word gets a curated gloss', async () => {
     const result = await new WordResolver(makeMockDictionary({})).resolve('入禅', '入禅', undefined, '名詞');
