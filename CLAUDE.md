@@ -74,8 +74,8 @@ Node 18+ required.
 ├── sudachi-wasm-built/        # Output of setup-sudachi.sh (must exist for default tokenizer)
 ├── jmdict-all-3.6.2.json.tgz  # 25 MB; auto-extracted on server start
 ├── jmnedict.json.gz           # 8.8 MB
-├── .word-cache.json.gz / .jisho-cache.json.gz  # Pre-warmed lookup caches (gzipped)
-├── .word-cache.json / .jisho-cache.json        # Decompressed by setup-cache.sh
+├── .word-cache.json.gz        # Pre-warmed word-cache dump (gzipped)
+├── .word-cache.json           # Decompressed by setup-cache.sh
 ├── .cache.db                  # SQLite DB (created on first run)
 ├── char.def                   # Sudachi character definitions
 ├── sudachi.json               # Sudachi tokenizer config
@@ -162,11 +162,11 @@ Boot sequence (in `server.ts`):
 1. `tokenizerReady` — `createTokenizer()` from env `TOKENIZER` (default Sudachi WASM)
 2. `jmdictReady` — extract `jmdict-all-3.6.2.json.tgz` if not already extracted
 3. `jmnedictReady` — decompress `jmnedict.json.gz` (via `ensureJmnedictPrepared`)
-4. `dictionaryReady` — `initDatabase()` (sql.js), build `WordsCache` / `JishoCache` / `ContentWordsStore`, `DictionaryManager.initialize(...)`, then `wordsCache.preload()`
+4. `dictionaryReady` — `initDatabase()` (better-sqlite3), build `WordsCache` / `ContentWordsStore`, `DictionaryManager.initialize(...)`, then `wordsCache.preload()`
 5. `app.listen(3000, "0.0.0.0")` — port opens once.
 6. **Background, non-blocking** but very loud:
-   - `loadCachesInBackground()` — loads `.jisho-cache.json` if present (~98 entries observed; takes ~25 ms once decompressed); the gzipped `.word-cache.json.gz` is intentionally skipped.
-   - **Startup extraction**: walks every content item (stories+music+videos = 163 on this checkout) that's missing from `content_words`, and runs `runBatchExtract` in chunks of 20. On a fresh DB this calls Jisho for hundreds of unique kana words per chunk and easily takes **minutes** to finish. The HTTP port is open, but the extraction lives on the same Node event loop, so the server is essentially unresponsive for user-facing API calls during this time. Expect the first `npm run dev` after a wipe of `.cache.db` to take *much* longer than 30 s before the app feels usable.
+   - `loadCachesInBackground()` — the gzipped `.word-cache.json.gz` is intentionally skipped (see "Cache architecture" below).
+   - **Startup extraction**: walks every content item (stories+music+videos = 163 on this checkout) that's missing from both `content_words` and a committed `resolved.json` (see "Precomputed resolution" above — in practice this is close to a no-op on a checkout with resolved.json committed), and runs `runBatchExtract` in chunks of 20 via the local dictionary waterfall (JMDict/JMnedict/kanji-data — no network calls since #256 removed the Jisho fallback). Still worth watching on a fresh DB with un-resolved content, since Sudachi tokenization + JMDict lookups across many items can take a while.
    - On second and later starts (cache hot), the log line `[Server] All content already extracted — skipping startup extraction` is what you want to see.
 
 You'll see `Server running on http://localhost:3000` printed during step 5 even
@@ -280,15 +280,20 @@ deterministic output of the tokenize+resolve pipeline
 (`src/lib/contentResolver.ts`), written by `npm run resolve-content`. The
 server serves these directly (`GET /api/content/:id/story`, and
 `/api/content/:id/words` prefers them), so disk content needs **no runtime
-extraction, no cache warmup, and no Jisho calls**. Live resolution remains
-the fallback for custom/imported content only.
+extraction and no cache warmup**. Live resolution remains the fallback for
+custom/imported content only — like every other lookup path, it is entirely
+local (JMDict -> JMnedict -> kanji-data) since #256 removed the unofficial
+Jisho web fallback.
 
 Consequences worth knowing:
 - **If you change anything in the resolution pipeline** (tokenizers,
   wordResolver, dictionary, morphemeDefinitions, scoring), re-run
   `npm run resolve-content -- --all` and commit the artifact diffs — the
   diff over resolved.json files IS the regression review.
-- The resolve script disables the Jisho web fallback for determinism.
+- The dictionary waterfall is entirely local (JMDict -> JMnedict -> kanji-data;
+  the unofficial Jisho web fallback was removed in #256), so the resolve
+  script never depends on network responses — determinism is now a property
+  of the pipeline itself, not something the script has to work around.
 - `resolved.json` positions are computed against the **trimmed** text, same
   as `/api/content` serves it.
 
@@ -408,48 +413,48 @@ mitigation; don't assume it covers every conjugation.
 
 ## Cache architecture
 
-There are two layers of cache, plus two on-disk artefacts:
+There is one layer of cache, plus one on-disk seed artefact:
 
 | Layer                    | Where it lives                                         | Loaded when                       |
 |--------------------------|--------------------------------------------------------|-----------------------------------|
 | In-memory `WordsCache`   | `src/lib/database.ts`, fed by SQLite                   | At server start, lazy-preloaded   |
-| In-memory `JishoCache`   | same                                                   | same                              |
 | `ContentWordsStore`      | same — per-content extracted vocab                     | same                              |
-| SQLite `.cache.db`       | repo root, three tables: `words_cache`, `jisho_cache`, `content_words` | persistent       |
+| SQLite `.cache.db`       | repo root, two tables: `words_cache`, `content_words`  | persistent       |
 | `.word-cache.json[.gz]`  | gzipped pre-warmed dump of the words cache             | optional, background-loaded       |
-| `.jisho-cache.json[.gz]` | gzipped pre-warmed dump of the Jisho lookup cache      | optional, background-loaded       |
 
-### Why the JSON files exist alongside the SQLite DB — DO NOT delete them
+(Prior to #256 there was also a `JishoCache` layer, a `jisho_cache` table, and
+committed `.jisho-cache.json.gz` seed data backing the now-removed unofficial
+Jisho web fallback. All of that is gone — the dictionary waterfall is JMDict
+-> JMnedict -> kanji-data, entirely local, so there is nothing left to
+pre-warm from a network round-trip.)
+
+### Why the JSON file exists alongside the SQLite DB — DO NOT delete it
 
 `.cache.db` is **per-checkout, per-machine**. The server doesn't sync it
-anywhere, and it's gitignored. So a fresh clone or a CI run starts with
-an empty SQLite cache, and the startup-extraction step (see "Dev server
-startup") then has to call Jisho hundreds of times to repopulate it —
-that's the multi-minute warmup penalty.
+anywhere, and it's gitignored. So a fresh clone or a CI run starts with an
+empty SQLite cache. Since #252's precomputed `resolved.json` artifacts cover
+disk content already, this mostly matters for live/custom-content resolution
+and for the startup-extraction fallback (see "Dev server startup") — both of
+which now resolve purely from local dictionaries, so there's no multi-minute
+network warmup penalty to worry about anymore.
 
-The gzipped `.word-cache.json.gz` and `.jisho-cache.json.gz` are how we
-share that pre-warmed cache across machines via git. They're committed
-on purpose. `setup-cache.sh` decompresses them into the bare
-`.word-cache.json` / `.jisho-cache.json` working files; `setup-cache.sh`
-and the server consult the decompressed versions to seed `JishoCache`
-on startup so a fresh clone doesn't have to re-fetch every lookup from
-Jisho.
+The gzipped `.word-cache.json.gz` is how we share a pre-warmed word cache
+across machines via git. It's committed on purpose. `setup-cache.sh`
+decompresses it into the bare `.word-cache.json` working file.
 
-So the four files do four different jobs and **none of them are
+So the three files do three different jobs and **none of them are
 redundant**:
 
 - `.cache.db` — the live, runtime, mutated SQLite cache.
-- `.word-cache.json` / `.jisho-cache.json` — decompressed seed data
-  used at startup. Generated locally; gitignored.
-- `.word-cache.json.gz` / `.jisho-cache.json.gz` — the *committed*
-  shipping format of the seed data. This is the only way new clones
-  inherit a warm cache.
+- `.word-cache.json` — decompressed seed data used at startup. Generated
+  locally; gitignored.
+- `.word-cache.json.gz` — the *committed* shipping format of the seed data.
+  This is the only way new clones inherit a warm cache.
 
-People have deleted `.word-cache.json` / `.jisho-cache.json` thinking
-"the database has all this already" — **don't**. The DB only has what
-*this machine* has happened to look up. If you need to regenerate the
-gzipped versions after intentionally extending the cache, run
-`npm run compress-cache`.
+People have deleted `.word-cache.json` thinking "the database has all this
+already" — **don't**. The DB only has what *this machine* has happened to
+look up. If you need to regenerate the gzipped version after intentionally
+extending the cache, run `npm run compress-cache`.
 
 The current `server.ts` deliberately **skips** loading `.word-cache.json.gz`
 into memory (relies on the SQLite-backed `WordsCache` instead — see the
@@ -479,7 +484,7 @@ comment first.
 - Tests sit next to the code they test (`foo.ts` ↔ `foo.test.ts`). Keep them in `src/`, not `integration/`.
 - Don't add deps for things `lucide-react` / `motion` / `tailwindcss` already cover.
 - Don't put new content into `src/data/content.ts` — content is on disk under `src/stories|music|videos/`.
-- Don't push `.cache.db`, `.word-cache.json`, `.jisho-cache.json` to git (the gzipped versions *are* committed). See the "Why the JSON files exist…" section above before deleting any of these.
+- Don't push `.cache.db`, `.word-cache.json` to git (the gzipped version *is* committed). See the "Why the JSON file exists…" section above before deleting either of these.
 - Push to whichever branch the harness or task specifies for your run. Don't push to `main`.
 
 ---
@@ -566,10 +571,13 @@ addressed by the time you're reading this.
   honour SIGTERM (save DB, close server, exit) or document why we
   don't.
 - **Startup extraction blocks the event loop.** On a fresh `.cache.db`,
-  the server opens port 3000 and *then* spends minutes calling Jisho
-  hundreds of times in chunks of 20, on the same event loop that
-  serves user requests. The user-visible result: "the server is up
-  but everything times out for 5 minutes". Options: move extraction
+  the server opens port 3000 and *then* spends time re-tokenizing and
+  dictionary-resolving content in chunks of 20, on the same event loop that
+  serves user requests. This used to be much worse when unknown-word lookups
+  fell through to hundreds of Jisho HTTP round-trips (removed in #256) — the
+  local-only waterfall is faster, but chunked extraction over many items is
+  still synchronous work on the main thread. The user-visible result: "the
+  server is up but everything times out for a while". Options: move extraction
   to a worker thread; throttle / yield between chunks so HTTP
   requests interleave; or wait until extraction is done before
   binding the port (and print honest progress).

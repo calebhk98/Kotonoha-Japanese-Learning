@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { initDatabase, WordsCache, JishoCache, ContentWordsStore, saveDatabase } from './database.js';
+import { initDatabase, WordsCache, ContentWordsStore, saveDatabase } from './database.js';
 import type { WordInfo } from '../types.js';
 import fs from 'fs';
 import path from 'path';
@@ -91,7 +91,6 @@ describe('Database Write Queue', () => {
 
   it('should handle mixed cache operations', async () => {
     const wordsCache = new WordsCache();
-    const jishoCache = new JishoCache();
     const contentStore = new ContentWordsStore();
 
     const testWord = '猫';
@@ -99,11 +98,6 @@ describe('Database Write Queue', () => {
       meanings: [{ glosses: ['cat'] }],
       variants: [{ pronounced: 'ねこ', written: '猫' }]
     } as any;
-
-    const testJisho = {
-      meaning: 'cat',
-      reading: 'ねこ'
-    };
 
     const words: WordInfo[] = [{
       word: testWord,
@@ -118,12 +112,10 @@ describe('Database Write Queue', () => {
 
     await Promise.all([
       wordsCache.set(testWord, [testEntry]),
-      jishoCache.set(testWord, testJisho),
       contentStore.setContentWords('mixed-test', words),
     ]);
 
     expect(wordsCache.get(testWord)).toEqual([testEntry]);
-    expect(jishoCache.get(testWord)).toEqual(testJisho);
     expect(contentStore.getContentWords('mixed-test')).toHaveLength(1);
   });
 
@@ -164,20 +156,6 @@ describe('Database Write Queue', () => {
 
     await cache.set('word1', [testEntry]);
     await cache.set('word2', [testEntry]);
-
-    expect(cache.size).toBeGreaterThan(0);
-
-    await cache.clear();
-    expect(cache.get('word1')).toBeUndefined();
-    expect(cache.get('word2')).toBeUndefined();
-  });
-
-  it('should handle JishoCache clear', async () => {
-    const cache = new JishoCache();
-    const testData = { meaning: 'test', reading: 'てすと' };
-
-    await cache.set('word1', testData);
-    await cache.set('word2', testData);
 
     expect(cache.size).toBeGreaterThan(0);
 
@@ -295,22 +273,6 @@ describe('Database durability without saveDatabase (issue #253)', () => {
       const row = raw.prepare('SELECT entries FROM words_cache WHERE word = ?').get('durable-word') as { entries: string } | undefined;
       expect(row).toBeDefined();
       expect(JSON.parse(row!.entries)).toEqual([entry]);
-    } finally {
-      raw.close();
-    }
-  });
-
-  it('JishoCache.set() writes survive on disk without calling saveDatabase()', async () => {
-    const cache = new JishoCache();
-    const value = { meaning: 'durable', reading: 'てすと' };
-
-    await cache.set('durable-jisho-word', value);
-
-    const raw = new BetterSqlite3(TEST_DB_PATH, { readonly: true });
-    try {
-      const row = raw.prepare('SELECT result FROM jisho_cache WHERE word = ?').get('durable-jisho-word') as { result: string } | undefined;
-      expect(row).toBeDefined();
-      expect(JSON.parse(row!.result)).toEqual(value);
     } finally {
       raw.close();
     }

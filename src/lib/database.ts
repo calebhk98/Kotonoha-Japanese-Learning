@@ -38,13 +38,6 @@ function createTables() {
   `);
 
   db.exec(`
-    CREATE TABLE IF NOT EXISTS jisho_cache (
-      word TEXT PRIMARY KEY,
-      result TEXT NOT NULL
-    )
-  `);
-
-  db.exec(`
     CREATE TABLE IF NOT EXISTS content_words (
       content_id TEXT NOT NULL,
       word TEXT NOT NULL,
@@ -147,51 +140,6 @@ export class WordsCache {
       this.memoryCache.set(word, JSON.parse(entries));
     }
     this.isPreloaded = true;
-  }
-}
-
-export class JishoCache {
-  async set(key: string, value: any) {
-    if (!db) throw new Error('Database not initialized');
-    db.prepare(
-      'INSERT OR REPLACE INTO jisho_cache (word, result) VALUES (?, ?)'
-    ).run(key, JSON.stringify(value));
-  }
-
-  get(key: string): any | undefined {
-    if (!db) throw new Error('Database not initialized');
-    const row = db.prepare(
-      'SELECT result FROM jisho_cache WHERE word = ?'
-    ).get(key) as { result: string } | undefined;
-    if (!row) {
-      return undefined;
-    }
-    return JSON.parse(row.result);
-  }
-
-  has(key: string): boolean {
-    if (!db) throw new Error('Database not initialized');
-    const row = db.prepare(
-      'SELECT 1 FROM jisho_cache WHERE word = ?'
-    ).get(key);
-    return row !== undefined;
-  }
-
-  async clear() {
-    if (!db) throw new Error('Database not initialized');
-    db.prepare('DELETE FROM jisho_cache').run();
-  }
-
-  entries(): [string, any][] {
-    if (!db) throw new Error('Database not initialized');
-    const rows = db.prepare('SELECT word, result FROM jisho_cache').all() as { word: string; result: string }[];
-    return rows.map(({ word, result }) => [word, JSON.parse(result)]);
-  }
-
-  get size(): number {
-    if (!db) throw new Error('Database not initialized');
-    const row = db.prepare('SELECT COUNT(*) as count FROM jisho_cache').get() as { count: number };
-    return row.count;
   }
 }
 

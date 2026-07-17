@@ -99,7 +99,6 @@ echo "🔨 Compressing dictionary caches..."
 echo ""
 
 compress_cache ".word-cache.json" || echo "ℹ️  .word-cache.json not found (cache not yet built)"
-compress_cache ".jisho-cache.json" || echo "ℹ️  .jisho-cache.json not found (cache not yet built)"
 
 echo ""
 echo "✨ Cache compression complete"

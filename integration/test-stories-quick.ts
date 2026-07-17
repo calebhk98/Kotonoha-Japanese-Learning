@@ -4,6 +4,7 @@ import { createTokenizer } from '../src/lib/tokenizers';
 import { DictionaryManager } from '../src/lib/dictionary';
 import { getStories } from '../src/data/content';
 import { LookupCache } from '../src/lib/lookupCache';
+import { ensureJmnedictPrepared } from '../src/lib/jmnedict-utils';
 
 interface StoryResult {
   title: string;
@@ -31,10 +32,14 @@ async function main() {
   const cache = new LookupCache();
 
   const jmdictFile = path.join(process.cwd(), 'jmdict-all-3.6.2.json');
+  // Wire up JMnedict so this sweep reflects the real production waterfall
+  // (JMDict -> JMnedict -> kanji-data; see #256) instead of running JMnedict
+  // in fallback/no-data mode, which used to understate real coverage.
+  const jmnedictFile = await ensureJmnedictPrepared().catch(() => null);
   if (fs.existsSync(jmdictFile)) {
-    await dictionary.initialize('jmdict', path.join(process.cwd(), 'jmdict-db'), jmdictFile);
+    await dictionary.initialize('jmdict', path.join(process.cwd(), 'jmdict-db'), jmdictFile, jmnedictFile ?? undefined);
   } else {
-    await dictionary.initialize('jisho');
+    await dictionary.initialize('kanjidata');
   }
 
   const stories = getStories();

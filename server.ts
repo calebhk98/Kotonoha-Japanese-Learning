@@ -15,7 +15,7 @@ import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk, loadResolvedContent } from "./src/lib/storyLoader.js";
 import { resolveContent, buildStoryResponse, buildWordsResponse } from "./src/lib/contentResolver.js";
-import { initDatabase, WordsCache, JishoCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
+import { initDatabase, WordsCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
 import { isPunctuation, isSingleKana, looksLikePartialStem, getGrammarDefinition } from "./src/lib/extraction-helpers.js";
 import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
 import type { WordInfo } from "./src/types.js";
@@ -24,7 +24,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let wordsCache: WordsCache;
-let jishoCache: JishoCache;
 let contentWordsStore: ContentWordsStore;
 
 // Extract jmdict if needed
@@ -104,7 +103,6 @@ const dictionaryReady = (async () => {
   // Initialize database
   await initDatabase();
   wordsCache = new WordsCache();
-  jishoCache = new JishoCache();
   contentWordsStore = new ContentWordsStore();
 
   dictionary = new DictionaryManager();
@@ -112,23 +110,12 @@ const dictionaryReady = (async () => {
   const jmdictFile = path.join(__dirname, 'jmdict-all-3.6.2.json');
   const jmdictExists = fs.existsSync(jmdictFile);
 
-  const onJishoCacheUpdate = (cache: Map<string, any>) => {
-    // Sync updated cache entries from dictionary (fire-and-forget during initialization)
-    for (const [key, value] of cache.entries()) {
-      if (!jishoCache.has(key)) {
-        jishoCache.set(key, value).catch(e =>
-          console.error('[Cache] Error updating Jisho cache:', e.message)
-        );
-      }
-    }
-  };
-
   if (jmdictExists) {
     console.log('[Dictionary] jmdict file found, attempting to initialize');
-    await dictionary.initialize('jmdict', jmdictPath, jmdictFile, jmnedictFile as string | undefined, jishoCache as any, onJishoCacheUpdate);
+    await dictionary.initialize('jmdict', jmdictPath, jmdictFile, jmnedictFile as string | undefined);
   } else {
-    console.log('[Dictionary] jmdict file not found, using Jisho API');
-    await dictionary.initialize('jisho', undefined, undefined, jmnedictFile as string | undefined, jishoCache as any, onJishoCacheUpdate);
+    console.log('[Dictionary] jmdict file not found, using kanji-data');
+    await dictionary.initialize('kanjidata', undefined, undefined, jmnedictFile as string | undefined);
   }
   console.log('[Dictionary] Initialization complete');
   wordResolver = new WordResolver(dictionary);
@@ -137,31 +124,10 @@ const dictionaryReady = (async () => {
   const preloadStart = Date.now();
   wordsCache.preload();
   const preloadTime = Date.now() - preloadStart;
-  console.log(`[Server] Pre-loaded ${wordsCache.size} words and ${jishoCache.size} Jisho entries from database (${preloadTime}ms)`);
+  console.log(`[Server] Pre-loaded ${wordsCache.size} words from database (${preloadTime}ms)`);
 
   // Load decompressed cache files in the background (don't block server startup)
   const loadCachesInBackground = async () => {
-    const wordCacheFile = path.join(__dirname, '.word-cache.json');
-    const jishoCacheFile = path.join(__dirname, '.jisho-cache.json');
-
-    if (fs.existsSync(jishoCacheFile)) {
-      try {
-        const cacheStart = Date.now();
-        const data = JSON.parse(fs.readFileSync(jishoCacheFile, 'utf-8'));
-        for (const [word, result] of Object.entries(data)) {
-          if (!jishoCache.has(word)) {
-            jishoCache.set(word, result).catch(e =>
-              console.error('[Cache] Error loading Jisho cache entry:', e.message)
-            );
-          }
-        }
-        const elapsed = Date.now() - cacheStart;
-        console.log(`[Cache] Jisho cache: loaded ${Object.keys(data).length} entries in ${elapsed}ms`);
-      } catch (e: any) {
-        console.warn('[Cache] Failed to load Jisho cache:', e.message);
-      }
-    }
-
     // Compressed cache loading disabled - database provides words via lazy load
     const wordCacheGzFile = path.join(__dirname, '.word-cache.json.gz');
     if (fs.existsSync(wordCacheGzFile)) {
@@ -453,40 +419,27 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
   }
   console.log(`[API] /api/batch-extract: Step 2 - Found ${uniqueKanaWords.size} unique kana words in ${Date.now() - collectStart}ms`);
 
-  // Step 3: Look up kana words with concurrency limit
+  // Step 3: Look up kana words and warm the word cache.
+  //
+  // This used to run through a hand-rolled concurrency-limiting queue
+  // (bounded to 5 in flight, with a setTimeout backoff) whose only purpose
+  // was throttling calls to the since-removed Jisho web fallback (#256) —
+  // dictionary.lookup() is now entirely local (JMDict/JMnedict/kanji-data),
+  // so a plain concurrent lookup is both simpler and correct.
   const lookupStart = Date.now();
   const kanaLookupCache = new Map<string, any>();
   if (dictionary && uniqueKanaWords.size > 0) {
     const words = Array.from(uniqueKanaWords);
-    const concurrencyLimit = 5;
-    const kanaResults: { word: string; result: any }[] = [];
-    let activeCount = 0;
-    let index = 0;
-
-    await new Promise<void>((resolve, reject) => {
-      const processNext = async () => {
+    const kanaResults = await Promise.all(
+      words.map(async (word) => {
         try {
-          if (index >= words.length && activeCount === 0) { resolve(); return; }
-          if (activeCount < concurrencyLimit && index < words.length) {
-            const word = words[index++];
-            activeCount++;
-            try {
-              const result = await dictionary!.lookup(word);
-              kanaResults.push({ word, result });
-            } catch (e) {
-              console.error(`[API] Kana lookup error for "${word}":`, e instanceof Error ? e.message : String(e));
-              kanaResults.push({ word, result: null });
-            } finally {
-              activeCount--;
-              await processNext();
-            }
-          } else if (index < words.length) {
-            setTimeout(() => processNext().catch(reject), 10);
-          }
-        } catch (err) { reject(err); }
-      };
-      for (let i = 0; i < concurrencyLimit; i++) processNext().catch(reject);
-    });
+          return { word, result: await dictionary!.lookup(word) };
+        } catch (e) {
+          console.error(`[API] Kana lookup error for "${word}":`, e instanceof Error ? e.message : String(e));
+          return { word, result: null };
+        }
+      })
+    );
 
     for (const { word, result } of kanaResults) {
       kanaLookupCache.set(word, result);
@@ -698,18 +651,16 @@ async function startServer() {
   app.post("/api/clear-cache", async (req, res) => {
     try {
       const wordCacheSize = wordsCache.size;
-      const jishoCacheSize = jishoCache.size;
 
       await wordsCache.clear();
-      await jishoCache.clear();
       await contentWordsStore.clear();
       await saveDatabase();
 
-      console.log(`[API] /api/clear-cache: Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`);
+      console.log(`[API] /api/clear-cache: Cleared ${wordCacheSize} words`);
 
       res.json({
         cleared: true,
-        message: `Cleared ${wordCacheSize} words and ${jishoCacheSize} Jisho entries`
+        message: `Cleared ${wordCacheSize} words`
       });
     } catch (e: any) {
       console.error('[API] /api/clear-cache failed:', e.message);
@@ -985,12 +936,10 @@ async function startServer() {
         // (classic-level) which holds an exclusive lock on the jmdict-db directory.
         // The main thread already holds that lock; a second open from the worker
         // thread fails with "Database is not open". The worker falls back to
-        // Jisho API which is correct for background extraction.
+        // kanji-data + JMnedict (both local, no lock needed) for background
+        // extraction.
         jmdictFile: null,
         jmnedictFile,
-        // Seed the worker's kana cache with everything already persisted in this
-        // process so the worker avoids redundant Jisho API round-trips.
-        jishoCacheEntries: jishoCache.entries(),
       };
 
       // Use the plain-JS shim as the worker entry point.

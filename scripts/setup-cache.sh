@@ -23,6 +23,5 @@ decompress_if_needed() {
 
 # Decompress cache files
 decompress_if_needed ".word-cache.json.gz" ".word-cache.json"
-decompress_if_needed ".jisho-cache.json.gz" ".jisho-cache.json"
 
 echo "✨ Cache setup complete"

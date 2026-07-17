@@ -37,7 +37,7 @@ async function runTokenizationTest(): Promise<void> {
   if (fs.existsSync(jmdictFile)) {
     await dictionary.initialize('jmdict', jmdictPath, jmdictFile);
   } else {
-    await dictionary.initialize('jisho');
+    await dictionary.initialize('kanjidata');
   }
 
   const results: AggregateResults = {
