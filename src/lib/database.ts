@@ -147,8 +147,12 @@ export class ContentWordsStore {
   async setContentWords(contentId: string, words: WordInfo[]): Promise<void> {
     if (!db) throw new Error('Database not initialized');
     const deleteExisting = db.prepare('DELETE FROM content_words WHERE content_id = ?');
+    // OR REPLACE: extraction paths can legitimately emit the same surface
+    // twice for one content item (e.g. re-classification across chunks);
+    // a bare INSERT made the whole transaction fail on the UNIQUE
+    // (content_id, word) key, so failed items were re-extracted forever.
     const insert = db.prepare(
-      `INSERT INTO content_words
+      `INSERT OR REPLACE INTO content_words
          (content_id, word, reading, meaning, meanings, jlpt, joyo, score, breakdown, frequency, is_morpheme)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );

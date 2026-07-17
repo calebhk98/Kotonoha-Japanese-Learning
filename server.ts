@@ -13,7 +13,7 @@ import { WordResolver } from "./src/lib/wordResolver.js";
 import { DictionaryManager } from "./src/lib/dictionary.js";
 import { createTokenizer, Tokenizer } from "./src/lib/tokenizers.js";
 import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
-import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk, loadResolvedContent } from "./src/lib/storyLoader.js";
+import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk, loadResolvedContent, listContentEntries } from "./src/lib/storyLoader.js";
 import { resolveContent, buildStoryResponse, buildWordsResponse } from "./src/lib/contentResolver.js";
 import { initDatabase, WordsCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
 import { isPunctuation, isSingleKana, looksLikePartialStem, getGrammarDefinition } from "./src/lib/extraction-helpers.js";
@@ -671,6 +671,15 @@ async function startServer() {
   app.get("/api/content/words", (req, res) => {
     try {
       const allWords = contentWordsStore.getAllContentWords();
+      // Merge in precomputed resolution (#252) for disk content the store
+      // doesn't have. Without this, a fresh checkout's client bootstrap saw
+      // every item as "missing vocab" and hammered /api/batch-extract with
+      // ~600 items of synchronous re-extraction (design review #259 §1).
+      for (const entry of listContentEntries()) {
+        if (allWords[entry.id]) continue;
+        const resolved = loadResolvedContent(entry.id);
+        if (resolved) allWords[entry.id] = buildWordsResponse(resolved) as any;
+      }
       res.json(allWords);
 
       // Schedule background refresh for content IDs with unknown-meaning words,
