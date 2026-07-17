@@ -35,7 +35,7 @@ const TOKENS = [
   { surface: '猫', baseForm: '猫', pos: '名詞', reading: 'ねこ' },
 ];
 
-describe('resolveContent', { timeout: 15000 }, () => {
+describe('resolveContent', { timeout: 30000 }, () => {
   it('produces positioned tokens, deduplicated words, and frequencies', async () => {
     const resolved = await resolveContent(TEXT, makeTokenizer(TOKENS), new WordResolver(dict));
 

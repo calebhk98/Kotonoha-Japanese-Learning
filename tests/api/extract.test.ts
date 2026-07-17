@@ -15,19 +15,12 @@ describe('POST /api/extract', () => {
     expect(neko, `words: ${body.map((w) => w.word).join(', ')}`).toBeTruthy();
     expect(neko!.meaning?.toLowerCase()).toContain('cat');
 
-    // 本 — real dictionary lookup happens (not "Unknown meaning"). NOTE: the
-    // exposed primary sense on this checkout is "origin", not "book", even
-    // though the raw JMDict entry's first gloss group *is* ["book", "volume",
-    // "script"] (visible via GET /api/word/本's `entry` field). That mismatch
-    // looks like a real, separate sense-ordering bug in the JMDict-backed
-    // lookup path (DictionaryManager) vs. the kanji-data path — worth its own
-    // issue — but reproducing/fixing it is out of scope here (verified
-    // against the live server before writing this assertion; see also
-    // CLAUDE.md's note that /api/word's raw `entry.meanings[0]` should never
-    // be shown directly because ordering there isn't reliable either).
+    // 本 — homograph selection prefers the entry whose primary written form
+    // is the searched word, so this is the ほん "book" entry, never the
+    // 元/本 もと "origin" entry that index-order ties used to surface.
     const hon = findWord(body, '本');
     expect(hon, `words: ${body.map((w) => w.word).join(', ')}`).toBeTruthy();
-    expect(hon!.meaning).toBeTruthy();
+    expect(hon!.meaning.toLowerCase()).toContain('book');
     expect(hon!.meaning?.toLowerCase()).not.toBe('unknown meaning');
 
     // 読みました — conjugated polite-past form of 読む, grouped as a single

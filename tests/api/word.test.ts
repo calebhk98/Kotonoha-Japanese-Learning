@@ -56,49 +56,34 @@ describe('GET /api/word/:word', () => {
     // CLAUDE.md documents 本's score as 1 (jlpt 15 + joyo 5 + freq -20,
     // clamped) — a stable regression pin independent of which sense wins.
     expect(body.score).toBe(1);
-    // The raw JMDict entry does carry "book" as its first gloss group (this
-    // is what CLAUDE.md warns not to read as the primary meaning) — assert
-    // it's present in the underlying entry data, even though the resolved
-    // top-level `meaning` field currently surfaces a different sense
-    // ("origin"). That mismatch looks like a genuine, separate bug in sense
-    // ordering between the kanji-data and JMDict lookup paths; out of scope
-    // to fix here, flagged for a follow-up issue.
-    const allGlosses = (body.entry?.meanings ?? []).flatMap((m: any) => m.glosses ?? []);
-    expect(allGlosses).toContain('book');
+    // Homograph selection prefers the entry whose PRIMARY written form is
+    // the searched word, so 本 resolves to the ほん "book" entry — not the
+    // 元/本 もと "origin" entry that database-index-order ties used to pick.
+    expect(body.meaning.toLowerCase()).toContain('book');
+    expect(body.reading).toBe('ほん');
   });
 
   describe('reading/pos context hints (人)', () => {
-    // NOTE: as of this checkout, /api/word/:word does not yet read `reading`
-    // / `pos` query hints — that homograph-disambiguation feature (carrying
-    // the in-context reading/POS from the reader/vocab list through to the
-    // word detail page, so 人-as-にん-counter vs 人-as-ひと-person resolve
-    // consistently) is being developed concurrently on a sibling branch
-    // (commit a250f40, "feat: carry in-context reading/POS to the word
-    // detail page") and hadn't merged into this checkout at the time this
-    // harness was built. Implementing it here would mean editing server.ts
-    // beyond the PORT change this task is scoped to, so these tests pin the
-    // *current* (pre-merge) behaviour: the endpoint resolves 人 the same way
-    // regardless of query hints, and does not error when they're supplied.
-    // Once that branch lands, extend these tests to assert the differential
-    // にん/"counter" vs ひと/"person" behaviour the query hints are meant to
-    // produce.
-    it('resolves 人 to a single default reading regardless of query hints', async () => {
-      const [plain, withNin, withHito] = await Promise.all([
-        apiGet('/api/word/' + encodeURIComponent('人')),
+    // The reading/pos query hints carry the in-context reading from the
+    // reader/vocab list to the detail page, so homographs resolve to the
+    // same entry the user clicked: 人 read にん is the people counter, 人
+    // read ひと is the standalone noun.
+    it('honors reading/pos hints: にん → counter, ひと → person', async () => {
+      const [withNin, withHito] = await Promise.all([
         apiGet('/api/word/' + encodeURIComponent('人') + '?reading=' + encodeURIComponent('にん') + '&pos=' + encodeURIComponent('名詞')),
         apiGet('/api/word/' + encodeURIComponent('人') + '?reading=' + encodeURIComponent('ひと')),
       ]);
 
-      for (const r of [plain, withNin, withHito]) {
+      for (const r of [withNin, withHito]) {
         expect(r.status).toBe(200);
         expect(r.body.reading).toBeTruthy();
         expect(r.body.meaning).toBeTruthy();
       }
 
-      // Today, query hints are accepted (no error) but not yet honored, so
-      // all three currently agree.
-      expect(withNin.body.reading).toBe(plain.body.reading);
-      expect(withHito.body.reading).toBe(plain.body.reading);
+      expect(withNin.body.reading).toBe('にん');
+      expect(withNin.body.meaning.toLowerCase()).toContain('counter');
+      expect(withHito.body.reading).toBe('ひと');
+      expect(withHito.body.meaning.toLowerCase()).toContain('person');
     });
   });
 });

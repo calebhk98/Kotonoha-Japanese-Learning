@@ -1,5 +1,93 @@
 import kanjiData from "kanji-data";
+import fs from "fs";
+import path from "path";
+import { createRequire } from "module";
 import { stemJapaneseWord } from "./stemming.js";
+
+// ---------------------------------------------------------------------------
+// kanji-data exact-match index.
+//
+// kanjiData.searchWords() rescans EVERY word shard on EVERY call
+// (~200ms-2.3s of synchronous CPU per lookup), which dominated both server
+// cold-boots and full-corpus resolution (#252). We only ever use its results
+// filtered to exact variant matches, so build a one-time index over the same
+// shard files, iterated in the same kanji-meta key order searchWords uses —
+// per-key entry order is therefore identical to the old filtered results,
+// keeping findBestVariant tie-breaks unchanged.
+// ---------------------------------------------------------------------------
+let kanjiDataIndex: Map<string, DictionaryEntry[]> | null = null;
+
+function getKanjiDataIndex(): Map<string, DictionaryEntry[]> {
+  if (kanjiDataIndex) return kanjiDataIndex;
+  const req = createRequire(import.meta.url);
+  const moduleRoot = path.dirname(path.dirname(req.resolve("kanji-data")));
+  const meta = JSON.parse(
+    fs.readFileSync(path.join(moduleRoot, "data", "kanji-meta.json"), "utf8")
+  );
+  const wordsDir = path.join(moduleRoot, "data", "words");
+  const hexPrefix = (c: string) =>
+    c.charCodeAt(0).toString(16).padStart(4, "0").substring(0, 2);
+
+  const index = new Map<string, DictionaryEntry[]>();
+  const seenPrefixes = new Set<string>();
+  for (const kanjiChar of Object.keys(meta)) {
+    const prefix = hexPrefix(kanjiChar);
+    if (seenPrefixes.has(prefix)) continue;
+    seenPrefixes.add(prefix);
+    let chunk: Record<string, DictionaryEntry[]>;
+    try {
+      chunk = JSON.parse(
+        fs.readFileSync(path.join(wordsDir, `chunk-${prefix}.json`), "utf8")
+      );
+    } catch {
+      continue; // shard may not exist for rare Unicode ranges
+    }
+    for (const words of Object.values(chunk)) {
+      for (const word of words) {
+        const keys = new Set<string>();
+        for (const v of (word as any).variants ?? []) {
+          if (v.written) keys.add(v.written);
+          if (v.pronounced) keys.add(v.pronounced);
+        }
+        for (const k of keys) {
+          let arr = index.get(k);
+          if (!arr) index.set(k, (arr = []));
+          arr.push(word);
+        }
+      }
+    }
+  }
+  kanjiDataIndex = index;
+  return index;
+}
+
+function kanjiDataExact(word: string): DictionaryEntry[] {
+  return getKanjiDataIndex().get(word) ?? [];
+}
+
+/**
+ * Last-ditch partial fallback replacing the old "first 10 raw searchWords
+ * results" behavior: entries whose variant text CONTAINS the word, in
+ * deterministic shortest-key-first order. Only reached when neither the word
+ * nor any of its stems has an exact variant match.
+ */
+function kanjiDataPartial(word: string): DictionaryEntry[] {
+  const index = getKanjiDataIndex();
+  const keys: string[] = [];
+  for (const k of index.keys()) if (k.includes(word)) keys.push(k);
+  keys.sort((a, b) => a.length - b.length || (a < b ? -1 : 1));
+  const out: DictionaryEntry[] = [];
+  const seen = new Set<DictionaryEntry>();
+  for (const k of keys) {
+    for (const e of index.get(k)!) {
+      if (seen.has(e)) continue;
+      seen.add(e);
+      out.push(e);
+      if (out.length >= 10) return out;
+    }
+  }
+  return out;
+}
 
 export interface DictionaryVariant {
   written: string;
@@ -147,23 +235,15 @@ function getEntriesByKanjiLookup(wordStr: string): DictionaryEntry[] {
 export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
   if (wordsCache.has(wordStr)) return wordsCache.get(wordStr)!;
 
-  // Try the word as-is first
-  let allEntries = kanjiData.searchWords(wordStr) as DictionaryEntry[];
-
-  // Filter to entries that actually match the word (not just contain it)
-  let entries = allEntries.filter(entry => {
-    return entry.variants?.some(v => v.written === wordStr || v.pronounced === wordStr);
-  });
+  // Try the word as-is first (exact variant match via the one-time index)
+  let entries = kanjiDataExact(wordStr);
 
   // If no exact matches found, try stemming for conjugated verbs
   if (entries.length === 0 && wordStr.length > 2) {
     const stems = stemJapaneseWord(wordStr);
     // Try each stem until we find results
     for (const stem of stems.slice(1)) { // Skip the original word (already tried)
-      allEntries = kanjiData.searchWords(stem) as DictionaryEntry[];
-      entries = allEntries.filter(entry => {
-        return entry.variants?.some(v => v.written === stem || v.pronounced === stem);
-      });
+      entries = kanjiDataExact(stem);
       if (entries.length > 0) {
         // Found a match with a stem, cache it under the original word
         break;
@@ -173,6 +253,7 @@ export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
 
   // For pure hiragana/katakana words, strongly prefer entries with hiragana-only written form
   // (particles, grammar words) over kanji entries (e.g., prefer に as particle over に as reading of 荷)
+  entries = [...entries]; // copy: downstream sort() must not mutate the index arrays
   const isPureKana = /^[ぁ-ん|ァ-ヴー]+$/.test(wordStr);
   if (isPureKana && entries.length > 0) {
     const hiraganaOnly = entries.filter(entry =>
@@ -183,9 +264,11 @@ export function getCachedDictionaryEntries(wordStr: string): DictionaryEntry[] {
     }
   }
 
-  // If still no results, fall back to all results but limit to first 10 (best matches are early)
+  // If still no results, fall back to partial matches (variant text containing
+  // the word), capped at 10 — replaces the old "first 10 raw searchWords
+  // results", which also matched English glosses and shard order.
   if (entries.length === 0) {
-    entries = allEntries.slice(0, 10);
+    entries = kanjiDataPartial(wordStr);
   }
 
   // Sort by frequency for better defaults
