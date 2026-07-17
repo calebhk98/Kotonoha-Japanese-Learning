@@ -188,3 +188,23 @@ describe('getGrammarDefinition', () => {
     expect(getGrammarDefinition('さくら', 'さくら')).toBeUndefined();
   });
 });
+
+describe('getGrammarDefinition – Sudachi kanji-normalized grammar verbs', () => {
+  it('している (base 為る): progressive of する, not the 成る homograph', () => {
+    expect(getGrammarDefinition('している', '為る')).toMatch(/doing|progressive/i);
+  });
+
+  it('した / します (base 為る): map to the する definition', () => {
+    expect(getGrammarDefinition('した', '為る')).toMatch(/to do/i);
+    expect(getGrammarDefinition('します', '為る')).toMatch(/to do/i);
+  });
+
+  it('いた / あった (bases 居る / 有る): map to the いる / ある definitions', () => {
+    expect(getGrammarDefinition('いた', '居る')).toMatch(/to be/i);
+    expect(getGrammarDefinition('あった', '有る')).toMatch(/to be/i);
+  });
+
+  it('ついて: the について grammar pattern gets a definition', () => {
+    expect(getGrammarDefinition('ついて', 'つく')).toMatch(/about|concerning/i);
+  });
+});

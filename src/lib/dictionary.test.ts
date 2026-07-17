@@ -577,6 +577,13 @@ describe('homograph entry selection – kana searches prefer usually-kana entrie
       sense: [{ partOfSpeech: ['suf'], misc: ['uk'] }, {}],
     };
     expect(pickBestEntry([longSword, pluralSuffix], 'たち', { pos: '接尾辞' }).id).toBe('1416220');
+
+    // Text like 鬼（おに）たち breaks Sudachi's suffix attachment — the
+    // parenthesis makes it tag たち as a plain noun. usually-kana must
+    // outweigh the POS bonus the noun entry earns, because uk is direct
+    // evidence about the written form we actually observed.
+    expect(pickBestEntry([longSword, pluralSuffix], 'たち', { pos: '名詞' }).id).toBe('1416220');
+    expect(pickBestEntry([longSword, pluralSuffix], 'たち').id).toBe('1416220');
   });
 
   it('おく as a VERB: picks 置く "to put" over 奥 "inner part" and 億', () => {
@@ -633,5 +640,23 @@ describe('homograph entry selection – kana searches prefer usually-kana entrie
       sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
     };
     expect(pickBestEntry([candy, rain], 'あめ', { pos: '名詞' }).id).toBe('1153520');
+  });
+});
+
+describe('homograph entry selection – uk bonus is gated by POS compatibility', () => {
+  it('かえる as a VERB: 蛙 "frog" (uk) must not outrank 帰る "to return"', () => {
+    const frog = {
+      id: '1577460',
+      kanji: [{ text: '蛙', common: true }],
+      kana: [{ text: 'かえる', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: ['uk'] }, {}],
+    };
+    const goHome = {
+      id: '1512150',
+      kanji: [{ text: '帰る', common: true }],
+      kana: [{ text: 'かえる', common: true }],
+      sense: [{ partOfSpeech: ['v5r', 'vi'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([frog, goHome], 'かえる', { pos: '動詞' }).id).toBe('1512150');
   });
 });

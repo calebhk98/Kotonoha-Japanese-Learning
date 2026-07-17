@@ -415,3 +415,21 @@ describe('WordResolver – して resolves as grammar, not a JMDict homograph', 
     expect(result.meaning).not.toBe('to become');
   });
 });
+
+// ── Reading source for uninflected words ─────────────────────────────────────
+
+describe('WordResolver – uninflected words take the JMDict reading', () => {
+  it('餅: reading is もち (JMDict), not the archaic kanji-data variant あも', async () => {
+    const dict = makeMockDictionary({ 餅: { meaning: 'mochi', reading: 'もち' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('餅', '餅');
+    expect(result.reading).toBe('もち');
+  });
+
+  it('誰: reading is だれ, not the archaic た', async () => {
+    const dict = makeMockDictionary({ 誰: { meaning: 'who', reading: 'だれ' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('誰', '誰');
+    expect(result.reading).toBe('だれ');
+  });
+});
