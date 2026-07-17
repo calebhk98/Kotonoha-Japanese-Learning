@@ -130,7 +130,12 @@ describe('getSenseCommonness – #187 slang / archaic detection', () => {
     expect(getSenseCommonness(xSense)).toBeLessThan(getSenseCommonness(normalSense));
   });
 
-  it('gives lower score to idiomatic senses that are domain-restricted', () => {
+  it('does NOT penalize domain-restricted senses (order handles them; a penalty broke 飴)', () => {
+    // Domain senses (field: ['comp'], ['food'], …) rely on JMDict's original
+    // order: a later technical sense can never overtake an earlier everyday
+    // sense under order-preserving ranking. An explicit -10 penalty here
+    // demoted primary senses that happen to carry a tag — 飴's first sense
+    // "(hard) candy" is tagged {food} and sank below the untagged "amber".
     const domainSense = {
       gloss: [{ text: 'technical computing term', lang: 'en' }],
       misc: [],
@@ -141,7 +146,7 @@ describe('getSenseCommonness – #187 slang / archaic detection', () => {
       misc: [],
       field: [],
     };
-    expect(getSenseCommonness(domainSense)).toBeLessThan(getSenseCommonness(commonSense));
+    expect(getSenseCommonness(domainSense)).toBe(getSenseCommonness(commonSense));
   });
 
   it('does NOT rank multi-gloss senses above single-gloss senses (both unmarked)', () => {

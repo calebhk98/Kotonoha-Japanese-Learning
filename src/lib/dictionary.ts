@@ -241,11 +241,12 @@ export function getSenseCommonness(sense: any): number {
     score -= 50;
   }
 
-  // Mild penalty for domain-restricted senses (e.g. computing, music). These
-  // are legitimate meanings but rarely what a beginner is looking for.
-  if (sense.field && Array.isArray(sense.field) && sense.field.length > 0) {
-    score -= 10;
-  }
+  // No penalty for domain-restricted senses (field: ['comp'], ['food'], …).
+  // With order-preserving ranking a later domain sense can never overtake an
+  // earlier everyday sense anyway, so a flat field penalty's only observable
+  // effect was demoting legitimately-primary tagged senses: 飴's first sense
+  // "(hard) candy" is tagged {food} and sank below the untagged "amber /
+  // yellowish-brown" colour sense.
 
   // Penalties ONLY — no bonuses. JMDict already lists the fundamental sense
   // first (verified against 読む, 食べる, 泳ぐ, 走る, 春, 買う, 可愛い), and
