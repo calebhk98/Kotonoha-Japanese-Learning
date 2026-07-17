@@ -415,16 +415,60 @@ Score range exposed externally is 1..100; `WordInfo.score` is the integer-rounde
 final. WaniKani SRS data, when present, multiplies the *base* score by 0.05–1.0
 (`useContentData.applyWaniKaniToWords`).
 
+### Compositional fallback + supplementary dictionary (#257)
+
+When the whole word is unknown, `composeUnknown` in wordResolver derives a
+meaning from transparent parts — every branch requires the parts to resolve,
+so nonsense can't compose. Branches (specific → generic): mimetic 〜と retry,
+reduplication (パチパチパチ→ぱちぱち), trailing-stretch strip (達ァ→達;
+mora-safe — only っ/ー strip after kana), honorific お/ご/御 (Sudachi
+normalizes お→御 in base forms — match the SURFACE too), curated
+prefix/suffix tables, の-compounds, compound verbs (aux table, then
+passive/causative stripping, then generic V1+V2 with kanji-initial tails),
+verbal nouns (振り返り→振り返る), and a best-scored recursive noun-compound
+split (fewest parts, most balanced — picks ガラス+ケース over ガラ+スケース).
+Composition uses `lookupPartStrict`, which rejects proper-noun glosses on
+kana/single-char parts (JMnedict name noise: いしさ→"Ishisa"). Unresolvable
+kana sound-words get honest labels ("onomatopoeia / sound effect" for
+副詞/感動詞, "stretched vocalization" for ー/〜 tokens). Curated one-offs
+(story names, brands, chants, literary coinages) live in
+`src/data/supplementaryDictionary.ts`, checked BEFORE the waterfall so they
+override wrong homographs (なつき ≠ 夏季 "summer season").
+
 ### Known limitations (measured against the committed artifacts)
 
-Across all 310k word-occurrences in the resolved artifacts, 0.117% are
-"Unknown meaning" and 0.239% get the generic kana fallback — see issue #257
-for the class-by-class breakdown (compositional compounds like 次の日/ご利用,
-compound verbs like 入れ直す, story character names, onomatopoeia/chants,
-archaic literary kanji) and the planned compositional-fallback +
-supplementary-dictionary fix. Kana homographs with identical signals (あめ)
-resolve to one entry and show the other as an alternative. TOKENIZER_ANALYSIS.md
-predates all of this and is historical.
+Across all 310k word-occurrences in the resolved artifacts, **6 occurrences
+(0.002%) remain "Unknown meaning"** — two whitespace+long-dash garbage
+tokens, one 8-char address, one ambiguous song lyric, one Chinese character
+in a story that features Chinese. If you touch composition rules, re-run the
+scan and MANUALLY REVIEW the artifact meaning-diff — the composition rules
+were tuned by exactly that review, and "composes to something wrong" is
+worse than "unknown" in this app. Kana homographs with identical signals
+(あめ) resolve to one entry and show the other as an alternative.
+TOKENIZER_ANALYSIS.md predates all of this and is historical.
+
+### Multi-language architecture (#258 target axis, #260 native axis)
+
+Two independent axes, both seamed but ja/en-only in runtime today:
+
+- **Target language (#258)**: `src/lib/language/` holds LanguageProfile —
+  script predicates, Sudachi-POS→neutral-class mapping, score-breakdown
+  rows, plus server-only tokenizer bindings in `serverProfile.ts`. The old
+  scattered Japanese regexes now live ONLY in the ja profile and
+  extraction-helpers (which the profile delegates to). `isPunctuation` is
+  per-profile semantics on purpose — "no target-language content" is only
+  correct scoped to a language. Content metadata carries optional
+  `language` (absent = 'ja'). Adding a language = one display profile +
+  server bindings + dictionary source + content folders.
+- **Native/gloss language (#260)**: JMDict-all already CONTAINS
+  multilingual glosses (spa 68k, ger 336k, …). `dictionary.ts` selects
+  gloss language PER ENTRY (`getEntryGlossLang` — JMDict groups senses by
+  language, English first, so per-sense fallback silently always returns
+  English). `/api/word/:word?lang=es`, `/api/extract {lang}`. UI strings go
+  through `src/lib/i18n.ts` + `src/locales/` (en source of truth, es stub;
+  English is the mandatory fallback). resolved.json stays English-baked;
+  non-English glosses resolve live on demand (see #260 for the
+  entry-id-in-artifact migration plan).
 
 ---
 
