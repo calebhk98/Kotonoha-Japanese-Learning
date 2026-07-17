@@ -302,3 +302,67 @@ describe('WordResolver – kana-only fallback', () => {
     expect(callCount).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Morpheme guard – conjugated auxiliary surface forms
+//
+// The tokenizer deliberately keeps grammatical auxiliaries (たい, ない, です…)
+// as separate tokens so learners see their meanings. Sudachi hands back the
+// auxiliary's base form (たく→たい, なかっ→ない, でし→です), but the guard in
+// resolve() only checked the SURFACE against morphemeDefinitions. The surface
+// missed the table, fell through to JMDict, and homograph lookup returned
+// nonsense: たく→対 "versus", よう→酔う "to get drunk".
+// ---------------------------------------------------------------------------
+
+describe('WordResolver – morpheme guard checks base form for conjugated auxiliaries', () => {
+  it('たく (base form たい): returns the desiderative definition, not 対 "versus"', async () => {
+    const dict = makeMockDictionary({ たい: { meaning: 'versus', reading: 'たい' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('たく', 'たい');
+    expect(result.meaning).toMatch(/want to/i);
+    expect(result.meaning).not.toBe('versus');
+  });
+
+  it('なかっ (base form ない): returns the negation definition', async () => {
+    const dict = makeMockDictionary({ ない: { meaning: 'nonexistent', reading: 'ない' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('なかっ', 'ない');
+    expect(result.meaning).toMatch(/negat|not/i);
+    expect(result.meaning).not.toBe('nonexistent');
+  });
+
+  it('でし (base form です): returns the polite copula definition', async () => {
+    const dict = makeMockDictionary({ です: { meaning: 'be', reading: 'です' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('でし', 'です');
+    expect(result.meaning).toMatch(/copula|polite/i);
+  });
+
+  it('よう: returns a grammatical definition, not 酔う "to get drunk"', async () => {
+    // よう exactly matches 17 JMDict entries (酔う, 用, 様, …); the entry picker
+    // tie-broke on database order and returned 酔う. As grammar (〜ように,
+    // 〜ようになる) it belongs in the morpheme table like ます/ない/たい.
+    const dict = makeMockDictionary({ よう: { meaning: 'to get drunk', reading: 'よう' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('よう', 'よう');
+    expect(result.meaning).not.toBe('to get drunk');
+    expect(result.meaning).toMatch(/manner|way|like|so that/i);
+  });
+
+  it('surface-form definition still wins over base-form definition when both exist', async () => {
+    // ました has its own entry ("polite past form") — the base form ます must
+    // not shadow the more specific surface definition.
+    const resolver = new WordResolver(null);
+    const result = await resolver.resolve('ました', 'ます');
+    expect(result.meaning).toMatch(/polite past/i);
+  });
+
+  it('kanji base forms are not routed through the morpheme table', async () => {
+    // A kanji base form (e.g. 見る for the surface 見) must go through the
+    // dictionary waterfall, not the kana morpheme table.
+    const dict = makeMockDictionary({ 見る: { meaning: 'to see', reading: 'みる' } });
+    const resolver = new WordResolver(dict);
+    const result = await resolver.resolve('見', '見る');
+    expect(result.meaning).toBe('to see');
+  });
+});

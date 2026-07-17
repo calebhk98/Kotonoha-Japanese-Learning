@@ -261,6 +261,46 @@ export function getSenseCommonness(sense: any): number {
   return score;
 }
 
+/**
+ * Scores a JMDict *entry* (as opposed to a sense) by how likely it is to be
+ * the entry a learner searching `word` actually wants.
+ *
+ * Use the jmdict-simplified `common` flag as the primary signal: an entry
+ * marked common is the canonical, everyday form that a learner expects to see.
+ * Raw kanji presence is only a weak tiebreaker because many obscure/rare entries
+ * also have kanji forms — e.g. いい matches 怡々/謂/飯 (all non-common kanji
+ * compounds) as well as the plain kana-only いい entry (common:true). Without
+ * heavily weighting the common flag, those obscure entries win on kanji count
+ * alone and the canonical meaning ("good") is lost.
+ */
+export function getEntryCommonness(entry: any, word?: string): number {
+  const hasKanji = entry.kanji && entry.kanji.length > 0;
+  const hasCommonKanji = hasKanji && entry.kanji.some((k: any) => k.common === true);
+  const hasCommonKana = entry.kana && entry.kana.some((k: any) => k.common === true);
+
+  let score = 0;
+  if (hasCommonKanji) score += 20;           // canonical kanji form (e.g. 猫, 良い)
+  else if (hasKanji) score += 3;             // obscure/non-common kanji form
+
+  if (hasCommonKana && !hasKanji) score += 20;  // canonical kana-only word (e.g. いい)
+  else if (hasCommonKana) score += 5;            // common reading of a kanji word
+
+  if (entry.sense && entry.sense.length > 1) score += 2;
+  return score;
+}
+
+/**
+ * Picks the JMDict entry a learner searching `word` most likely wants, from a
+ * list of entries whose kanji or kana exactly match `word`.
+ */
+export function pickBestEntry(exactMatches: any[], word: string): any {
+  return exactMatches.reduce((best: any, current: any) => {
+    const bestScore = getEntryCommonness(best, word);
+    const currentScore = getEntryCommonness(current, word);
+    return currentScore > bestScore ? current : best;
+  });
+}
+
 // ==================== JMDict Wrapper Dictionary ====================
 export class JmdictDictionary implements Dictionary {
   private db: any = null;
@@ -326,14 +366,10 @@ export class JmdictDictionary implements Dictionary {
 
       if (exactMatches.length === 0) return null;
 
-      // Among exact matches, pick the entry with the most senses (most complete entry).
+      // Among exact matches, pick the entry a learner most likely wants.
       // For words like 行く that have multiple variants (行く, 往く), all exact matches
       // refer to the same underlying word — pick the most common entry.
-      const bestMatch = exactMatches.reduce((best: any, current: any) => {
-        const bestScore = this.getEntryCommonness(best);
-        const currentScore = this.getEntryCommonness(current);
-        return currentScore > bestScore ? current : best;
-      });
+      const bestMatch = pickBestEntry(exactMatches, word);
 
       // Extract all meanings, deprioritising rare/slang/archaic senses (#187).
       const meanings: string[] = [];
@@ -372,29 +408,6 @@ export class JmdictDictionary implements Dictionary {
       console.error("[Dictionary] JMDict lookup error:", (e as any).message);
       return null;
     }
-  }
-
-  private getEntryCommonness(entry: any): number {
-    // Use the jmdict-simplified `common` flag as the primary signal: an entry
-    // marked common is the canonical, everyday form that a learner expects to see.
-    // Raw kanji presence is only a weak tiebreaker because many obscure/rare entries
-    // also have kanji forms — e.g. いい matches 怡々/謂/飯 (all non-common kanji
-    // compounds) as well as the plain kana-only いい entry (common:true). Without
-    // heavily weighting the common flag, those obscure entries win on kanji count
-    // alone and the canonical meaning ("good") is lost.
-    const hasKanji = entry.kanji && entry.kanji.length > 0;
-    const hasCommonKanji = hasKanji && entry.kanji.some((k: any) => k.common === true);
-    const hasCommonKana = entry.kana && entry.kana.some((k: any) => k.common === true);
-
-    let score = 0;
-    if (hasCommonKanji) score += 20;           // canonical kanji form (e.g. 猫, 良い)
-    else if (hasKanji) score += 3;             // obscure/non-common kanji form
-
-    if (hasCommonKana && !hasKanji) score += 20;  // canonical kana-only word (e.g. いい)
-    else if (hasCommonKana) score += 5;            // common reading of a kanji word
-
-    if (entry.sense && entry.sense.length > 1) score += 2;
-    return score;
   }
 
   // Delegates to the module-level getSenseCommonness so the logic can be
