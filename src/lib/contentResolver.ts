@@ -92,50 +92,65 @@ export async function resolveContent(
   }
 
   // ---- build the unique word list (first-appearance order, keyed by surface)
-  const words: any[] = [];
   const wordIndexBySurface = new Map<string, number>();
   const frequency = new Map<string, number>();
+  const uniqueTokens: typeof tokens = [];
 
   for (const token of tokens) {
     if (!token.isJapanese) continue;
     frequency.set(token.surface, (frequency.get(token.surface) ?? 0) + 1);
     if (wordIndexBySurface.has(token.surface)) continue;
-
-    let info: any;
-    if (token.isMorpheme) {
-      info = {
-        word: token.surface,
-        reading: token.reading ?? token.surface,
-        meaning: getGrammarDefinition(token.surface, token.baseForm) || 'Grammatical morpheme',
-        jlpt: 0,
-        joyo: false,
-        score: 0,
-        breakdown: EMPTY_BREAKDOWN,
-        isMorpheme: true,
-      };
-    } else if (token.isVocabWord) {
-      const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-        await wordResolver.resolve(token.surface, token.baseForm, lookupCache, token.pos, token.reading);
-      info = { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown };
-      if (meanings) info.meanings = meanings;
-      if (token.pos) info.pos = token.pos;
-    } else {
-      // Single kana with no morpheme-table entry — still hoverable, but a
-      // JMDict homograph lookup would be nonsense (ね→根 "root").
-      info = {
-        word: token.surface,
-        reading: token.surface,
-        meaning: 'Kana particle / expression',
-        jlpt: 0,
-        joyo: false,
-        score: 0,
-        breakdown: EMPTY_BREAKDOWN,
-        isMorpheme: true,
-      };
-    }
-    wordIndexBySurface.set(token.surface, words.length);
-    words.push(info);
+    wordIndexBySurface.set(token.surface, uniqueTokens.length);
+    uniqueTokens.push(token);
   }
+
+  // Dictionary lookups are independent — resolve with bounded concurrency
+  // (each vocab word costs two LevelDB index scans; sequential resolution
+  // made full-corpus generation take hours). Output order stays the
+  // deterministic first-appearance order regardless of completion order.
+  const CONCURRENCY = 8;
+  const words: any[] = new Array(uniqueTokens.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, uniqueTokens.length) }, async () => {
+      while (next < uniqueTokens.length) {
+        const i = next++;
+        const token = uniqueTokens[i];
+        if (token.isMorpheme) {
+          words[i] = {
+            word: token.surface,
+            reading: token.reading ?? token.surface,
+            meaning: getGrammarDefinition(token.surface, token.baseForm) || 'Grammatical morpheme',
+            jlpt: 0,
+            joyo: false,
+            score: 0,
+            breakdown: EMPTY_BREAKDOWN,
+            isMorpheme: true,
+          };
+        } else if (token.isVocabWord) {
+          const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
+            await wordResolver.resolve(token.surface, token.baseForm, lookupCache, token.pos, token.reading);
+          const info: any = { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown };
+          if (meanings) info.meanings = meanings;
+          if (token.pos) info.pos = token.pos;
+          words[i] = info;
+        } else {
+          // Single kana with no morpheme-table entry — still hoverable, but a
+          // JMDict homograph lookup would be nonsense (ね→根 "root").
+          words[i] = {
+            word: token.surface,
+            reading: token.surface,
+            meaning: 'Kana particle / expression',
+            jlpt: 0,
+            joyo: false,
+            score: 0,
+            breakdown: EMPTY_BREAKDOWN,
+            isMorpheme: true,
+          };
+        }
+      }
+    })
+  );
 
   // frequencies (per surface, matching the extraction paths' counts)
   for (const w of words) {
