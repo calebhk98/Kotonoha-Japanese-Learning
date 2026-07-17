@@ -562,147 +562,11 @@ async function runBatchExtract(texts: { id: string; text: string }[]): Promise<B
   return results;
 }
 
-/**
- * Background loader for music lyrics from uta-net.com.
- * Detects placeholder transcripts and auto-fetches actual lyrics on startup.
- * Runs non-blocking after server is bound to port.
- */
-async function loadMusicTranscriptsInBackground() {
-  try {
-    const musicDir = path.join(process.cwd(), 'src', 'music');
-    if (!fs.existsSync(musicDir)) {
-      return; // No music directory
-    }
-
-    const musicFolders = fs.readdirSync(musicDir);
-    const toFetch: Array<{ id: string; title: string; sourceUrl: string; transcriptPath: string }> = [];
-
-    // Identify placeholders
-    for (const folder of musicFolders) {
-      const metadataPath = path.join(musicDir, folder, 'metadata.json');
-      const transcriptPath = path.join(musicDir, folder, 'transcript.md');
-
-      if (!fs.existsSync(metadataPath) || !fs.existsSync(transcriptPath)) continue;
-
-      try {
-        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
-        const transcript = fs.readFileSync(transcriptPath, 'utf-8');
-
-        // Check if it's a placeholder (contains "to be fetched" or "Placeholder" or is just the header)
-        const isPlaceholder =
-          transcript.includes('to be fetched') ||
-          transcript.includes('Placeholder') ||
-          transcript.includes('fetch') ||
-          transcript.trim().split('\n').length < 5; // Very short = likely placeholder
-
-        if (
-          isPlaceholder &&
-          metadata.sourceUrl &&
-          metadata.sourceUrl.includes('uta-net.com')
-        ) {
-          toFetch.push({
-            id: metadata.id,
-            title: metadata.title,
-            sourceUrl: metadata.sourceUrl,
-            transcriptPath,
-          });
-        }
-      } catch (e) {
-        // Skip errors per-folder
-      }
-    }
-
-    if (toFetch.length === 0) {
-      console.log('[Lyrics] All music transcripts already populated — skipping');
-      return;
-    }
-
-    console.log(
-      `[Lyrics] Background loader: ${toFetch.length} placeholder transcripts detected`
-    );
-
-    // Batch-fetch with rate limiting (delay between fetches to avoid hammering uta-net)
-    const DELAY_MS = 1000; // 1 second between requests
-    for (let i = 0; i < toFetch.length; i++) {
-      const item = toFetch[i];
-
-      // Delay before fetch (except the first one)
-      if (i > 0) {
-        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
-      }
-
-      try {
-        console.log(`[Lyrics] Fetching ${item.id} (${i + 1}/${toFetch.length})...`);
-
-        const response = await fetch(item.sourceUrl);
-        if (!response.ok) {
-          console.warn(`[Lyrics] Failed to fetch ${item.id}: HTTP ${response.status}`);
-          continue;
-        }
-
-        const html = await response.text();
-
-        // Parse uta-net HTML: lyrics are in <div id="kashi_area">
-        const match = html.match(
-          /<div id="kashi_area">[\s\S]*?<\/div>/i
-        );
-        if (!match) {
-          console.warn(`[Lyrics] No #kashi_area found in ${item.sourceUrl}`);
-          continue;
-        }
-
-        let lyricsHtml = match[0];
-
-        // Convert <br> to newlines
-        lyricsHtml = lyricsHtml.replace(/<br\s*\/?>/gi, '\n');
-
-        // Remove all HTML tags
-        lyricsHtml = lyricsHtml.replace(/<[^>]+>/g, '');
-
-        // Decode HTML entities
-        lyricsHtml = lyricsHtml
-          .replace(/&nbsp;/g, ' ')
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'");
-
-        // Clean up whitespace
-        const lyrics = lyricsHtml
-          .split('\n')
-          .map((line) => line.trim())
-          .filter((line) => line.length > 0)
-          .join('\n');
-
-        if (!lyrics) {
-          console.warn(
-            `[Lyrics] Extracted empty lyrics for ${item.id}`
-          );
-          continue;
-        }
-
-        // Write to transcript.md
-        fs.writeFileSync(item.transcriptPath, lyrics + '\n', 'utf-8');
-        console.log(
-          `[Lyrics] ✓ ${item.id} — ${lyrics.split('\n').length} lines`
-        );
-      } catch (e) {
-        console.error(
-          `[Lyrics] Error fetching ${item.id}:`,
-          e instanceof Error ? e.message : String(e)
-        );
-      }
-    }
-
-    console.log('[Lyrics] Background loading complete');
-  } catch (e) {
-    console.error(
-      '[Lyrics] Background loader error:',
-      e instanceof Error ? e.message : String(e)
-    );
-  }
-}
+// NOTE (issue #255): the background lyrics loader (uta-net.com scraping) that
+// used to live here and auto-run on every server boot has been moved to a
+// standalone script: scripts/fetch-lyrics.ts (run via `npm run fetch-lyrics`).
+// The dev server no longer scrapes lyrics on startup — see the log hint in
+// startServer() below.
 
 async function startServer() {
   // Startup takes ~30 seconds: dictionary decompression and tokenizer (Sudachi WASM)
@@ -1182,13 +1046,10 @@ async function startServer() {
   // Transcribe any music/video entries that have a playable URL but no transcript
   runStartupTranscription();
 
-  // Scrape captions for any video entries that have placeholder transcripts
-  runStartupCaptionScraper();
-
-  // Load music lyrics in background from uta-net.com for placeholder transcripts
-  loadMusicTranscriptsInBackground().catch((e) =>
-    console.error('[Lyrics] Background loading error:', e instanceof Error ? e.message : String(e)),
-  );
+  // Caption/lyrics scraping used to auto-run here on every boot (issue #255).
+  // They're now manual, on-demand scripts so `npm run dev` doesn't spend its
+  // startup window hitting YouTube/uta-net.com.
+  console.log('[Server] Caption/lyrics scrapers are manual: npm run scrape-captions / fetch-lyrics');
 
   // Save database on shutdown — server.close() stops accepting new
   // connections; saveDatabase() is a no-op now that database.ts is backed by
@@ -1329,43 +1190,11 @@ function runStartupTranscription() {
   });
 }
 
-/**
- * Scrape real Japanese captions for videos with placeholder transcripts.
- * Runs as a non-blocking background process, pulling one video at a time with delays.
- * Detects video sources (YouTube, NHK) and uses source-specific handlers.
- */
-function runStartupCaptionScraper() {
-  const scriptPath = path.join(__dirname, 'scripts', 'background', 'scrape-video-captions.ts');
-
-  // Script exits after one run (no prerequisites check needed — graceful failures are handled)
-  console.log('[CaptionScraper] Starting background caption scraper');
-
-  const child = spawn('npx', ['tsx', scriptPath], {
-    cwd: __dirname,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    detached: false,
-  });
-
-  child.stdout.on('data', (chunk: Buffer) => {
-    for (const line of chunk.toString().split('\n').filter(Boolean)) {
-      console.log(`[CaptionScraper] ${line}`);
-    }
-  });
-
-  child.stderr.on('data', (chunk: Buffer) => {
-    for (const line of chunk.toString().split('\n').filter(Boolean)) {
-      console.log(`[CaptionScraper] ${line}`);
-    }
-  });
-
-  child.on('close', (code: number | null) => {
-    if (code !== 0) {
-      console.warn(`[CaptionScraper] Exited with code ${code} (some captions may not have been pulled)`);
-      return;
-    }
-    console.log('[CaptionScraper] Background caption scraping complete');
-  });
-}
+// NOTE (issue #255): the background caption scraper that used to auto-spawn
+// scripts/background/scrape-video-captions.ts on every server boot has been
+// removed from the boot path. Run it manually via `npm run scrape-captions`.
+// The script itself (and its .caption-scrape-state.json cooldown behavior)
+// is unchanged.
 
 startServer().catch((err) => {
   console.error('[Server] Fatal error during startup:', err);
