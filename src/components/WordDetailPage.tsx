@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { WordInfo } from '../types';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { WK_STAGE_NAMES, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
+import { getNativeLanguage, t } from '../lib/i18n';
 
 interface WordDetailData extends WordInfo {
   entry?: any;
+  // #260: the language the served gloss is actually in, and what was requested,
+  // so we can flag English fallback when the learner asked for another language.
+  glossLang?: string;
+  requestedLang?: string;
 }
 
 export function WordDetailPage({
@@ -48,6 +53,10 @@ export function WordDetailPage({
         const contextPos = urlParams.get('pos');
         if (contextReading) apiParams.set('reading', contextReading);
         if (contextPos) apiParams.set('pos', contextPos);
+        // #260: request glosses in the learner's native language (English is
+        // the server default, so only send when it differs).
+        const nativeLang = getNativeLanguage();
+        if (nativeLang && nativeLang !== 'en') apiParams.set('lang', nativeLang);
         const query = apiParams.size > 0 ? `?${apiParams.toString()}` : '';
         const response = await fetch(`/api/word/${encodeURIComponent(word)}${query}`);
         if (!response.ok) {
@@ -178,14 +187,21 @@ export function WordDetailPage({
 
           {/* Primary Meaning */}
           <div className="space-y-3 border-t border-gray-100 pt-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Primary Meaning</h2>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">{t('word.primaryMeaning')}</h2>
             <p className="text-lg text-gray-800">{wordData.meaning}</p>
+            {/* #260: flag English fallback when another language was requested
+                but JMDict has no gloss in it for this word. */}
+            {wordData.requestedLang && wordData.requestedLang !== 'en' && wordData.glossLang === 'eng' && (
+              <p className="text-xs text-amber-600 italic">
+                {t('word.englishFallback', { lang: t(`lang.${wordData.requestedLang}`) })}
+              </p>
+            )}
           </div>
 
           {/* All Definitions */}
           {wordData.meanings && wordData.meanings.length > 1 && (
             <div className="space-y-3 border-t border-gray-100 pt-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">All Definitions</h2>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">{t('word.allDefinitions')}</h2>
               <ul className="space-y-2">
                 {wordData.meanings.map((def, idx) => (
                   <li key={idx} className="flex gap-3">

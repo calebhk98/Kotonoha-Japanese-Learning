@@ -4,6 +4,10 @@ export interface WordLookupResult {
   meaning: string;
   meanings?: string[]; // All available meanings/senses
   reading?: string;
+  // The language the returned gloss text is actually in (normalised 3-letter
+  // tag, e.g. 'spa' | 'eng'), for the requested-vs-served comparison that lets
+  // the UI flag English fallback (#260). Only set by JMDict lookups.
+  glossLang?: string;
 }
 
 /**
@@ -18,6 +22,10 @@ export interface WordLookupResult {
 export interface LookupHint {
   pos?: string;
   reading?: string;
+  // Native-language gloss priority (#260), e.g. ['spa','eng']. When omitted,
+  // lookups return English glosses exactly as before. 'eng' should always be
+  // last so English remains the mandatory fallback.
+  lang?: string[];
 }
 
 export interface Dictionary {
@@ -127,18 +135,109 @@ export class KanjiDataDictionary implements Dictionary {
 // ==================== JMDict Helpers (exported for testing) ====================
 
 /**
+ * Language-code aliases so callers can pass either the 2-letter form ('en',
+ * 'es') or JMDict's native ISO-639-2 tag ('eng', 'spa'). Everything is
+ * normalised to the 3-letter tag before comparison.
+ *
+ * The committed jmdict-all-3.6.2.json ships glosses in: eng, ger, dut, hun,
+ * rus, spa, fre, slv, swe (English by far the largest at ~438k senses; Spanish
+ * ~68k). Coverage of the non-English languages is partial, so callers must
+ * always list 'eng' last as the mandatory fallback (see getGlosses / #260).
+ */
+const GLOSS_LANG_ALIASES: Record<string, string> = {
+  en: 'eng', eng: 'eng',
+  es: 'spa', spa: 'spa',
+  de: 'ger', ger: 'ger',
+  fr: 'fre', fre: 'fre',
+  nl: 'dut', dut: 'dut',
+  ru: 'rus', rus: 'rus',
+  hu: 'hun', hun: 'hun',
+  sl: 'slv', slv: 'slv',
+  sv: 'swe', swe: 'swe',
+};
+
+/** The default gloss language when a caller passes no priority list. */
+export const DEFAULT_GLOSS_LANGS = ['eng'];
+
+function normGlossLang(lang: string | undefined): string {
+  if (!lang) return '';
+  return GLOSS_LANG_ALIASES[lang] ?? lang;
+}
+
+/**
+ * Language-priority gloss extraction (#260). Walks `langPriority` and returns
+ * the gloss strings of the FIRST language the sense actually carries, so a
+ * Spanish learner (['spa','eng']) gets Spanish where JMDict has it and English
+ * everywhere else. Returns [] when none of the requested languages are present.
+ *
+ * Language codes are matched loosely (see GLOSS_LANG_ALIASES): 'es' and 'spa'
+ * both match JMDict's 'spa' tag, 'en' and 'eng' both match 'en'/'eng'.
+ */
+export function getGlosses(sense: any, langPriority: string[] = DEFAULT_GLOSS_LANGS): string[] {
+  const all = (sense?.gloss as any[]) || [];
+  for (const wanted of langPriority) {
+    const norm = normGlossLang(wanted);
+    const matches = all
+      .filter((g) => normGlossLang(g.lang) === norm)
+      .map((g) => g.text)
+      .filter(Boolean);
+    if (matches.length > 0) return matches;
+  }
+  return [];
+}
+
+/**
+ * The language a sense's gloss text is actually in, given the caller's
+ * priority list — i.e. which entry of `langPriority` getGlosses() matched.
+ * Returns the normalised 3-letter tag (e.g. 'spa', 'eng') or null when the
+ * sense has no gloss in any requested language. Used to flag English fallback
+ * in the UI when the learner asked for another language.
+ */
+export function getGlossLang(sense: any, langPriority: string[] = DEFAULT_GLOSS_LANGS): string | null {
+  const all = (sense?.gloss as any[]) || [];
+  for (const wanted of langPriority) {
+    const norm = normGlossLang(wanted);
+    if (all.some((g) => normGlossLang(g.lang) === norm && g.text)) return norm;
+  }
+  return null;
+}
+
+/**
+ * Entry-level gloss-language choice (#260). JMDict-simplified "all" groups an
+ * entry's senses BY LANGUAGE (English senses first, then ger/spa/...), each
+ * sense carrying glosses in a single language. So the language must be decided
+ * once for the whole ENTRY — the first requested language present in ANY sense
+ * — and then only that language's senses are used. Per-sense fallback would
+ * always pick the leading English senses and never reach Spanish.
+ *
+ * Returns the normalised tag ('spa' | 'eng' | ...) or null when the entry has
+ * no gloss in any requested language.
+ */
+export function getEntryGlossLang(entry: any, langPriority: string[] = DEFAULT_GLOSS_LANGS): string | null {
+  const senses = (entry?.sense as any[]) || [];
+  for (const wanted of langPriority) {
+    const norm = normGlossLang(wanted);
+    const present = senses.some((s: any) =>
+      ((s.gloss as any[]) || []).some((g) => normGlossLang(g.lang) === norm && g.text)
+    );
+    if (present) return norm;
+  }
+  return null;
+}
+
+/**
  * Returns only the English-language gloss strings from a JMDict sense.
  *
  * Fix for #186: the original code had an `else if (sense.gloss[0]?.text)` fallback
  * that pushed the first gloss without a language check. JMDict entries include
  * German (ger), Spanish (spa), and other language glosses, so that fallback could
  * return non-English text as a word's primary definition.
+ *
+ * Now a thin wrapper over getGlosses (#260); behaviour is byte-identical —
+ * ['eng'] normalises 'en'/'eng' the same way the old explicit filter did.
  */
 export function getEnglishGlosses(sense: any): string[] {
-  return ((sense.gloss as any[]) || [])
-    .filter((g) => g.lang === "en" || g.lang === "eng")
-    .map((g) => g.text)
-    .filter(Boolean);
+  return getGlosses(sense, DEFAULT_GLOSS_LANGS);
 }
 
 /**
@@ -291,14 +390,18 @@ export function findCloseAlternatives(
   const MARGIN = 3;
   const bestScore = getEntryCommonness(best, word, hint);
   const alternatives: string[] = [];
+  const langPriority = hint?.lang ?? DEFAULT_GLOSS_LANGS;
 
   for (const entry of exactMatches) {
     if (entry === best || entry.id === best.id) continue;
     if (getEntryCommonness(entry, word, hint) < bestScore - MARGIN) continue;
 
-    const firstSense = (entry.sense || []).find((s: any) => getEnglishGlosses(s).length > 0);
+    // Entry-level language choice (senses are grouped by language), then take
+    // the first sense in that language.
+    const entryLang = getEntryGlossLang(entry, langPriority) ?? DEFAULT_GLOSS_LANGS[0];
+    const firstSense = (entry.sense || []).find((s: any) => getGlosses(s, [entryLang]).length > 0);
     if (!firstSense) continue;
-    const gloss = getEnglishGlosses(firstSense)[0];
+    const gloss = getGlosses(firstSense, [entryLang])[0];
 
     // Label with the written form that distinguishes it from the searched
     // word: the kanji when the search was kana (雨), the kana otherwise (ぜん).
@@ -403,8 +506,18 @@ export class JmdictDictionary implements Dictionary {
       // refer to the same underlying word — pick the most common entry.
       const bestMatch = pickBestEntry(exactMatches, word, hint);
 
+      // Native-language gloss priority (#260): default ['eng'] keeps the
+      // English-only behaviour byte-identical; ['spa','eng'] gives Spanish
+      // where JMDict has it and English as the mandatory fallback.
+      const langPriority = hint?.lang ?? DEFAULT_GLOSS_LANGS;
+      // Decide the gloss language once for the whole entry, then use only that
+      // language's senses — JMDict groups senses by language (English first),
+      // so per-sense selection would never reach the Spanish senses.
+      const primaryGlossLang = getEntryGlossLang(bestMatch, langPriority);
+
       // Extract all meanings, deprioritising rare/slang/archaic senses (#187).
       const meanings: string[] = [];
+      const senseLangFilter = primaryGlossLang ? [primaryGlossLang] : DEFAULT_GLOSS_LANGS;
       const sensesWithScores = (bestMatch.sense || []).map((sense: any, idx: number) => ({
         sense,
         order: idx,
@@ -418,17 +531,18 @@ export class JmdictDictionary implements Dictionary {
       });
 
       for (const { sense } of sensesWithScores) {
-        // getEnglishGlosses() only returns lang:"en" entries, so non-English
-        // JMDict senses are silently skipped rather than leaking German/Spanish
-        // text as definitions (fix for #186).
-        const glossTexts = getEnglishGlosses(sense);
+        // Only the chosen language's senses contribute glosses; senses in other
+        // languages yield [] and are skipped, so text never leaks in the wrong
+        // language as a definition (fix for #186, generalised in #260).
+        const glossTexts = getGlosses(sense, senseLangFilter);
         if (glossTexts.length > 0) {
           meanings.push(...glossTexts);
         }
       }
 
-      // Return null when no English meanings were found — this lets DictionaryManager
-      // try the fallback chain (JMnedict → kanji-data) rather than returning "Unknown".
+      // Return null when no meanings were found in any requested language —
+      // this lets DictionaryManager try the fallback chain (JMnedict →
+      // kanji-data) rather than returning "Unknown".
       if (meanings.length === 0) return null;
 
       // Beginner-facing ambiguity: when a homograph scores within a hair of
@@ -451,6 +565,7 @@ export class JmdictDictionary implements Dictionary {
         meaning,
         meanings: meanings.length > 1 ? meanings : undefined,
         reading: matchedKana || word,
+        ...(primaryGlossLang ? { glossLang: primaryGlossLang } : {}),
       };
     } catch (e) {
       console.error("[Dictionary] JMDict lookup error:", (e as any).message);
