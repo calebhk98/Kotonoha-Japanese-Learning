@@ -18,6 +18,15 @@ one (fresh `.cache.db`, jmdict/jmnedict not yet extracted, Sudachi WASM not
 yet built) it can take minutes — the setup step allows up to 240s
 (`SERVER_BOOT_TIMEOUT_MS` in `support/config.ts`).
 
+**Side effect to know about:** booting the real server also starts its
+background caption-scraper/lyrics-fetcher jobs (see server.ts's
+`runStartupCaptionScraper` / `loadMusicTranscriptsInBackground`), which write
+scrape-attempt bookkeeping directly into `src/videos/*/metadata.json` on
+disk. A short-lived test run rarely gets far enough to touch much, but check
+`git status` after running this suite and `git checkout -- src/videos/` (or
+`src/music/`) if anything unrelated shows up as modified — it's noise from
+the live server, not from the tests themselves.
+
 ## How it works
 
 - `vitest.api.config.ts` (repo root) is a standalone Vitest config — not
