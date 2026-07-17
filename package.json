@@ -40,7 +40,6 @@
     "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "sql.js": "^1.14.1",
     "tar": "^7.5.13",
     "tiny-segmenter": "^0.2.0",
     "unofficial-jisho-api": "^2.3.4",

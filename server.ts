@@ -1172,25 +1172,33 @@ async function startServer() {
     console.error('[Lyrics] Background loading error:', e instanceof Error ? e.message : String(e)),
   );
 
-  // Save database on shutdown
-  process.on('SIGINT', () => {
-    console.log('\n[Server] Shutting down, saving database...');
+  // Save database on shutdown — server.close() stops accepting new
+  // connections; saveDatabase() is a no-op now that database.ts is backed by
+  // better-sqlite3 (every write already committed straight to disk), kept as
+  // a call site for the flush step in case that ever changes back.
+  const shutdown = (signal: string) => {
+    console.log(`[Server] Received ${signal}, shutting down gracefully...`);
+    server.close();
     saveDatabase().then(() => process.exit(0)).catch(err => {
       console.error('[Server] Error saving database on shutdown:', err);
       process.exit(0);
     });
-  });
+  };
 
-  // SIGTERM was previously ignored (commit 1b49e85) to survive GitHub Codespaces idle
-  // timeouts, but that breaks docker stop / systemd / k8s. If Codespaces kills the server
-  // on idle, restart it — don't make the server unkillable to compensate.
-  process.on('SIGTERM', () => {
-    console.log('[Server] Received SIGTERM, shutting down gracefully...');
-    saveDatabase().then(() => process.exit(0)).catch(err => {
-      console.error('[Server] Error saving database on shutdown:', err);
-      process.exit(0);
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  // SIGTERM was previously ignored outright (commit 1b49e85) to survive GitHub
+  // Codespaces idle timeouts, but an unkillable process breaks docker stop /
+  // systemd / k8s / any supervisor that sends SIGTERM and expects a clean exit
+  // (#253). If you specifically need the old survive-Codespaces-idle behavior,
+  // set IGNORE_SIGTERM=1 — it is opt-in, not the default.
+  if (process.env.IGNORE_SIGTERM === '1') {
+    process.on('SIGTERM', () => {
+      console.log('[Server] Received SIGTERM, ignoring (IGNORE_SIGTERM=1 set).');
     });
-  });
+  } else {
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+  }
 }
 
 // ---------------------------------------------------------------------------
