@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { createTokenizer } from './src/lib/tokenizers';
-import { DictionaryManager } from './src/lib/dictionary';
-import { getStories } from './src/data/content';
-import { LookupCache } from './src/lib/lookupCache';
+import { createTokenizer } from '../src/lib/tokenizers';
+import { DictionaryManager } from '../src/lib/dictionary';
+import { getStories } from '../src/data/content';
+import { LookupCache } from '../src/lib/lookupCache';
 
 interface StoryResult {
   title: string;
