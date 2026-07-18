@@ -5,7 +5,14 @@ import {
   JOYO_PENALTIES,
   JOYO_LABELS,
   FREQUENCY_PENALTY_RULES,
-} from '../lib/scoring';
+  // #259 C2 regression fix: import from scoringConstants.ts, NOT scoring.ts.
+  // scoring.ts pulls in kanji-data/fs/path (server-only) — importing it from
+  // this CLIENT component crashed the whole app with "process is not
+  // defined" once Vite pre-bundled kanji-data for the browser. The pure
+  // constants/getFrequencyPenalty live in scoringConstants.ts specifically so
+  // this view can import them safely; scoring.ts re-exports them for
+  // server-side callers.
+} from '../lib/scoringConstants';
 
 // JLPT_SCORES/JOYO_PENALTIES/FREQUENCY_PENALTY_RULES keys/order aren't
 // guaranteed by TS (Record<number,...> + array insertion order), so render in
