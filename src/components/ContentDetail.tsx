@@ -74,9 +74,18 @@ export function ContentDetail({
     );
   }
 
+  // #259 P2: a full 40vh dark band with only a title/back-button was mostly
+  // empty space for the majority of content that has no imageUrl — shrink
+  // the hero when there's no image to fill it instead of stretching the
+  // empty dark band to the same height as content that has art.
+  const heroHeightClass = content.imageUrl ? 'h-[40vh]' : 'h-56';
+
   return (
-    <div className="min-h-screen bg-white">
-      <div className="relative h-[40vh] bg-gray-900 w-full">
+    // #259 I2: this view used a plain bg-white shell while every other view
+    // (Home/Vocab/Scoring/Settings/Reader/Word Detail) shares the warm-gray
+    // #F5F2ED background — the white surface read as a different app.
+    <div className="min-h-screen bg-[#F5F2ED]">
+      <div className={`relative ${heroHeightClass} bg-gray-900 w-full`}>
         {content.imageUrl && (
           <img src={content.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
         )}
@@ -332,7 +341,12 @@ export function ContentDetail({
           </div>
         </div>
 
-        <div className="space-y-6">
+        {/* #259 P1: on mobile this sidebar (primary CTAs + stats) used to
+            stack below the entire vocab list, pushing "Start Prep Lesson" /
+            "Dive Right In" far below the fold. order-first puts it visually
+            first on narrow viewports; md:order-none restores normal source
+            order (main content, then sidebar) on the 3-column desktop grid. */}
+        <div className="space-y-6 order-first md:order-none">
           <div className="bg-[#F9F8F6] p-6 rounded-3xl border border-[#EBE8E0]">
             <h3 className="font-semibold text-lg mb-6">Action Plan</h3>
             
