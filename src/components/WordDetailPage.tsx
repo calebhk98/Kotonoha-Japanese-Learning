@@ -3,6 +3,7 @@ import { WordInfo } from '../types';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { WK_STAGE_NAMES, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
 import { getNativeLanguage, t } from '../lib/i18n';
+import { filterAdultGlosses, isAdultGloss } from '../lib/senseDisplay';
 
 interface WordDetailData extends WordInfo {
   entry?: any;
@@ -198,20 +199,25 @@ export function WordDetailPage({
             )}
           </div>
 
-          {/* All Definitions */}
-          {wordData.meanings && wordData.meanings.length > 1 && (
-            <div className="space-y-3 border-t border-gray-100 pt-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">{t('word.allDefinitions')}</h2>
-              <ul className="space-y-2">
-                {wordData.meanings.map((def, idx) => (
-                  <li key={idx} className="flex gap-3">
-                    <span className="font-semibold text-gray-400 text-sm min-w-6">{idx + 1}.</span>
-                    <span className="text-gray-700">{def}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* All Definitions — adult/vulgar senses filtered for the beginner-facing
+              view (#259 P7); see src/lib/senseDisplay.ts for why this is a
+              display-time text filter rather than a JMDict misc[] tag check. */}
+          {wordData.meanings && wordData.meanings.length > 1 && (() => {
+            const displayMeanings = filterAdultGlosses(wordData.meanings);
+            return displayMeanings.length > 1 ? (
+              <div className="space-y-3 border-t border-gray-100 pt-6">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">{t('word.allDefinitions')}</h2>
+                <ul className="space-y-2">
+                  {displayMeanings.map((def, idx) => (
+                    <li key={idx} className="flex gap-3">
+                      <span className="font-semibold text-gray-400 text-sm min-w-6">{idx + 1}.</span>
+                      <span className="text-gray-700">{def}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null;
+          })()}
 
           {/* Frequency Data */}
           <div className="space-y-3 border-t border-gray-100 pt-6">
@@ -299,21 +305,32 @@ export function WordDetailPage({
             <div className="space-y-3 border-t border-gray-100 pt-6">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Dictionary Entry</h2>
               <div className="bg-gray-50 p-4 rounded-lg space-y-3 text-sm">
-                {wordData.entry.meanings && wordData.entry.meanings.length > 0 && (
-                  <div>
-                    <p className="font-semibold text-gray-600 mb-2">All Senses:</p>
-                    {wordData.entry.meanings.map((sense: any, idx: number) => (
-                      <div key={idx} className="mb-2 pb-2 border-b border-gray-200 last:border-0">
-                        <p className="text-xs text-gray-500 mb-1">
-                          {sense.partOfSpeech?.join(', ')}
-                        </p>
-                        <p className="text-gray-700">
-                          {sense.glosses?.join('; ')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {wordData.entry.meanings && wordData.entry.meanings.length > 0 && (() => {
+                  // Drop glosses that read as adult/vulgar (#259 P7), then drop
+                  // any sense left with nothing to show.
+                  const displaySenses = wordData.entry.meanings
+                    .map((sense: any) => ({
+                      ...sense,
+                      glosses: (sense.glosses || []).filter((g: string) => !isAdultGloss(g)),
+                    }))
+                    .filter((sense: any) => sense.glosses.length > 0);
+                  const senses = displaySenses.length > 0 ? displaySenses : wordData.entry.meanings;
+                  return (
+                    <div>
+                      <p className="font-semibold text-gray-600 mb-2">All Senses:</p>
+                      {senses.map((sense: any, idx: number) => (
+                        <div key={idx} className="mb-2 pb-2 border-b border-gray-200 last:border-0">
+                          <p className="text-xs text-gray-500 mb-1">
+                            {sense.partOfSpeech?.join(', ')}
+                          </p>
+                          <p className="text-gray-700">
+                            {sense.glosses?.join('; ')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
