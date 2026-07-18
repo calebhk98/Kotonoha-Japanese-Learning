@@ -3,6 +3,32 @@ import fs from "fs";
 import path from "path";
 import { createRequire } from "module";
 import { stemJapaneseWord } from "./stemming.js";
+import {
+  JLPT_SCORES,
+  JOYO_PENALTIES,
+  JLPT_LABELS,
+  JOYO_LABELS,
+  FREQUENCY_PENALTY_RULES,
+  getFrequencyPenalty,
+  type DictionaryVariant,
+  type FrequencyPenaltyRule,
+} from "./scoringConstants.js";
+
+// Re-exported so every existing import site (server.ts, scoring.test.ts, and
+// any other `from './scoring.js'` caller) keeps working unchanged — the
+// constants/function now live in scoringConstants.ts (#259 C2 regression
+// fix: ScoringView, a CLIENT component, must not import THIS file, since it
+// pulls in kanji-data/fs/path and crashes the browser bundle with
+// "process is not defined". Import from scoringConstants.ts instead.
+export {
+  JLPT_SCORES,
+  JOYO_PENALTIES,
+  JLPT_LABELS,
+  JOYO_LABELS,
+  FREQUENCY_PENALTY_RULES,
+  getFrequencyPenalty,
+};
+export type { DictionaryVariant, FrequencyPenaltyRule };
 
 // ---------------------------------------------------------------------------
 // kanji-data exact-match index.
@@ -89,12 +115,6 @@ function kanjiDataPartial(word: string): DictionaryEntry[] {
   return out;
 }
 
-export interface DictionaryVariant {
-  written: string;
-  pronounced: string;
-  priorities?: string[];
-}
-
 export interface DictionaryEntry {
   meanings: Array<{ glosses: string[] }>;
   variants: DictionaryVariant[];
@@ -104,34 +124,6 @@ export interface FindBestVariantResult {
   variant: DictionaryVariant | null;
   entry: DictionaryEntry | null;
   score: number;
-}
-
-export const JLPT_SCORES: Record<number, number> = { 5: 15, 4: 30, 3: 50, 2: 70, 1: 90, 0: 100 };
-export const JOYO_PENALTIES: Record<number, number> = { 1: 5, 2: 7, 3: 10, 4: 12, 5: 15, 6: 20, 8: 25, 9: 30 };
-
-export function getFrequencyPenalty(variant: DictionaryVariant | null, wordStr: string): number {
-  const priorities = variant?.priorities || [];
-
-  if (variant === null && /^[ぁ-ん]{1,3}$/.test(wordStr)) return -20;
-
-  const hasPriority = (p: string) => priorities.includes(p);
-
-  if (hasPriority('news1') || hasPriority('ichi1')) return -20;
-  if (hasPriority('news2') || hasPriority('ichi2')) return -10;
-  if (hasPriority('gai1') || hasPriority('spec1')) return 0;
-  if (hasPriority('gai2') || hasPriority('spec2')) return 5;
-
-  const nfTag = priorities.find((p: string) => p.startsWith('nf'));
-  if (nfTag) {
-    const rank = parseInt(nfTag.slice(2), 10);
-    if (rank <= 5) return 10;
-    if (rank <= 10) return 15;
-    if (rank <= 20) return 20;
-    if (rank <= 30) return 30;
-    return 40;
-  }
-
-  return 50;
 }
 
 export function getWordScoreBreakdown(wordStr: string, variant: DictionaryVariant | null) {

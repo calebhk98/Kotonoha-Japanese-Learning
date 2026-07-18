@@ -1,4 +1,41 @@
+import { useEffect } from 'react';
+import {
+  JLPT_SCORES,
+  JLPT_LABELS,
+  JOYO_PENALTIES,
+  JOYO_LABELS,
+  FREQUENCY_PENALTY_RULES,
+  // #259 C2 regression fix: import from scoringConstants.ts, NOT scoring.ts.
+  // scoring.ts pulls in kanji-data/fs/path (server-only) — importing it from
+  // this CLIENT component crashed the whole app with "process is not
+  // defined" once Vite pre-bundled kanji-data for the browser. The pure
+  // constants/getFrequencyPenalty live in scoringConstants.ts specifically so
+  // this view can import them safely; scoring.ts re-exports them for
+  // server-side callers.
+} from '../lib/scoringConstants';
+
+// JLPT_SCORES/JOYO_PENALTIES/FREQUENCY_PENALTY_RULES keys/order aren't
+// guaranteed by TS (Record<number,...> + array insertion order), so render in
+// the same "easiest first" order the guide has always shown.
+const JLPT_LEVEL_ORDER = [5, 4, 3, 2, 1] as const;
+const JOYO_GRADE_ORDER = [1, 2, 3, 4, 5, 6, 8, 9] as const;
+
+function formatPts(n: number): string {
+  return `${n > 0 ? '+' : ''}${n} pts`;
+}
+
+// #259 C2: this view used to hardcode all three tables, and they drifted from
+// the actual scoring code in src/lib/scoring.ts (N4 shown as +25 vs the real
+// 30, N2 +75 vs 70, N1 +100 vs 90; the whole Frequency Penalties table didn't
+// match getFrequencyPenalty's buckets at all). Every number below is now read
+// directly from scoring.ts's exported constants, so this page cannot drift
+// from the code that actually computes scores — see scoring.test.ts's
+// "scoring-guide constants (#259 C2)" suite for the pinned regression check.
 function ScoringView() {
+  useEffect(() => {
+    document.title = 'Scoring Guide — Kotonoha';
+  }, []);
+
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-semibold tracking-tight mb-8">
@@ -13,23 +50,12 @@ function ScoringView() {
           Rarer words score higher.
         </p>
         <ul className="list-disc list-inside space-y-2 mb-8">
-          <li>
-            <span className="font-medium text-indigo-600">N5</span>: +15 pts
-            (Fundamentals)
-          </li>
-          <li>
-            <span className="font-medium text-indigo-600">N4</span>: +25 pts
-          </li>
-          <li>
-            <span className="font-medium text-indigo-600">N3</span>: +50 pts
-          </li>
-          <li>
-            <span className="font-medium text-indigo-600">N2</span>: +75 pts
-          </li>
-          <li>
-            <span className="font-medium text-indigo-600">N1</span>: +100 pts
-            (Native / Advanced)
-          </li>
+          {JLPT_LEVEL_ORDER.map((level) => (
+            <li key={level}>
+              <span className="font-medium text-indigo-600">{JLPT_LABELS[level]}</span>:{' '}
+              {formatPts(JLPT_SCORES[level])}
+            </li>
+          ))}
         </ul>
 
         <h3 className="text-xl font-bold mb-4 border-b border-gray-100 pb-2">
@@ -40,31 +66,11 @@ function ScoringView() {
           highest-grade kanji it contains.
         </p>
         <ul className="list-disc list-inside space-y-2 mb-8">
-          <li>
-            <span className="font-medium">Grade 1</span>: +5 pts
-          </li>
-          <li>
-            <span className="font-medium">Grade 2</span>: +7 pts
-          </li>
-          <li>
-            <span className="font-medium">Grade 3</span>: +10 pts
-          </li>
-          <li>
-            <span className="font-medium">Grade 4</span>: +12 pts
-          </li>
-          <li>
-            <span className="font-medium">Grade 5</span>: +15 pts
-          </li>
-          <li>
-            <span className="font-medium">Grade 6</span>: +20 pts
-          </li>
-          <li>
-            <span className="font-medium">Grade 8 (Middle School)</span>: +25
-            pts
-          </li>
-          <li>
-            <span className="font-medium">Grade 9+ (Non-Joyo)</span>: +30 pts
-          </li>
+          {JOYO_GRADE_ORDER.map((grade) => (
+            <li key={grade}>
+              <span className="font-medium">{JOYO_LABELS[grade]}</span>: {formatPts(JOYO_PENALTIES[grade])}
+            </li>
+          ))}
         </ul>
 
         <h3 className="text-xl font-bold mb-4 border-b border-gray-100 pb-2">
@@ -72,55 +78,17 @@ function ScoringView() {
         </h3>
         <p className="text-sm text-gray-600 mb-4">
           Words are penalized or rewarded based on their frequency in standard
-          Japanese corpora. Values range from -20 to +50.
+          Japanese corpora. Values range from{' '}
+          {formatPts(Math.min(...FREQUENCY_PENALTY_RULES.map((r) => r.penalty)))} to{' '}
+          {formatPts(Math.max(...FREQUENCY_PENALTY_RULES.map((r) => r.penalty)))}.
         </p>
         <ul className="list-disc list-inside space-y-2">
-          <li>
-            <span className="font-medium text-red-500">Very Common</span>{' '}
-            (ichi1, news1, common kana): -20 pts
-          </li>
-          <li>
-            <span className="font-medium text-orange-500">Common</span> (ichi2,
-            news2): -10 pts
-          </li>
-          <li>
-            <span className="font-medium">Frequent Loan/Spec 1</span> (gai1,
-            spec1): 0 pts
-          </li>
-          <li>
-            <span className="font-medium">Frequent Loan/Spec 2</span> (gai2,
-            spec2): +5 pts
-          </li>
-          <li>
-            <span className="font-medium">General Corpus Rank 1-5</span>{' '}
-            (nf01-nf05): +10 pts
-          </li>
-          <li>
-            <span className="font-medium">General Corpus Rank 6-10</span>{' '}
-            (nf06-nf10): +15 pts
-          </li>
-          <li>
-            <span className="font-medium text-green-600">
-              General Corpus Rank 11-20
-            </span>{' '}
-            (nf11-nf20): +20 pts
-          </li>
-          <li>
-            <span className="font-medium text-emerald-600">
-              General Corpus Rank 21-30
-            </span>{' '}
-            (nf21-nf30): +30 pts
-          </li>
-          <li>
-            <span className="font-medium text-teal-600">
-              General Corpus Rank 31-48
-            </span>{' '}
-            (nf31-nf48): +40 pts
-          </li>
-          <li>
-            <span className="font-medium text-blue-600">Very Rare</span> (No
-            frequency tags): +50 pts
-          </li>
+          {FREQUENCY_PENALTY_RULES.map((rule) => (
+            <li key={rule.id}>
+              <span className="font-medium">{rule.label}</span> ({rule.detail}):{' '}
+              {formatPts(rule.penalty)}
+            </li>
+          ))}
         </ul>
       </div>
     </section>

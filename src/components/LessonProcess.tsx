@@ -1,15 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
 import { WordInfo } from '../types';
 import { X, Check } from 'lucide-react';
+import { AppHeader, type AppView } from './AppHeader';
 
 export function LessonProcess({
   words,
   onComplete,
-  onCancel
+  onCancel,
+  onNavigateView,
+  knownCount,
 }: {
   words: WordInfo[];
   onComplete: (learned: string[]) => void;
   onCancel: () => void;
+  /** #259 I1: jump to a top-level view (Home/Vocab/Scoring/Settings) from the persistent AppHeader. */
+  onNavigateView?: (view: AppView) => void;
+  knownCount?: number;
 }) {
   const LESSON_CAP = 50;
   const [queue, setQueue] = useState<WordInfo[]>(() => words.slice(0, LESSON_CAP));
@@ -17,10 +23,21 @@ export function LessonProcess({
   const [showAnswer, setShowAnswer] = useState(false);
   const [learnedWords, setLearnedWords] = useState<string[]>([]);
   const [pendingAction, setPendingAction] = useState<{learned: boolean} | null>(null);
-  
+
+  // #259 P4: reflect the lesson flow in the tab title instead of the static
+  // "Kotonoha".
+  useEffect(() => {
+    document.title = 'Lesson — Kotonoha';
+  }, []);
+
   if (queue.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="relative min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+        {onNavigateView && (
+          <div className="absolute top-0 left-0 w-full">
+            <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+          </div>
+        )}
         <div className="text-center max-w-md">
           <h2 className="text-2xl font-bold mb-4">You already know all these words!</h2>
           <button 
@@ -74,6 +91,14 @@ export function LessonProcess({
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+      {/* #259 I1: persistent nav so Vocab/Scoring/Settings are reachable
+          without cancelling the lesson first. Deliberately left in its
+          normal light styling rather than re-skinned for the dark lesson
+          theme — a visible seam, but lower-risk than forking AppHeader's
+          styles per view. */}
+      {onNavigateView && (
+        <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+      )}
       <div className="p-6 flex items-center justify-between">
         <button onClick={onCancel} className="text-gray-400 hover:text-white transition">
           <X className="w-6 h-6" />
@@ -108,9 +133,9 @@ export function LessonProcess({
             <div className={`absolute inset-0 bg-white rounded-3xl shadow-2xl flex flex-col items-center justify-center p-8 text-black backface-hidden ${showAnswer ? 'pointer-events-none' : ''}`}>
               <span className="text-gray-400 text-sm font-medium tracking-widest uppercase mb-4">Click to reveal</span>
               {currentWord.reading !== currentWord.word && (
-                <span className="text-xl text-gray-500 mb-2">{currentWord.reading}</span>
+                <span lang="ja" className="text-xl text-gray-500 mb-2">{currentWord.reading}</span>
               )}
-              <span className="text-6xl font-bold">{currentWord.word}</span>
+              <span lang="ja" className="text-6xl font-bold">{currentWord.word}</span>
             </div>
 
             {/* BACK */}

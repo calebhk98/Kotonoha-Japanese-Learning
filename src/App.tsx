@@ -1,5 +1,6 @@
 import { CheckCircle, Plus, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { type AppView } from './components/AppHeader';
 import { ContentDetail } from './components/ContentDetail';
 import { ImportModal } from './components/ImportModal';
 import { SettingsPage } from './components/SettingsPage';
@@ -49,6 +50,8 @@ export default function App() {
   // bouncing back to the content intro screen.
   const [contentView, setContentView] = useContentView(selectedContent?.id);
 
+  // navigateBack comes from useUrlRouting — it carries the #259 P9 fix
+  // (deep-linked /word/:word with no in-app history no longer dead-ends).
   const { navigateToWord, navigateBack } = useUrlRouting({ setSelectedWord });
 
   useEffect(() => {
@@ -56,6 +59,34 @@ export default function App() {
     const id = setTimeout(() => setToast(null), 4000);
     return () => clearTimeout(id);
   }, [toast]);
+
+  // #259 P4: document.title was always the static "Kotonoha" from index.html
+  // and never reflected the active view. ContentDetail/ContentReader/
+  // WordDetailPage/LessonProcess set their own title while they're shown
+  // (selectedContent/selectedWord below), so this only needs to cover the
+  // top-level shell views.
+  useEffect(() => {
+    if (selectedContent || selectedWord) return;
+    const titles: Record<typeof view, string> = {
+      home: 'Kotonoha — Content',
+      vocab: 'My Vocabulary — Kotonoha',
+      scoring: 'Scoring Guide — Kotonoha',
+      settings: 'Settings — Kotonoha',
+    };
+    document.title = titles[view];
+  }, [view, selectedContent, selectedWord]);
+
+  // #259 I1: lets the persistent nav bar (AppHeader) jump straight to a
+  // top-level view from anywhere — Content Detail, the Reader, Word Detail,
+  // or the Lesson flow — without the user having to back out step by step
+  // first. Deliberately only touches the local view/selection state (not
+  // window.history) so it doesn't interfere with the existing back-button/
+  // popstate routing.
+  const goToView = (v: AppView) => {
+    setSelectedContent(null);
+    setSelectedWord(null);
+    setView(v);
+  };
 
   const {
     searchQuery,
@@ -101,6 +132,8 @@ export default function App() {
           allWords={Object.values(contentVocab).flat() as WordInfo[]}
           onNavigateWord={navigateToWord}
           onEdit={(wordInfo) => setEditingWord(wordInfo)}
+          onNavigateView={goToView}
+          knownCount={knownWords.size}
         />
         {editingWord && (
           <WordDetailModal
@@ -125,6 +158,8 @@ export default function App() {
         knownWordSet={knownWords}
         view={contentView}
         setView={setContentView}
+        onNavigateView={goToView}
+        knownCount={knownWords.size}
         onForceReload={() => loadVocabForContent(selectedContent, true)}
         onUpdateContent={(updatedContent) => {
           let updatedVocab = false;
@@ -187,41 +222,51 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F5F2ED] text-gray-900 font-sans">
-      <header className="bg-white px-6 py-4 shadow-sm border-b border-gray-200 sticky top-0 z-10 w-full">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-semibold tracking-tight cursor-pointer" onClick={() => setView('home')}>
+      {/* #259 I3: at 390px the logo + 4 nav links overflowed the header,
+          clipping "Settings" to "Setting" with no way to scroll or wrap to
+          it. Tighter mobile padding/gaps, a smaller logo, and short labels
+          below the sm breakpoint (full labels return at sm+) keep everything
+          on one row without adding a hamburger menu. */}
+      <header className="bg-white px-3 sm:px-6 py-3 sm:py-4 shadow-sm border-b border-gray-200 sticky top-0 z-10 w-full">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-1">
+          <h1
+            className="text-base sm:text-xl font-semibold tracking-tight cursor-pointer shrink-0"
+            onClick={() => setView('home')}
+          >
             Kotonoha <span className="text-xs text-gray-500 font-normal uppercase tracking-widest ml-2 hidden sm:inline">Language Learning</span>
           </h1>
-          <div className="flex items-center gap-4">
-            <button 
+          <div className="flex items-center gap-1.5 sm:gap-4 min-w-0">
+            <button
               onClick={() => setShowImportOpts(true)}
               className="hidden sm:flex text-sm font-medium items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200"
             >
               <Plus className="w-4 h-4" /> Import Text
             </button>
-            <button 
+            <button
               onClick={() => setView('home')}
-              className={`text-sm font-medium transition-colors ${view === 'home' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+              className={`text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${view === 'home' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
             >
               Content
             </button>
-            <button 
+            <button
               onClick={() => setView('vocab')}
-              className={`text-sm font-medium transition-colors ${view === 'vocab' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+              className={`text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${view === 'vocab' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
             >
-              My Vocab
+              <span className="sm:hidden">Vocab</span>
+              <span className="hidden sm:inline">My Vocab</span>
             </button>
             <button
               onClick={() => setView('scoring')}
-              className={`text-sm font-medium transition-colors ${view === 'scoring' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+              className={`text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${view === 'scoring' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
             >
-              Scoring Guide
+              <span className="sm:hidden">Scoring</span>
+              <span className="hidden sm:inline">Scoring Guide</span>
             </button>
             <button
               onClick={() => setView('settings')}
-              className={`text-sm font-medium transition-colors flex items-center gap-1 ${view === 'settings' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+              className={`text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${view === 'settings' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
             >
-              <Settings className="w-4 h-4" /> Settings
+              <Settings className="w-4 h-4 shrink-0" /> Settings
             </button>
             <div className="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
               <CheckCircle className="w-4 h-4 text-green-600" />

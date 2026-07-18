@@ -350,8 +350,12 @@ function HomeView({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {visibleContent.map((content) => {
           const status = getContentStatus(content.id);
+          // #259 C1: `loaded` (not totalCount === 0) is the "still loading"
+          // signal — totalCount === 0 is also true for content that's fully
+          // loaded but genuinely has no extracted vocabulary, which used to
+          // show "Analyzing vocabulary..." forever for those cards.
           const isLoading =
-            loadingContent[content.id] || status.totalCount === 0;
+            loadingContent[content.id] || !status.loaded;
           const showUnknownChips =
             comprehensionRange[0] >= 85 && comprehensionRange[1] < 100;
 
@@ -568,6 +572,7 @@ type HomeViewProps = {
     score: number;
     unknownWords?: WordInfo[];
     comprehension: number;
+    loaded: boolean;
   };
   comprehensionColor: (comprehension: number) => string;
 

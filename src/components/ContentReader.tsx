@@ -2,6 +2,7 @@ import { Content } from '../data/content';
 import { WordInfo } from '../types';
 import { ArrowLeft, Play, Pause, Loader2 } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo, type KeyboardEvent, type ReactNode } from 'react';
+import { AppHeader, type AppView } from './AppHeader';
 
 function getYouTubeId(url: string) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -22,7 +23,22 @@ interface ParagraphTokens {
   tokens: Token[];
 }
 
-export function ContentReader({ content, vocab, onBack, onWordClick }: { content: Content; vocab?: WordInfo[]; onBack: () => void; onWordClick?: (word: string, reading?: string, pos?: string) => void }) {
+export function ContentReader({
+  content,
+  vocab,
+  onBack,
+  onWordClick,
+  onNavigateView,
+  knownCount,
+}: {
+  content: Content;
+  vocab?: WordInfo[];
+  onBack: () => void;
+  onWordClick?: (word: string, reading?: string, pos?: string) => void;
+  /** #259 I1: jump to a top-level view (Home/Vocab/Scoring/Settings) from the persistent AppHeader. */
+  onNavigateView?: (view: AppView) => void;
+  knownCount?: number;
+}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showFurigana, setShowFurigana] = useState(true);
   const [showHoverDefs, setShowHoverDefs] = useState(true);
@@ -34,6 +50,12 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
   const [loadStatus, setLoadStatus] = useState<'loading' | 'error' | 'ready'>('loading');
   const [retryCount, setRetryCount] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // #259 P4: reflect the story/song/video being read in the tab title
+  // instead of the static "Kotonoha".
+  useEffect(() => {
+    document.title = `${content.title} — Kotonoha`;
+  }, [content.title]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -139,7 +161,9 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
         const inner = hasFurigana ? (
           <ruby className="leading-loose">
             {token.surface}
-            <rt className="text-xs text-gray-500 font-medium select-none">{info.reading}</rt>
+            {/* #259 P6: gray-500 at 12px was borderline-low contrast for
+                furigana; gray-700 reads clearly at the same size. */}
+            <rt className="text-xs text-gray-700 font-medium select-none">{info.reading}</rt>
           </ruby>
         ) : (
           <span>{token.surface}</span>
@@ -177,8 +201,8 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
                       Morpheme
                     </span>
                   )}
-                  <span className="text-xs text-gray-400 font-medium">{info.reading}</span>
-                  <span className="font-bold text-base">{info.word}</span>
+                  <span lang="ja" className="text-xs text-gray-400 font-medium">{info.reading}</span>
+                  <span lang="ja" className="font-bold text-base">{info.word}</span>
                   <span className="text-sm border-t border-gray-700 pt-1 mt-1 text-gray-200">{info.meaning}</span>
                   <div className="flex gap-2 mt-1 text-xs text-gray-400 font-medium">
                     {info.jlpt > 0 && <span>N{info.jlpt}</span>}
@@ -221,32 +245,41 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
 
   return (
     <div className="min-h-screen bg-[#F5F2ED] text-gray-900 font-sans flex flex-col">
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <button 
-            onClick={onBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-black transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium text-sm">Exit</span>
-          </button>
-          <div className="flex items-center gap-3">
-             <button 
-               onClick={() => setShowFurigana(!showFurigana)}
-               className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border transition-colors ${showFurigana ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
-             >
-               ふりがな {showFurigana ? 'ON' : 'OFF'}
-             </button>
-             <button 
-               onClick={() => setShowHoverDefs(!showHoverDefs)}
-               className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border transition-colors ${showHoverDefs ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
-             >
-               Hover {showHoverDefs ? 'ON' : 'OFF'}
-             </button>
-             <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">{content.type}</span>
+      {/* #259 I1: the persistent nav (AppHeader) and this view's own Exit/
+          furigana-toggle bar are wrapped in one sticky container so they
+          scroll-stick together as a single unit instead of each fighting
+          over `sticky top-0`. */}
+      <div className="sticky top-0 z-20">
+        {onNavigateView && (
+          <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+        )}
+        <header className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-200">
+          <div className="max-w-3xl mx-auto flex items-center justify-between">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-black transition"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium text-sm">Exit</span>
+            </button>
+            <div className="flex items-center gap-3">
+               <button
+                 onClick={() => setShowFurigana(!showFurigana)}
+                 className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border transition-colors ${showFurigana ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
+               >
+                 ふりがな {showFurigana ? 'ON' : 'OFF'}
+               </button>
+               <button
+                 onClick={() => setShowHoverDefs(!showHoverDefs)}
+                 className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border transition-colors ${showHoverDefs ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
+               >
+                 Hover {showHoverDefs ? 'ON' : 'OFF'}
+               </button>
+               <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">{content.type}</span>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       <main className="flex-grow max-w-3xl mx-auto w-full p-6 space-y-12 pb-24">
         {(content.type === 'video' || content.type === 'music') && (
@@ -315,8 +348,10 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
             </div>
           )}
 
+          {/* #259 P5: mark the Japanese story body so screen readers use
+              Japanese TTS/pronunciation instead of reading it as English. */}
           {loadStatus !== 'loading' && (
-            <div className="space-y-6 text-lg md:text-xl leading-relaxed text-gray-800">
+            <div lang="ja" className="space-y-6 text-lg md:text-xl leading-relaxed text-gray-800">
               {paragraphs.map((p, i) => (
                 <div key={i}>{renderParagraph(p)}</div>
               ))}
