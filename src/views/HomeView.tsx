@@ -355,14 +355,25 @@ function HomeView({
           const showUnknownChips =
             comprehensionRange[0] >= 85 && comprehensionRange[1] < 100;
 
+          const openContent = () => {
+            loadVocabForContent(content);
+            setSelectedContent(content);
+          };
+
           return (
             <div
               key={content.id}
-              onClick={() => {
-                loadVocabForContent(content);
-                setSelectedContent(content);
+              onClick={openContent}
+              role="button"
+              tabIndex={0}
+              aria-label={`Open ${content.title}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openContent();
+                }
               }}
-              className="bg-white rounded-3xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all border border-gray-100 group flex flex-col h-full"
+              className="bg-white rounded-3xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all border border-gray-100 group flex flex-col h-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
               <div className="aspect-[4/3] w-full bg-gray-100 relative overflow-hidden">
                 {content.imageUrl ? (
