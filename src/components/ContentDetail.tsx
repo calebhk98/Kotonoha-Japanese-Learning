@@ -29,6 +29,8 @@ export function ContentDetail({
   onAddWord,
   knownWordSet,
   onWordClick,
+  view,
+  setView,
 }: {
   content: Content;
   onBack: () => void;
@@ -40,8 +42,12 @@ export function ContentDetail({
   onAddWord?: (addedWordStr: string) => void;
   knownWordSet?: Set<string>;
   onWordClick?: (word: string, reading?: string, pos?: string) => void;
+  // #259 B3: view is owned by the parent (App), not local state, so it
+  // survives ContentDetail unmounting while a word-detail page is shown on
+  // top of it. See src/hooks/useContentView.ts.
+  view: 'intro' | 'lesson' | 'consume';
+  setView: (view: 'intro' | 'lesson' | 'consume') => void;
 }) {
-  const [view, setView] = useState<'intro' | 'lesson' | 'consume'>('intro');
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(content.title);
   const [editText, setEditText] = useState(content.text);

@@ -1,5 +1,5 @@
 import { CheckCircle, Plus, Settings } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ContentDetail } from './components/ContentDetail';
 import { ImportModal } from './components/ImportModal';
 import { SettingsPage } from './components/SettingsPage';
@@ -8,6 +8,7 @@ import { WordDetailPage } from './components/WordDetailPage';
 import { Content } from './data/content';
 import { useContentBootstrap } from './hooks/useContentBootstrap';
 import { useContentData } from './hooks/useContentData';
+import { useContentView } from './hooks/useContentView';
 import { useHomeFilters } from './hooks/useHomeFilters';
 import { useUrlRouting } from './hooks/useUrlRouting';
 import { WordInfo } from './types';
@@ -39,15 +40,22 @@ export default function App() {
   const [showImportOpts, setShowImportOpts] = useState(false);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
   const [editingWord, setEditingWord] = useState<WordInfo | null>(null);
+  // #259 C4: replaces the old blocking window.alert() for add-word failures.
+  const [toast, setToast] = useState<string | null>(null);
 
-  const { navigateToWord } = useUrlRouting({ setSelectedWord });
+  // #259 B3: contentView lives here (not inside ContentDetail's local state)
+  // so it survives ContentDetail unmounting while WordDetailPage is shown on
+  // top of it — pressing browser Back returns to the reader instead of
+  // bouncing back to the content intro screen.
+  const [contentView, setContentView] = useContentView(selectedContent?.id);
 
-  const navigateBack = () => {
-    if (selectedWord) {
-      setSelectedWord(null);
-      window.history.back();
-    }
-  };
+  const { navigateToWord, navigateBack } = useUrlRouting({ setSelectedWord });
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(id);
+  }, [toast]);
 
   const {
     searchQuery,
@@ -107,6 +115,7 @@ export default function App() {
 
   if (selectedContent) {
     return (
+      <>
       <ContentDetail
         content={selectedContent}
         onBack={() => setSelectedContent(null)}
@@ -114,6 +123,8 @@ export default function App() {
         loading={loadingContent[selectedContent.id]}
         markWordsAsKnown={markWordsAsKnown}
         knownWordSet={knownWords}
+        view={contentView}
+        setView={setContentView}
         onForceReload={() => loadVocabForContent(selectedContent, true)}
         onUpdateContent={(updatedContent) => {
           let updatedVocab = false;
@@ -157,11 +168,20 @@ export default function App() {
             localStorage.setItem('contentVocab', JSON.stringify(newVocab));
           } catch (e) {
             console.error(e);
-            alert('Failed to add word');
+            setToast('Failed to add word');
           }
         }}
         onWordClick={navigateToWord}
       />
+      {toast && (
+        <div
+          role="alert"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl"
+        >
+          {toast}
+        </div>
+      )}
+      </>
     );
   }
 
