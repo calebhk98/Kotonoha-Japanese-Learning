@@ -6,6 +6,9 @@ import {
   wordsCache,
   JLPT_SCORES,
   JOYO_PENALTIES,
+  JLPT_LABELS,
+  JOYO_LABELS,
+  FREQUENCY_PENALTY_RULES,
   type DictionaryEntry,
   type DictionaryVariant,
 } from './scoring';
@@ -76,6 +79,63 @@ describe('getFrequencyPenalty', () => {
   it('returns 50 for variant with no priorities', () => {
     expect(getFrequencyPenalty(v([]), 'x')).toBe(50);
     expect(getFrequencyPenalty({ written: 'x', pronounced: 'x' }, 'x')).toBe(50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scoring-guide source of truth (#259 C2) — pins that the exported constants
+// ScoringView renders from stay in lockstep with the functions that actually
+// compute scores, so the guide can never silently drift again like it did
+// (N4 shown as +25 vs the real 30, N2 +75 vs 70, N1 +100 vs 90).
+// ---------------------------------------------------------------------------
+
+describe('scoring-guide constants (#259 C2)', () => {
+  it('JLPT_SCORES has an entry (and a label) for every level 0-5', () => {
+    for (const level of [5, 4, 3, 2, 1, 0]) {
+      expect(JLPT_SCORES[level]).toBeTypeOf('number');
+      expect(JLPT_LABELS[level]).toBeTypeOf('string');
+    }
+  });
+
+  it('JOYO_PENALTIES has an entry (and a label) for every grade bucket', () => {
+    for (const grade of [1, 2, 3, 4, 5, 6, 8, 9]) {
+      expect(JOYO_PENALTIES[grade]).toBeTypeOf('number');
+      expect(JOYO_LABELS[grade]).toBeTypeOf('string');
+    }
+  });
+
+  it('FREQUENCY_PENALTY_RULES reproduces every getFrequencyPenalty branch used by scoring.test.ts', () => {
+    const v = (priorities: string[]): DictionaryVariant => ({ written: 'x', pronounced: 'x', priorities });
+
+    // Tag-based rules: every listed tag must round-trip through getFrequencyPenalty
+    // to the rule's own penalty value.
+    for (const rule of FREQUENCY_PENALTY_RULES) {
+      if (!rule.tags) continue;
+      for (const tag of rule.tags) {
+        expect(getFrequencyPenalty(v([tag]), 'x'), `tag ${tag}`).toBe(rule.penalty);
+      }
+    }
+
+    // nf-bucket rules: the rank at the ceiling of each bucket must match.
+    const nfRules = FREQUENCY_PENALTY_RULES.filter((r) => r.nfMax !== undefined);
+    for (const rule of nfRules) {
+      const rank = Number.isFinite(rule.nfMax) ? (rule.nfMax as number) : 48;
+      const tag = `nf${String(rank).padStart(2, '0')}`;
+      expect(getFrequencyPenalty(v([tag]), 'x'), `nf rank ${rank}`).toBe(rule.penalty);
+    }
+
+    // kana-fallback and very-rare fallback.
+    const kanaRule = FREQUENCY_PENALTY_RULES.find((r) => r.kanaFallback)!;
+    expect(getFrequencyPenalty(null, 'は')).toBe(kanaRule.penalty);
+    const fallbackRule = FREQUENCY_PENALTY_RULES.find((r) => r.fallback)!;
+    expect(getFrequencyPenalty(v([]), 'x')).toBe(fallbackRule.penalty);
+  });
+
+  it('every rule has a non-empty label and detail for the Scoring Guide UI', () => {
+    for (const rule of FREQUENCY_PENALTY_RULES) {
+      expect(rule.label.length).toBeGreaterThan(0);
+      expect(rule.detail.length).toBeGreaterThan(0);
+    }
   });
 });
 
