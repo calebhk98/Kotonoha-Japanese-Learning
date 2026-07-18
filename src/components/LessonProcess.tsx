@@ -11,7 +11,8 @@ export function LessonProcess({
   onComplete: (learned: string[]) => void;
   onCancel: () => void;
 }) {
-  const [queue, setQueue] = useState<WordInfo[]>(() => words.slice(0, 50));
+  const LESSON_CAP = 50;
+  const [queue, setQueue] = useState<WordInfo[]>(() => words.slice(0, LESSON_CAP));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [learnedWords, setLearnedWords] = useState<string[]>([]);
@@ -90,6 +91,12 @@ export function LessonProcess({
         </div>
         <div className="w-6" /> {/* spacer for alignment */}
       </div>
+
+      {words.length > LESSON_CAP && (
+        <p className="text-center text-xs text-amber-400/90 -mt-4 mb-2 px-6">
+          Showing {LESSON_CAP} of {words.length} words you don't know yet — the rest weren't included in this lesson.
+        </p>
+      )}
 
       <div className="flex-grow flex items-center justify-center p-6">
         <div className="w-full max-w-lg perspective-[1000px]">
