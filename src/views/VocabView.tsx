@@ -271,40 +271,47 @@ function VocabView({
           learned yet. Click a word to view details.
         </p>
         <div className="flex flex-wrap gap-2">
-          {Array.from(
-            new Set(
-              (Object.values(contentVocab).flat() as WordInfo[])
-                .map((w) => w.word)
-                .filter((w) => !knownWords.has(w)),
-            ),
-          )
-            .filter((w) =>
-              searchQuery === '' || w.toLowerCase().includes(searchQuery.toLowerCase()),
-            )
-            .slice(0, 100)
-            .map((w: string) => {
-              const info = (
-                Object.values(contentVocab).flat() as WordInfo[]
-              ).find((x) => x.word === w);
-              return (
-                <button
-                  key={`unknown-${w}`}
-                  onClick={() => navigateToWord(w)}
-                  className="px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium group relative hover:bg-gray-100 transition-colors"
-                >
-                  <span className="opacity-0 group-hover:opacity-100 absolute z-10 bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap transition-opacity">
-                    {info?.meaning || w}
-                  </span>
-                  {w}
-                </button>
-              );
-            })}
+          {(() => {
+            const SHOWN_LIMIT = 100;
+            const allVocab = Object.values(contentVocab).flat() as WordInfo[];
+            const upcomingWords = Array.from(
+              new Set(allVocab.map((w) => w.word).filter((w) => !knownWords.has(w))),
+            ).filter(
+              (w) => searchQuery === '' || w.toLowerCase().includes(searchQuery.toLowerCase()),
+            );
+            const shown = upcomingWords.slice(0, SHOWN_LIMIT);
+            // #259 I5: this used to render the literal string "+ thousands
+            // more" whenever total vocab exceeded 100, regardless of how many
+            // words were actually left (could be 101, or 100k) — mirror
+            // Home's "+N more" pattern with the real remaining count instead.
+            const remaining = upcomingWords.length - shown.length;
 
-          {(Object.values(contentVocab).flat() as WordInfo[]).length > 100 && (
-            <span className="px-3 py-1.5 text-gray-400 text-sm font-medium italic">
-              + thousands more
-            </span>
-          )}
+            return (
+              <>
+                {shown.map((w: string) => {
+                  const info = allVocab.find((x) => x.word === w);
+                  return (
+                    <button
+                      key={`unknown-${w}`}
+                      onClick={() => navigateToWord(w)}
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium group relative hover:bg-gray-100 transition-colors"
+                    >
+                      <span className="opacity-0 group-hover:opacity-100 absolute z-10 bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap transition-opacity">
+                        {info?.meaning || w}
+                      </span>
+                      {w}
+                    </button>
+                  );
+                })}
+
+                {remaining > 0 && (
+                  <span className="px-3 py-1.5 text-gray-400 text-sm font-medium italic">
+                    + {remaining.toLocaleString()} more
+                  </span>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
