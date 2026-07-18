@@ -252,6 +252,7 @@ function VocabView({
               .map((w: string) => (
                 <button
                   key={w}
+                  lang="ja"
                   onClick={() => navigateToWord(w)}
                   className="px-3 py-1.5 bg-green-50 border border-green-100 text-green-800 rounded-lg text-sm font-medium transition-colors hover:bg-green-100 cursor-pointer"
                 >
@@ -293,10 +294,11 @@ function VocabView({
                   return (
                     <button
                       key={`unknown-${w}`}
+                      lang="ja"
                       onClick={() => navigateToWord(w)}
                       className="px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium group relative hover:bg-gray-100 transition-colors"
                     >
-                      <span className="opacity-0 group-hover:opacity-100 absolute z-10 bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap transition-opacity">
+                      <span lang="en" className="opacity-0 group-hover:opacity-100 absolute z-10 bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap transition-opacity">
                         {info?.meaning || w}
                       </span>
                       {w}
@@ -358,7 +360,7 @@ function VocabView({
                     View
                   </span>
                 </div>
-                <div>
+                <div lang="ja">
                   <div className="text-xs text-gray-500">{w.reading}</div>
                   <div className="font-bold text-lg text-gray-900">
                     {w.word}

@@ -101,9 +101,9 @@ export function LessonProcess({
             <div className={`absolute inset-0 bg-white rounded-3xl shadow-2xl flex flex-col items-center justify-center p-8 text-black backface-hidden ${showAnswer ? 'pointer-events-none' : ''}`}>
               <span className="text-gray-400 text-sm font-medium tracking-widest uppercase mb-4">Click to reveal</span>
               {currentWord.reading !== currentWord.word && (
-                <span className="text-xl text-gray-500 mb-2">{currentWord.reading}</span>
+                <span lang="ja" className="text-xl text-gray-500 mb-2">{currentWord.reading}</span>
               )}
-              <span className="text-6xl font-bold">{currentWord.word}</span>
+              <span lang="ja" className="text-6xl font-bold">{currentWord.word}</span>
             </div>
 
             {/* BACK */}

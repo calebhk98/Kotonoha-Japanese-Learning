@@ -121,7 +121,9 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
         const inner = hasFurigana ? (
           <ruby className="leading-loose">
             {token.surface}
-            <rt className="text-xs text-gray-500 font-medium select-none">{info.reading}</rt>
+            {/* #259 P6: gray-500 at 12px was borderline-low contrast for
+                furigana; gray-700 reads clearly at the same size. */}
+            <rt className="text-xs text-gray-700 font-medium select-none">{info.reading}</rt>
           </ruby>
         ) : (
           <span>{token.surface}</span>
@@ -142,8 +144,8 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
                       Morpheme
                     </span>
                   )}
-                  <span className="text-xs text-gray-400 font-medium">{info.reading}</span>
-                  <span className="font-bold text-base">{info.word}</span>
+                  <span lang="ja" className="text-xs text-gray-400 font-medium">{info.reading}</span>
+                  <span lang="ja" className="font-bold text-base">{info.word}</span>
                   <span className="text-sm border-t border-gray-700 pt-1 mt-1 text-gray-200">{info.meaning}</span>
                   <div className="flex gap-2 mt-1 text-xs text-gray-400 font-medium">
                     {info.jlpt > 0 && <span>N{info.jlpt}</span>}
@@ -257,7 +259,9 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
             <div className="w-16 h-1 bg-indigo-600 rounded-full mb-8" />
           </div>
 
-          <div className="space-y-6 text-lg md:text-xl leading-relaxed text-gray-800">
+          {/* #259 P5: mark the Japanese story body so screen readers use
+              Japanese TTS/pronunciation instead of reading it as English. */}
+          <div lang="ja" className="space-y-6 text-lg md:text-xl leading-relaxed text-gray-800">
             {paragraphs.map((p, i) => (
               <div key={i}>{renderParagraph(p)}</div>
             ))}

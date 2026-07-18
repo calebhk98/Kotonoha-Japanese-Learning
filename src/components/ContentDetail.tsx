@@ -216,7 +216,7 @@ export function ContentDetail({
                       onClick={() => onWordClick?.(w.word, w.reading, w.pos)}
                       className="border border-gray-100 bg-gray-50 hover:bg-gray-100 hover:border-indigo-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 transition-colors text-left w-full cursor-pointer"
                     >
-                      <div>
+                      <div lang="ja">
                         <div className="text-xs text-gray-500 flex items-center gap-2">
                           <span>{w.reading}</span>
                           {w.frequencyInContent && w.frequencyInContent > 1 && (
@@ -224,7 +224,7 @@ export function ContentDetail({
                           )}
                         </div>
                         <div className="font-bold text-lg">{w.word}</div>
-                        <div className="text-sm font-medium text-gray-700 mt-1">{w.meaning}</div>
+                        <div lang="en" className="text-sm font-medium text-gray-700 mt-1">{w.meaning}</div>
                       </div>
                       <div className="bg-white border border-gray-200 p-3 rounded-lg text-xs space-y-1 min-w-[200px]">
                         <div className="flex justify-between font-semibold border-b border-gray-100 pb-1 mb-1">
@@ -294,7 +294,7 @@ export function ContentDetail({
                       className="border border-green-100 bg-white/50 hover:bg-green-50/50 hover:border-green-200 rounded-xl p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 transition-colors text-left w-full cursor-pointer"
                     >
                       <div>
-                        <div className="flex items-baseline gap-2">
+                        <div lang="ja" className="flex items-baseline gap-2">
                           <span className="font-bold text-lg text-gray-900">{w.word}</span>
                           <span className="text-sm text-gray-500">{w.reading}</span>
                         </div>

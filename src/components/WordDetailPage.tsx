@@ -180,8 +180,10 @@ export function WordDetailPage({
           {/* Word Header */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <h1 className="text-5xl md:text-6xl font-bold font-serif">{wordData.word}</h1>
-              <p className="text-xl text-gray-600">{wordData.reading}</p>
+              {/* #259 P5: mark the Japanese headword/reading so screen readers
+                  don't read them with English pronunciation rules. */}
+              <h1 lang="ja" className="text-5xl md:text-6xl font-bold font-serif">{wordData.word}</h1>
+              <p lang="ja" className="text-xl text-gray-600">{wordData.reading}</p>
             </div>
             <div className="w-16 h-1 bg-indigo-600 rounded-full" />
           </div>
@@ -344,6 +346,7 @@ export function WordDetailPage({
                 {relatedWords.map((w, idx) => (
                   <button
                     key={idx}
+                    lang="ja"
                     onClick={() => onNavigateWord?.(w.word)}
                     className="px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
                   >
