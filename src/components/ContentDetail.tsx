@@ -6,6 +6,7 @@ import { WK_STAGE_NAMES } from '../lib/wanikani';
 import { LessonProcess } from './LessonProcess';
 import { ContentReader } from './ContentReader';
 import { AnkiExportModal } from './AnkiExportModal';
+import { AddWordModal } from './AddWordModal';
 
 interface Status {
   difficulty: number;
@@ -53,6 +54,7 @@ export function ContentDetail({
   const [editText, setEditText] = useState(content.text);
   const [showAllWords, setShowAllWords] = useState(false);
   const [showAnkiModal, setShowAnkiModal] = useState(false);
+  const [showAddWordModal, setShowAddWordModal] = useState(false);
 
   if (view === 'lesson') {
     return (
@@ -146,12 +148,8 @@ export function ContentDetail({
             <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
               <h2 className="text-2xl font-semibold">Vocabulary Overview</h2>
               <div className="flex gap-2">
-                <button 
-                  onClick={() => {
-                    const newWordStr = prompt("Enter the new word:");
-                    if (!newWordStr) return;
-                    if (onAddWord) onAddWord(newWordStr);
-                  }}
+                <button
+                  onClick={() => setShowAddWordModal(true)}
                    className="text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
                 >
                   Add Custom Word
@@ -411,6 +409,13 @@ export function ContentDetail({
           words={[...status.unknownWords, ...status.knownWords]}
           knownWordSet={knownWordSet ?? new Set()}
           onClose={() => setShowAnkiModal(false)}
+        />
+      )}
+
+      {showAddWordModal && (
+        <AddWordModal
+          onClose={() => setShowAddWordModal(false)}
+          onAdd={(newWordStr) => onAddWord?.(newWordStr)}
         />
       )}
     </div>
