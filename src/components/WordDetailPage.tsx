@@ -157,7 +157,7 @@ export function WordDetailPage({
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="flex items-center gap-2 text-gray-600 hover:text-black transition"
           >
             <ArrowLeft className="w-5 h-5" />
