@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { WK_STAGE_NAMES, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
 import { getNativeLanguage, t } from '../lib/i18n';
 import { filterAdultGlosses, isAdultGloss } from '../lib/senseDisplay';
+import { AppHeader, type AppView } from './AppHeader';
 
 interface WordDetailData extends WordInfo {
   entry?: any;
@@ -18,13 +19,18 @@ export function WordDetailPage({
   onBack,
   allWords = [],
   onNavigateWord,
-  onEdit
+  onEdit,
+  onNavigateView,
+  knownCount,
 }: {
   word: string;
   onBack: () => void;
   allWords?: WordInfo[];
   onNavigateWord?: (word: string) => void;
   onEdit?: (wordInfo: WordInfo) => void;
+  /** #259 I1: jump to a top-level view (Home/Vocab/Scoring/Settings) from the persistent AppHeader. */
+  onNavigateView?: (view: AppView) => void;
+  knownCount?: number;
 }) {
   const [wordData, setWordData] = useState<WordDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,20 +121,28 @@ export function WordDetailPage({
     document.title = wordData ? `${wordData.word} — Kotonoha` : `${word} — Kotonoha`;
   }, [word, wordData]);
 
+  // #259 I1: the persistent nav (AppHeader) and this view's own Back/Edit bar
+  // are wrapped in one sticky container in every state (loading/error/success)
+  // so they scroll-stick together as a single unit.
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F2ED] text-gray-900 font-sans flex flex-col">
-        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
-          <div className="max-w-3xl mx-auto flex items-center">
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-black transition"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium text-sm">Back</span>
-            </button>
-          </div>
-        </header>
+        <div className="sticky top-0 z-20">
+          {onNavigateView && (
+            <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+          )}
+          <header className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-200">
+            <div className="max-w-3xl mx-auto flex items-center">
+              <button
+                onClick={handleBack}
+                className="flex items-center gap-2 text-gray-600 hover:text-black transition"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium text-sm">Back</span>
+              </button>
+            </div>
+          </header>
+        </div>
         <main className="flex-grow flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
         </main>
@@ -139,17 +153,22 @@ export function WordDetailPage({
   if (error || !wordData) {
     return (
       <div className="min-h-screen bg-[#F5F2ED] text-gray-900 font-sans flex flex-col">
-        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
-          <div className="max-w-3xl mx-auto flex items-center">
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-black transition"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium text-sm">Back</span>
-            </button>
-          </div>
-        </header>
+        <div className="sticky top-0 z-20">
+          {onNavigateView && (
+            <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+          )}
+          <header className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-200">
+            <div className="max-w-3xl mx-auto flex items-center">
+              <button
+                onClick={handleBack}
+                className="flex items-center gap-2 text-gray-600 hover:text-black transition"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium text-sm">Back</span>
+              </button>
+            </div>
+          </header>
+        </div>
         <main className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <p className="text-gray-600 text-lg">{error || 'Failed to load word details'}</p>
@@ -161,7 +180,11 @@ export function WordDetailPage({
 
   return (
     <div className="min-h-screen bg-[#F5F2ED] text-gray-900 font-sans flex flex-col">
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
+      <div className="sticky top-0 z-20">
+        {onNavigateView && (
+          <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+        )}
+        <header className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-200">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <button
             onClick={onBack}
@@ -179,7 +202,8 @@ export function WordDetailPage({
             </button>
           )}
         </div>
-      </header>
+        </header>
+      </div>
 
       <main className="flex-grow max-w-3xl mx-auto w-full p-6 pb-24">
         <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-gray-100 space-y-8">

@@ -3,6 +3,7 @@ import { ArrowLeft, PlayCircle, GraduationCap, Loader2, BookOpen, Download, Zap 
 import { Content } from '../data/content';
 import { WordInfo } from '../types';
 import { WK_STAGE_NAMES } from '../lib/wanikani';
+import { AppHeader, type AppView } from './AppHeader';
 import { LessonProcess } from './LessonProcess';
 import { ContentReader } from './ContentReader';
 import { AnkiExportModal } from './AnkiExportModal';
@@ -29,6 +30,8 @@ export function ContentDetail({
   onAddWord,
   knownWordSet,
   onWordClick,
+  onNavigateView,
+  knownCount,
 }: {
   content: Content;
   onBack: () => void;
@@ -40,6 +43,9 @@ export function ContentDetail({
   onAddWord?: (addedWordStr: string) => void;
   knownWordSet?: Set<string>;
   onWordClick?: (word: string, reading?: string, pos?: string) => void;
+  /** #259 I1: jump to a top-level view (Home/Vocab/Scoring/Settings) from the persistent AppHeader. */
+  onNavigateView?: (view: AppView) => void;
+  knownCount?: number;
 }) {
   const [view, setView] = useState<'intro' | 'lesson' | 'consume'>('intro');
   const [isEditing, setIsEditing] = useState(false);
@@ -56,8 +62,8 @@ export function ContentDetail({
 
   if (view === 'lesson') {
     return (
-      <LessonProcess 
-        words={status.unknownWords} 
+      <LessonProcess
+        words={status.unknownWords}
         onComplete={(learnedWords) => {
           if (learnedWords.length > 0) {
             markWordsAsKnown(learnedWords);
@@ -65,6 +71,8 @@ export function ContentDetail({
           setView('consume');
         }}
         onCancel={() => setView('intro')}
+        onNavigateView={onNavigateView}
+        knownCount={knownCount}
       />
     );
   }
@@ -76,28 +84,43 @@ export function ContentDetail({
         vocab={[...status.unknownWords, ...status.knownWords]}
         onBack={() => setView('intro')}
         onWordClick={onWordClick}
+        onNavigateView={onNavigateView}
+        knownCount={knownCount}
       />
     );
   }
 
   // #259 P2: a full 40vh dark band with only a title/back-button was mostly
   // empty space for the majority of content that has no imageUrl — shrink
-  // the hero when there's no image to fill it instead of stretching the
-  // empty dark band to the same height as content that has art.
-  const heroHeightClass = content.imageUrl ? 'h-[40vh]' : 'h-56';
+  // the hero's MINIMUM height when there's no image, rather than stretching
+  // the empty dark band to the same height as content that has art. This is
+  // a min-height (not a fixed height): the title/description block below is
+  // laid out with flexbox (not absolutely positioned) so a long description
+  // grows the hero instead of overflowing past its top edge — a real bug
+  // hit while verifying this fix: a fixed h-56 with an absolutely
+  // bottom-anchored, unbounded-height text block let long descriptions
+  // bleed upward over the header/back button.
+  const heroMinHeightClass = content.imageUrl ? 'min-h-[40vh]' : 'min-h-56';
 
   return (
     // #259 I2: this view used a plain bg-white shell while every other view
     // (Home/Vocab/Scoring/Settings/Reader/Word Detail) shares the warm-gray
     // #F5F2ED background — the white surface read as a different app.
     <div className="min-h-screen bg-[#F5F2ED]">
-      <div className={`relative ${heroHeightClass} bg-gray-900 w-full`}>
+      {/* #259 I1: persistent nav so Vocab/Scoring/Settings are reachable
+          without backing all the way out to Home first. */}
+      {onNavigateView && (
+        <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+      )}
+      {/* pt-20 reserves room for the absolutely-positioned back button so a
+          long description that grows the container never overlaps it. */}
+      <div className={`relative ${heroMinHeightClass} bg-gray-900 w-full flex flex-col justify-end overflow-hidden pt-20`}>
         {content.imageUrl && (
           <img src={content.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent" />
-        
-        <button 
+
+        <button
           onClick={onBack}
           className="absolute top-6 left-6 text-white flex items-center gap-2 hover:bg-white/10 px-3 py-1.5 rounded-full transition-colors backdrop-blur-sm"
         >
@@ -105,7 +128,7 @@ export function ContentDetail({
           <span className="font-medium">Back to library</span>
         </button>
 
-        <div className="absolute bottom-0 left-0 w-full p-8 max-w-5xl mx-auto">
+        <div className="relative w-full p-8 max-w-5xl mx-auto">
           <div className="inline-block bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold uppercase tracking-wider mb-4 border border-white/20">
             {content.type}
           </div>

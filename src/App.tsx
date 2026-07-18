@@ -1,5 +1,6 @@
 import { CheckCircle, Plus, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AppHeader, type AppView } from './components/AppHeader';
 import { ContentDetail } from './components/ContentDetail';
 import { ImportModal } from './components/ImportModal';
 import { SettingsPage } from './components/SettingsPage';
@@ -65,6 +66,18 @@ export default function App() {
     }
   };
 
+  // #259 I1: lets the persistent nav bar (AppHeader) jump straight to a
+  // top-level view from anywhere — Content Detail, the Reader, Word Detail,
+  // or the Lesson flow — without the user having to back out step by step
+  // first. Deliberately only touches the local view/selection state (not
+  // window.history) so it doesn't interfere with the existing back-button/
+  // popstate routing.
+  const goToView = (v: AppView) => {
+    setSelectedContent(null);
+    setSelectedWord(null);
+    setView(v);
+  };
+
   const {
     searchQuery,
     setSearchQuery,
@@ -109,6 +122,8 @@ export default function App() {
           allWords={Object.values(contentVocab).flat() as WordInfo[]}
           onNavigateWord={navigateToWord}
           onEdit={(wordInfo) => setEditingWord(wordInfo)}
+          onNavigateView={goToView}
+          knownCount={knownWords.size}
         />
         {editingWord && (
           <WordDetailModal
@@ -130,6 +145,8 @@ export default function App() {
         loading={loadingContent[selectedContent.id]}
         markWordsAsKnown={markWordsAsKnown}
         knownWordSet={knownWords}
+        onNavigateView={goToView}
+        knownCount={knownWords.size}
         onForceReload={() => loadVocabForContent(selectedContent, true)}
         onUpdateContent={(updatedContent) => {
           let updatedVocab = false;

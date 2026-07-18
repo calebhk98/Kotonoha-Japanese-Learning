@@ -1,15 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
 import { WordInfo } from '../types';
 import { X, Check } from 'lucide-react';
+import { AppHeader, type AppView } from './AppHeader';
 
 export function LessonProcess({
   words,
   onComplete,
-  onCancel
+  onCancel,
+  onNavigateView,
+  knownCount,
 }: {
   words: WordInfo[];
   onComplete: (learned: string[]) => void;
   onCancel: () => void;
+  /** #259 I1: jump to a top-level view (Home/Vocab/Scoring/Settings) from the persistent AppHeader. */
+  onNavigateView?: (view: AppView) => void;
+  knownCount?: number;
 }) {
   const [queue, setQueue] = useState<WordInfo[]>(() => words.slice(0, 50));
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -25,7 +31,12 @@ export function LessonProcess({
 
   if (queue.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="relative min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+        {onNavigateView && (
+          <div className="absolute top-0 left-0 w-full">
+            <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+          </div>
+        )}
         <div className="text-center max-w-md">
           <h2 className="text-2xl font-bold mb-4">You already know all these words!</h2>
           <button 
@@ -79,6 +90,14 @@ export function LessonProcess({
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+      {/* #259 I1: persistent nav so Vocab/Scoring/Settings are reachable
+          without cancelling the lesson first. Deliberately left in its
+          normal light styling rather than re-skinned for the dark lesson
+          theme — a visible seam, but lower-risk than forking AppHeader's
+          styles per view. */}
+      {onNavigateView && (
+        <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+      )}
       <div className="p-6 flex items-center justify-between">
         <button onClick={onCancel} className="text-gray-400 hover:text-white transition">
           <X className="w-6 h-6" />
