@@ -10,12 +10,16 @@ export const morphemeDefinitions: Record<string, string> = {
   // Verb forms
   す: "Causative marker",
   される: "Passive voice marker",
-  さ: "Passive voice marker",
+  さ: "Nominalizing suffix (-ness, e.g. 高さ); sentence-final emphasis; causative stem (させる)",
   せ: "Causative passive",
   ん: "Negative form / Emphatic particle",
   ぬ: "Negative form (classical)",
   ない: "not; negative form",
   なかった: "was not; past negative",
+  // Sudachi splits なかった into なかっ+た and normalizes なかっ to the
+  // kanji 無い, which the kana-keyed base-form guard can't catch — so the
+  // conjugated stem needs its own surface entry.
+  なかっ: "was not (negative stem of ない, 〜なかった)",
 
   // Copula and auxiliary verbs
   です: "polite copula; to be (is/are)",
@@ -43,6 +47,11 @@ export const morphemeDefinitions: Record<string, string> = {
   よ: "Sentence final particle (assertion/emphasis)",
   な: "Sentence final particle (prohibition/emphasis)",
   もの: "Sentence final particle (explanation)",
+  わ: "Sentence final particle (emphasis; feminine)",
+  ぞ: "Sentence final particle (strong emphasis; masculine)",
+  ぜ: "Sentence final particle (emphasis; casual masculine)",
+  かな: "Sentence final particle (I wonder...)",
+  っけ: "Sentence final particle (trying to recall)",
 
   // Other particles (that slipped through as single kana)
   も: "Also / too / even",
@@ -57,10 +66,25 @@ export const morphemeDefinitions: Record<string, string> = {
   と: "With / and",
   から: "From / because",
   まで: "Until / up to",
+  や: "And / or (non-exhaustive listing)",
+  けど: "But / although",
+  けれど: "But / although",
+  なら: "If / in the case of (conditional)",
+  たり: "Doing things like ... (listing actions)",
+
+  // Grammatical nouns / auxiliaries
+  よう: "Manner / way; (〜ように) so that, like; (〜ようになる) come to ...",
 
   // Less common but significant
   し: "Verb stem / conditional form",
   する: "To do",
+  // Sudachi normalizes して to the kanji 為る, whose JMDict homographs
+  // include 成る "to become" — so the te-form needs its own surface entry.
+  して: "te-form of する (to do); and then",
+  している: "is doing; progressive of する (〜している)",
+  // 〜について "about / concerning" is far more common than the verb 点く
+  // ("to be lit"), which homograph lookup used to pick for this surface.
+  ついて: "about; concerning (〜について); attached (付いて)",
   いる: "To be (animate) / Progressive form",
   ある: "To be (inanimate) / to exist",
   いく: "To go / to continue",
@@ -68,6 +92,9 @@ export const morphemeDefinitions: Record<string, string> = {
 
   // Small tsu variations
   っ: "Geminate consonant marker",
+
+  // Generic counter (五つ splits into 五 + つ)
+  つ: "Counter for things (一つ, 二つ, 三つ…)",
 
   // Additional verb forms
   られる: "Passive / potential form",

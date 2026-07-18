@@ -39,7 +39,7 @@ async function analyzeStory(storyName: string) {
   if (fs.existsSync(jmdictFile)) {
     await dictionary.initialize('jmdict', path.join(process.cwd(), 'jmdict-db'), jmdictFile);
   } else {
-    await dictionary.initialize('jisho');
+    await dictionary.initialize('kanjidata');
   }
 
   // Tokenize

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem } from './extraction-helpers.js';
+import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem, getGrammarDefinition } from './extraction-helpers.js';
 
 describe('extraction helpers', () => {
   describe('isPunctuation', () => {
@@ -153,5 +153,58 @@ describe('extraction helpers', () => {
       expect(PARTICLES.has('猫')).toBe(false);
       expect(PARTICLES.has('ありがとう')).toBe(false);
     });
+  });
+});
+
+describe('getGrammarDefinition', () => {
+  it('returns the surface definition for known morphemes (ます, は)', () => {
+    expect(getGrammarDefinition('ます', 'ます')).toMatch(/polite/i);
+    expect(getGrammarDefinition('は', 'は')).toMatch(/topic/i);
+  });
+
+  it('falls back to the base-form definition for conjugated auxiliaries', () => {
+    expect(getGrammarDefinition('たく', 'たい')).toMatch(/want to/i);
+    expect(getGrammarDefinition('なかっ', 'ない')).toMatch(/negat|not/i);
+    expect(getGrammarDefinition('でし', 'です')).toMatch(/copula|polite/i);
+  });
+
+  it('prefers the surface definition when both surface and base form are in the table', () => {
+    // ました "polite past form" must not be shadowed by ます "polite verb ending"
+    expect(getGrammarDefinition('ました', 'ます')).toMatch(/polite past/i);
+  });
+
+  it('returns undefined for kanji-containing surfaces', () => {
+    expect(getGrammarDefinition('見', '見る')).toBeUndefined();
+    expect(getGrammarDefinition('読みました', '読む')).toBeUndefined();
+  });
+
+  it('does not consult the table for kanji base forms', () => {
+    // し (surface) with base form 為る: 為る is not pure kana, so only the
+    // surface entry applies.
+    expect(getGrammarDefinition('ゆき', '行く')).toBeUndefined();
+  });
+
+  it('returns undefined for ordinary kana vocabulary not in the table', () => {
+    expect(getGrammarDefinition('さくら', 'さくら')).toBeUndefined();
+  });
+});
+
+describe('getGrammarDefinition – Sudachi kanji-normalized grammar verbs', () => {
+  it('している (base 為る): progressive of する, not the 成る homograph', () => {
+    expect(getGrammarDefinition('している', '為る')).toMatch(/doing|progressive/i);
+  });
+
+  it('した / します (base 為る): map to the する definition', () => {
+    expect(getGrammarDefinition('した', '為る')).toMatch(/to do/i);
+    expect(getGrammarDefinition('します', '為る')).toMatch(/to do/i);
+  });
+
+  it('いた / あった (bases 居る / 有る): map to the いる / ある definitions', () => {
+    expect(getGrammarDefinition('いた', '居る')).toMatch(/to be/i);
+    expect(getGrammarDefinition('あった', '有る')).toMatch(/to be/i);
+  });
+
+  it('ついて: the について grammar pattern gets a definition', () => {
+    expect(getGrammarDefinition('ついて', 'つく')).toMatch(/about|concerning/i);
   });
 });

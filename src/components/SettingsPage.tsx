@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Key, RefreshCw, CheckCircle, XCircle, Loader2, AlertCircle, Trash2, Zap } from 'lucide-react';
+import { Key, RefreshCw, CheckCircle, XCircle, Loader2, AlertCircle, Trash2, Zap, Languages } from 'lucide-react';
 import { WK_STAGE_NAMES, loadCachedWaniKaniData } from '../lib/wanikani';
 import { clearServerCache } from '../lib/api';
+import { t, setNativeLanguage, useNativeLanguage, SUPPORTED_NATIVE_LANGUAGES } from '../lib/i18n';
 
 interface WaniKaniUser {
   username: string;
@@ -13,6 +14,9 @@ type SyncStatus = 'idle' | 'syncing' | 'done' | 'error';
 type ClearCacheStatus = 'idle' | 'clearing' | 'done' | 'error';
 
 export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }) {
+  // Re-render this page when the native language changes so t() strings and the
+  // selected option update live (#260).
+  const nativeLang = useNativeLanguage();
   const [token, setToken] = useState('');
   const [tokenStatus, setTokenStatus] = useState<TokenStatus>('idle');
   const [savedUser, setSavedUser] = useState<WaniKaniUser | null>(null);
@@ -109,8 +113,34 @@ export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }
   return (
     <section className="space-y-6 max-w-2xl">
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold tracking-tight mb-1">Settings</h2>
-        <p className="text-sm text-gray-500">Configure API integrations and personalization options.</p>
+        <h2 className="text-2xl font-semibold tracking-tight mb-1">{t('settings.title')}</h2>
+        <p className="text-sm text-gray-500">{t('settings.subtitle')}</p>
+      </div>
+
+      {/* Native Language (#260) */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-8 py-6 border-b border-gray-100 flex items-center gap-3">
+          <div className="bg-indigo-50 p-2 rounded-xl">
+            <Languages className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">{t('settings.language.title')}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{t('settings.language.subtitle')}</p>
+          </div>
+        </div>
+        <div className="px-8 py-6 space-y-3">
+          <label className="block text-sm font-medium text-gray-700">{t('settings.language.native')}</label>
+          <select
+            value={nativeLang}
+            onChange={e => setNativeLanguage(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+          >
+            {SUPPORTED_NATIVE_LANGUAGES.map(code => (
+              <option key={code} value={code}>{t(`lang.${code}`)}</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-400">{t('settings.language.nativeHelp')}</p>
+        </div>
       </div>
 
       {/* WaniKani Integration */}
@@ -120,8 +150,8 @@ export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }
             <Key className="w-5 h-5 text-rose-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">WaniKani API Key</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Personalizes difficulty scores based on your SRS progress</p>
+            <h3 className="font-semibold text-gray-900">{t('settings.wanikani.title')}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{t('settings.wanikani.subtitle')}</p>
           </div>
           {savedUser && (
             <div className="ml-auto flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-1.5 rounded-full">
@@ -254,8 +284,8 @@ export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }
             <Zap className="w-5 h-5 text-amber-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Cache Management</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Clear dictionary and definition caches</p>
+            <h3 className="font-semibold text-gray-900">{t('settings.cache.title')}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{t('settings.cache.subtitle')}</p>
           </div>
         </div>
 
@@ -277,7 +307,7 @@ export function SettingsPage({ onWaniKaniSync }: { onWaniKaniSync?: () => void }
           {clearCacheStatus === 'done' && (
             <div className="flex items-center gap-2 text-green-700 text-sm bg-green-50 border border-green-100 rounded-lg px-3 py-2">
               <CheckCircle className="w-4 h-4 shrink-0" />
-              Cache cleared! Next lookup will re-fetch from Jisho API.
+              Cache cleared! Next lookup will re-resolve definitions.
             </div>
           )}
           {clearCacheStatus === 'error' && (

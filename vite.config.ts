@@ -11,12 +11,18 @@ export default defineConfig({
     },
   },
   server: {
-    // This tells Vite to use the secure port GitHub's proxy expects
-      clientPort: 443, //Default is 24678
+    // This tells Vite HMR to use the secure port GitHub's proxy expects.
+    // clientPort is an hmr option — it is not valid directly under `server`.
+    hmr: {
+      clientPort: 443, // Default is 24678
+    },
   },
   test: {
     globals: true,
     environment: 'node',
-    exclude: ['**/node_modules/**', '**/.claude/**'],
+    // tests/api/** is a separate, much slower suite (spawns the real server
+    // as a subprocess) run via `npm run test:api` / vitest.api.config.ts —
+    // keep it out of the default `npm test` run.
+    exclude: ['**/node_modules/**', '**/.claude/**', 'tests/api/**'],
   },
 });

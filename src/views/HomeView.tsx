@@ -350,19 +350,34 @@ function HomeView({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {visibleContent.map((content) => {
           const status = getContentStatus(content.id);
+          // #259 C1: `loaded` (not totalCount === 0) is the "still loading"
+          // signal — totalCount === 0 is also true for content that's fully
+          // loaded but genuinely has no extracted vocabulary, which used to
+          // show "Analyzing vocabulary..." forever for those cards.
           const isLoading =
-            loadingContent[content.id] || status.totalCount === 0;
+            loadingContent[content.id] || !status.loaded;
           const showUnknownChips =
             comprehensionRange[0] >= 85 && comprehensionRange[1] < 100;
+
+          const openContent = () => {
+            loadVocabForContent(content);
+            setSelectedContent(content);
+          };
 
           return (
             <div
               key={content.id}
-              onClick={() => {
-                loadVocabForContent(content);
-                setSelectedContent(content);
+              onClick={openContent}
+              role="button"
+              tabIndex={0}
+              aria-label={`Open ${content.title}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openContent();
+                }
               }}
-              className="bg-white rounded-3xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all border border-gray-100 group flex flex-col h-full"
+              className="bg-white rounded-3xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all border border-gray-100 group flex flex-col h-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
               <div className="aspect-[4/3] w-full bg-gray-100 relative overflow-hidden">
                 {content.imageUrl ? (
@@ -557,6 +572,7 @@ type HomeViewProps = {
     score: number;
     unknownWords?: WordInfo[];
     comprehension: number;
+    loaded: boolean;
   };
   comprehensionColor: (comprehension: number) => string;
 

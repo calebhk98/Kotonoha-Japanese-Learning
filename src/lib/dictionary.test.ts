@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEnglishGlosses, getSenseCommonness, DictionaryManager } from './dictionary';
+import { getEnglishGlosses, getSenseCommonness, pickBestEntry, findCloseAlternatives, DictionaryManager } from './dictionary';
 import { getMorphemeDefinition } from './morphemeDefinitions';
 
 // ---------------------------------------------------------------------------
@@ -130,7 +130,12 @@ describe('getSenseCommonness – #187 slang / archaic detection', () => {
     expect(getSenseCommonness(xSense)).toBeLessThan(getSenseCommonness(normalSense));
   });
 
-  it('gives lower score to idiomatic senses that are domain-restricted', () => {
+  it('does NOT penalize domain-restricted senses (order handles them; a penalty broke 飴)', () => {
+    // Domain senses (field: ['comp'], ['food'], …) rely on JMDict's original
+    // order: a later technical sense can never overtake an earlier everyday
+    // sense under order-preserving ranking. An explicit -10 penalty here
+    // demoted primary senses that happen to carry a tag — 飴's first sense
+    // "(hard) candy" is tagged {food} and sank below the untagged "amber".
     const domainSense = {
       gloss: [{ text: 'technical computing term', lang: 'en' }],
       misc: [],
@@ -141,24 +146,31 @@ describe('getSenseCommonness – #187 slang / archaic detection', () => {
       misc: [],
       field: [],
     };
-    expect(getSenseCommonness(domainSense)).toBeLessThan(getSenseCommonness(commonSense));
+    expect(getSenseCommonness(domainSense)).toBe(getSenseCommonness(commonSense));
   });
 
-  it('gives higher score to senses with more English synonyms (well-established meanings)', () => {
-    // 可愛い: the "cute/adorable/sweet/charming" sense should beat the sparse "dainty" sense
-    const richSense = {
+  it('does NOT rank multi-gloss senses above single-gloss senses (both unmarked)', () => {
+    // Regression: the old +2 "more synonyms" bonus was described as a tiebreaker
+    // but acted as the primary ordering signal (most senses have no misc/field
+    // markers, so scores were just 0 vs 2). JMDict lists the fundamental sense
+    // first, and for common verbs that sense often has a SINGLE gloss:
+    //   読む  sense0 ["to read"]  vs sense1 ["to recite (e.g. a sutra)", "to chant"]
+    //   食べる sense0 ["to eat"]   vs sense1 ["to live on (e.g. a salary)", ...]
+    //   泳ぐ  sense0 ["to swim"]  vs sense2 ["to make one's way through the world", ...]
+    // The bonus systematically demoted those primaries. Unmarked senses must
+    // score equally so JMDict's own (frequency-informed) order prevails.
+    const singleGlossPrimary = {
+      gloss: [{ text: 'to read', lang: 'en' }],
+      misc: [],
+    };
+    const multiGlossSecondary = {
       gloss: [
-        { text: 'cute', lang: 'en' },
-        { text: 'adorable', lang: 'en' },
-        { text: 'charming', lang: 'en' },
+        { text: 'to recite (e.g. a sutra)', lang: 'en' },
+        { text: 'to chant', lang: 'en' },
       ],
       misc: [],
     };
-    const sparseSense = {
-      gloss: [{ text: 'dainty', lang: 'en' }],
-      misc: [],
-    };
-    expect(getSenseCommonness(richSense)).toBeGreaterThan(getSenseCommonness(sparseSense));
+    expect(getSenseCommonness(multiGlossSecondary)).toBe(getSenseCommonness(singleGlossPrimary));
   });
 
   it('plain senses with no misc markers score >= 0', () => {
@@ -239,8 +251,11 @@ describe('mixed kanji+kana sense ordering – real-world cases (#191)', () => {
 
   // ── 可愛い (kawaii) ────────────────────────────────────────────────────────
 
-  it('可愛い: "cute/adorable" (multi-gloss) ranks above "dainty" (sparse) even when dainty appears first', () => {
-    const daintyFirst = { gloss: [{ text: 'dainty', lang: 'en' }], misc: [] };
+  it('可愛い: "cute/adorable" stays primary (real JMDict order: cute first, dainty last)', () => {
+    // In the actual JMDict data (entry 1577200) "cute/adorable/charming/lovely/
+    // pretty" is sense 0 and "dainty/little/tiny" is sense 3 — the previous
+    // version of this test fabricated a dainty-first order that doesn't occur,
+    // and was used to justify the multi-gloss bonus that broke 読む/食べる/泳ぐ.
     const cuteSense = {
       gloss: [
         { text: 'cute', lang: 'en' },
@@ -248,16 +263,19 @@ describe('mixed kanji+kana sense ordering – real-world cases (#191)', () => {
         { text: 'charming', lang: 'en' },
         { text: 'pretty', lang: 'en' },
       ],
-      misc: [],
+      misc: ['uk'],
     };
-    const ranked = rankSenses([daintyFirst, cuteSense]);
+    const daintySense = { gloss: [{ text: 'dainty', lang: 'en' }], misc: ['uk'] };
+    const ranked = rankSenses([cuteSense, daintySense]);
     expect(getEnglishGlosses(ranked[0])[0]).toBe('cute');
   });
 
   it('可愛い: primary definition contains "cute" or "adorable" — not a slang/archaic term', () => {
+    // Fixture mirrors real JMDict order (cute is sense 0, dainty sense 3);
+    // the point of this test is that a slang sense can never become primary.
     const senses = [
-      { gloss: [{ text: 'dainty', lang: 'en' }], misc: [] },
       { gloss: [{ text: 'cute', lang: 'en' }, { text: 'adorable', lang: 'en' }], misc: [] },
+      { gloss: [{ text: 'dainty', lang: 'en' }], misc: [] },
       { gloss: [{ text: 'spoiled child (slang)', lang: 'en' }], misc: ['sl'] },
     ];
     const ranked = rankSenses(senses);
@@ -366,5 +384,379 @@ describe('DictionaryManager – JMnedict fallback', () => {
 
     const result = await manager.lookup('和彦');
     expect(result).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sense ordering – JMDict native order must be preserved for unmarked senses
+//
+// JMDict lists the fundamental, most common sense first. The ranking pipeline
+// exists only to DEMOTE senses that carry explicit rarity markers (slang,
+// archaic, obsolete, …) — it must never reorder plain everyday senses.
+// These fixtures mirror the real JMDict sense data for each word.
+// ---------------------------------------------------------------------------
+
+describe('sense ordering – single-gloss primary senses stay primary', () => {
+  it('読む: "to read" stays above "to recite (e.g. a sutra)"', () => {
+    const senses = [
+      { gloss: [{ text: 'to read', lang: 'en' }], misc: [] },
+      { gloss: [{ text: 'to recite (e.g. a sutra)', lang: 'en' }, { text: 'to chant', lang: 'en' }], misc: [] },
+      { gloss: [{ text: 'to predict', lang: 'en' }, { text: 'to guess', lang: 'en' }, { text: 'to forecast', lang: 'en' }], misc: [] },
+    ];
+    const ranked = rankSenses(senses);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('to read');
+  });
+
+  it('食べる: "to eat" stays above "to live on (e.g. a salary)"', () => {
+    const senses = [
+      { gloss: [{ text: 'to eat', lang: 'en' }], misc: [] },
+      { gloss: [{ text: 'to live on (e.g. a salary)', lang: 'en' }, { text: 'to live off', lang: 'en' }, { text: 'to subsist on', lang: 'en' }], misc: [] },
+    ];
+    const ranked = rankSenses(senses);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('to eat');
+  });
+
+  it('泳ぐ: "to swim" stays above "to make one\'s way through the world"', () => {
+    const senses = [
+      { gloss: [{ text: 'to swim', lang: 'en' }], misc: [] },
+      { gloss: [{ text: 'to struggle through (a crowd)', lang: 'en' }], misc: [] },
+      { gloss: [{ text: "to make one's way through the world", lang: 'en' }, { text: 'to get along (in life)', lang: 'en' }], misc: [] },
+    ];
+    const ranked = rankSenses(senses);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('to swim');
+  });
+
+  it('飴: "(hard) candy" (tagged {food}) stays above the untagged "amber" sense', () => {
+    // Real JMDict entry 1153520: sense 0 "(hard) candy / toffee" carries
+    // field:['food']; a later "amber / yellowish-brown" colour sense is
+    // untagged. A flat domain-field penalty demoted the primary sense, so
+    // あめ showed "amber" as its meaning. With order-preserving ranking a
+    // later domain sense can never overtake earlier senses anyway, so the
+    // penalty's only observable effect was this kind of demotion.
+    const senses = [
+      { gloss: [{ text: '(hard) candy', lang: 'en' }, { text: 'toffee', lang: 'en' }], misc: [], field: ['food'] },
+      { gloss: [{ text: 'starch syrup', lang: 'en' }], misc: [], field: ['food'] },
+      { gloss: [{ text: 'amber', lang: 'en' }, { text: 'yellowish-brown', lang: 'en' }], misc: [] },
+    ];
+    const ranked = rankSenses(senses);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('(hard) candy');
+  });
+
+  it('走る: "to run" stays above "to run (of a vehicle)"', () => {
+    const senses = [
+      { gloss: [{ text: 'to run', lang: 'en' }], misc: [] },
+      { gloss: [{ text: 'to run (of a vehicle)', lang: 'en' }, { text: 'to drive', lang: 'en' }, { text: 'to travel', lang: 'en' }], misc: [] },
+    ];
+    const ranked = rankSenses(senses);
+    expect(getEnglishGlosses(ranked[0])[0]).toBe('to run');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Homograph entry selection – pickBestEntry
+//
+// When one written form matches several JMDict entries, the picker must
+// prefer the entry the learner actually searched for. Before the fix, ties
+// on the common-flag score were broken by database index order, so 本
+// resolved to the もと entry ("origin") instead of ほん ("book"), and よう
+// resolved to 酔う ("to get drunk"). Fixtures mirror the real entries.
+// ---------------------------------------------------------------------------
+
+describe('homograph entry selection – pickBestEntry', () => {
+  it('本: picks the ほん (book) entry, where 本 is the PRIMARY kanji — not もと (origin)', () => {
+    // Real entry 1260670: 元/本/素/基 (もと) — 本 is a secondary written form.
+    const motoEntry = {
+      id: '1260670',
+      kanji: [
+        { text: '元', common: true },
+        { text: '本', common: true },
+        { text: '素', common: false },
+        { text: '基', common: false },
+      ],
+      kana: [{ text: 'もと', common: true }],
+      sense: [{}, {}, {}, {}],
+    };
+    // Real entry 1522150: 本 (ほん) — 本 is the primary (and only) written form.
+    const honEntry = {
+      id: '1522150',
+      kanji: [{ text: '本', common: true }],
+      kana: [{ text: 'ほん', common: true }],
+      sense: [{}, {}, {}],
+    };
+    // もと first: this is the actual candidate order returned by the index scan.
+    const best = pickBestEntry([motoEntry, honEntry], '本');
+    expect(best.id).toBe('1522150');
+  });
+
+  it('たい: picks the kana-only auxiliary ("want to do") over 対 (versus)', () => {
+    // Real entry 1409800: 対 (たい) "versus" — common kanji entry.
+    const taiVersus = {
+      id: '1409800',
+      kanji: [{ text: '対', common: true }, { text: '對', common: false }],
+      kana: [{ text: 'たい', common: true }],
+      sense: [{}, {}, {}],
+    };
+    // Real entry 2017560: たい auxiliary "want to do ..." — kana-only, common.
+    const taiAux = {
+      id: '2017560',
+      kanji: [],
+      kana: [{ text: 'たい', common: true }, { text: 'ったい', common: false }],
+      sense: [{}, {}],
+    };
+    const best = pickBestEntry([taiVersus, taiAux], 'たい');
+    expect(best.id).toBe('2017560');
+  });
+
+  it('single exact match is returned unchanged', () => {
+    const only = { id: 'x', kanji: [{ text: '猫', common: true }], kana: [{ text: 'ねこ', common: true }], sense: [{}] };
+    expect(pickBestEntry([only], '猫').id).toBe('x');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Homograph selection for PURE-KANA searches + part-of-speech hints
+//
+// Kana-heavy beginner stories exposed a systematic error class: when a token
+// is written in kana, entry selection rewarded entries whose CANONICAL form
+// is kanji, so the wrong homograph won on database order:
+//   こぶ → 鼓舞 "encouragement"  (wanted 瘤 "lump", marked uk)
+//   たち → 太刀 "long sword"     (wanted 達 pluralizing suffix, uk)
+//   そこ → 底 "bottom"           (wanted 其処 "there", pn + uk)
+//   おく → 奥 "inner part"       (wanted 置く "to put" — token was a VERB)
+//   頭(かしら) → "counter for large animals" (wanted the plain noun "head")
+// Fixtures mirror the real JMDict entries (ids, common flags, uk, POS tags).
+// ---------------------------------------------------------------------------
+
+describe('homograph entry selection – kana searches prefer usually-kana entries', () => {
+  const kobuEncourage = {
+    id: '1268020',
+    kanji: [{ text: '鼓舞', common: true }],
+    kana: [{ text: 'こぶ', common: true }],
+    sense: [{ partOfSpeech: ['n', 'vs', 'vt'], misc: [] }, {}],
+  };
+  const kobuLump = {
+    id: '1569660',
+    kanji: [{ text: '瘤', common: true }],
+    kana: [{ text: 'こぶ', common: true }],
+    sense: [{ partOfSpeech: ['n'], misc: ['uk'] }, {}],
+  };
+
+  it('こぶ: picks 瘤 "lump" (usually-kana) over 鼓舞 "encouragement"', () => {
+    expect(pickBestEntry([kobuEncourage, kobuLump], 'こぶ').id).toBe('1569660');
+  });
+
+  it('そこ: picks 其処 "there" (pn, usually-kana) over 底 "bottom"', () => {
+    const soko = {
+      id: '1006670',
+      kanji: [{ text: '其処', common: false }, { text: '其所', common: false }],
+      kana: [{ text: 'そこ', common: true }],
+      sense: [{ partOfSpeech: ['pn'], misc: ['uk'] }, {}],
+    };
+    const bottom = {
+      id: '1436050',
+      kanji: [{ text: '底', common: true }],
+      kana: [{ text: 'そこ', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([soko, bottom], 'そこ', { pos: '代名詞' }).id).toBe('1006670');
+    // uk alone should carry it even without a POS hint
+    expect(pickBestEntry([soko, bottom], 'そこ').id).toBe('1006670');
+  });
+
+  it('たち: picks the 達 pluralizing suffix (uk) over 太刀 "long sword"', () => {
+    const longSword = {
+      id: '1408340',
+      kanji: [{ text: '太刀', common: true }, { text: '大刀', common: false }],
+      kana: [{ text: 'たち', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    const pluralSuffix = {
+      id: '1416220',
+      kanji: [{ text: '達', common: true }],
+      kana: [{ text: 'たち', common: true }],
+      sense: [{ partOfSpeech: ['suf'], misc: ['uk'] }, {}],
+    };
+    expect(pickBestEntry([longSword, pluralSuffix], 'たち', { pos: '接尾辞' }).id).toBe('1416220');
+
+    // Text like 鬼（おに）たち breaks Sudachi's suffix attachment — the
+    // parenthesis makes it tag たち as a plain noun. usually-kana must
+    // outweigh the POS bonus the noun entry earns, because uk is direct
+    // evidence about the written form we actually observed.
+    expect(pickBestEntry([longSword, pluralSuffix], 'たち', { pos: '名詞' }).id).toBe('1416220');
+    expect(pickBestEntry([longSword, pluralSuffix], 'たち').id).toBe('1416220');
+  });
+
+  it('おく as a VERB: picks 置く "to put" over 奥 "inner part" and 億', () => {
+    const oku = {
+      id: '1179320',
+      kanji: [{ text: '奥', common: true }],
+      kana: [{ text: 'おく', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    const hundredMillion = {
+      id: '1182620',
+      kanji: [{ text: '億', common: true }],
+      kana: [{ text: 'おく', common: true }],
+      sense: [{ partOfSpeech: ['num'], misc: [] }, {}],
+    };
+    const put = {
+      id: '1421850',
+      kanji: [{ text: '置く', common: true }],
+      kana: [{ text: 'おく', common: true }],
+      sense: [{ partOfSpeech: ['v5k', 'vt'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([oku, hundredMillion, put], 'おく', { pos: '動詞' }).id).toBe('1421850');
+  });
+
+  it('頭 as a NOUN: picks "head" over the large-animal counter', () => {
+    const counter = {
+      id: '1450690',
+      kanji: [{ text: '頭', common: true }],
+      kana: [{ text: 'とう', common: true }],
+      sense: [{ partOfSpeech: ['ctr'], misc: [] }, {}],
+    };
+    const head = {
+      id: '1582310',
+      kanji: [{ text: '頭', common: true }],
+      kana: [{ text: 'あたま', common: true }, { text: 'かしら', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([counter, head], '頭', { pos: '名詞' }).id).toBe('1582310');
+  });
+
+  it('kanji-primary entries still win kana searches when nothing marks the competitor', () => {
+    // あめ: 飴 vs 雨 — neither is uk, both common; selection stays stable
+    // (first in index order) rather than flipping on the new signals.
+    const candy = {
+      id: '1153520',
+      kanji: [{ text: '飴', common: true }],
+      kana: [{ text: 'あめ', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    const rain = {
+      id: '1171900',
+      kanji: [{ text: '雨', common: true }],
+      kana: [{ text: 'あめ', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([candy, rain], 'あめ', { pos: '名詞' }).id).toBe('1153520');
+  });
+});
+
+describe('homograph entry selection – uk bonus is gated by POS compatibility', () => {
+  it('かえる as a VERB: 蛙 "frog" (uk) must not outrank 帰る "to return"', () => {
+    const frog = {
+      id: '1577460',
+      kanji: [{ text: '蛙', common: true }],
+      kana: [{ text: 'かえる', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: ['uk'] }, {}],
+    };
+    const goHome = {
+      id: '1512150',
+      kanji: [{ text: '帰る', common: true }],
+      kana: [{ text: 'かえる', common: true }],
+      sense: [{ partOfSpeech: ['v5r', 'vi'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([frog, goHome], 'かえる', { pos: '動詞' }).id).toBe('1512150');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reading hints (from the rebuilt Sudachi WASM's reading_form)
+//
+// UniDic knows the contextual reading of every token. When available it is
+// the strongest homograph signal: 家の前 reads まえ (not ぜん), 鬼のかしら
+// reads かしら (so 頭 must resolve to the head/leader entry, not あたま via
+// tie-break or the とう counter).
+// ---------------------------------------------------------------------------
+
+describe('homograph entry selection – reading hints', () => {
+  const zenEntry = {
+    id: '1387310',
+    kanji: [{ text: '前', common: true }],
+    kana: [{ text: 'ぜん', common: true }],
+    sense: [{ partOfSpeech: ['n-pref'], misc: [] }, {}],
+  };
+  const maeEntry = {
+    id: '1392580',
+    kanji: [{ text: '前', common: true }],
+    kana: [{ text: 'まえ', common: true }],
+    sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+  };
+
+  it('前 read まえ: picks the まえ entry over ぜん', () => {
+    expect(pickBestEntry([zenEntry, maeEntry], '前', { pos: '名詞', reading: 'まえ' }).id).toBe('1392580');
+  });
+
+  it('頭 read かしら: reading beats both the counter and the plain-noun tiebreak', () => {
+    const counter = {
+      id: '1450690',
+      kanji: [{ text: '頭', common: true }],
+      kana: [{ text: 'とう', common: true }],
+      sense: [{ partOfSpeech: ['ctr'], misc: [] }, {}],
+    };
+    const head = {
+      id: '1582310',
+      kanji: [{ text: '頭', common: true }],
+      kana: [{ text: 'あたま', common: true }, { text: 'かしら', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([counter, head], '頭', { pos: '名詞', reading: 'かしら' }).id).toBe('1582310');
+  });
+
+  it('人 read にん after a numeral: picks the people-counter entry', () => {
+    const hito = {
+      id: '1580640',
+      kanji: [{ text: '人', common: true }],
+      kana: [{ text: 'ひと', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
+    };
+    const nin = {
+      id: '1580645',
+      kanji: [{ text: '人', common: true }],
+      kana: [{ text: 'にん', common: true }],
+      sense: [{ partOfSpeech: ['ctr'], misc: [] }, {}],
+    };
+    expect(pickBestEntry([hito, nin], '人', { reading: 'にん' }).id).toBe('1580645');
+    expect(pickBestEntry([hito, nin], '人', { reading: 'ひと' }).id).toBe('1580640');
+  });
+});
+
+describe('findCloseAlternatives – ambiguous homographs surface the runner-up', () => {
+  const candy = {
+    id: '1153520',
+    kanji: [{ text: '飴', common: true }],
+    kana: [{ text: 'あめ', common: true }],
+    sense: [{ partOfSpeech: ['n'], misc: [], gloss: [{ text: '(hard) candy', lang: 'eng' }] }, {}],
+  };
+  const rain = {
+    id: '1171900',
+    kanji: [{ text: '雨', common: true }],
+    kana: [{ text: 'あめ', common: true }],
+    sense: [{ partOfSpeech: ['n'], misc: [], gloss: [{ text: 'rain', lang: 'eng' }] }, {}],
+  };
+
+  it('あめ: the losing 雨 "rain" entry is reported as a close alternative', () => {
+    const alts = findCloseAlternatives([candy, rain], candy, 'あめ', { pos: '名詞' });
+    expect(alts.length).toBe(1);
+    expect(alts[0]).toMatch(/rain/);
+    expect(alts[0]).toMatch(/雨/);
+  });
+
+  it('clear winners produce no alternatives (瘤 vs 鼓舞)', () => {
+    const kobuLump = {
+      id: '1569660',
+      kanji: [{ text: '瘤', common: true }],
+      kana: [{ text: 'こぶ', common: true }],
+      sense: [{ partOfSpeech: ['n'], misc: ['uk'], gloss: [{ text: 'bump', lang: 'eng' }] }, {}],
+    };
+    const kobuEncourage = {
+      id: '1268020',
+      kanji: [{ text: '鼓舞', common: true }],
+      kana: [{ text: 'こぶ', common: true }],
+      sense: [{ partOfSpeech: ['n', 'vs'], misc: [], gloss: [{ text: 'encouragement', lang: 'eng' }] }, {}],
+    };
+    const alts = findCloseAlternatives([kobuEncourage, kobuLump], kobuLump, 'こぶ', { pos: '名詞' });
+    expect(alts).toEqual([]);
   });
 });

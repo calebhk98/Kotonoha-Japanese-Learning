@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, Download, Check } from 'lucide-react';
 import { WordInfo } from '../types';
 import { generateAnkiExport, downloadAnkiFile, AnkiExportOptions } from '../lib/anki';
+import { useModalDismiss } from '../hooks/useModalDismiss';
 
 const JLPT_LEVELS = [
   { value: 5, label: 'N5' },
@@ -27,6 +28,7 @@ export function AnkiExportModal({
   const [includeKnown, setIncludeKnown] = useState(false);
   const [jlptFilter, setJlptFilter] = useState<number[]>([]);
   const [exported, setExported] = useState(false);
+  const { onBackdropClick } = useModalDismiss(onClose);
 
   const toggleJlpt = (level: number) => {
     setJlptFilter(prev =>
@@ -55,7 +57,10 @@ export function AnkiExportModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onBackdropClick}
+    >
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Export to Anki</h2>

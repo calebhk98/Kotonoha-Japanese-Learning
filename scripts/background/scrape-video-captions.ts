@@ -14,6 +14,7 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { CaptionScraper, isPlaceholderTranscript, detectSource } from "../../src/lib/caption-scraper.js";
+import { wasRecentlyAttempted } from "../../src/lib/caption-scrape-state.js";
 
 const VIDEOS_DIR = join(process.cwd(), "src", "videos");
 
@@ -49,13 +50,10 @@ async function findPlaceholderVideos(): Promise<
         continue;
       }
 
-      // Skip if already attempted recently (avoid thrashing on failures)
-      const lastAttempt = meta.lastCaptionScrapeAttempt
-        ? new Date(meta.lastCaptionScrapeAttempt)
-        : null;
-      const now = new Date();
-      if (lastAttempt && now.getTime() - lastAttempt.getTime() < 3600000) {
-        // 1 hour
+      // Skip if already attempted recently (avoid thrashing on failures).
+      // Attempt state lives in the gitignored .caption-scrape-state.json,
+      // NOT in metadata.json (which is git-tracked content).
+      if (wasRecentlyAttempted(name)) {
         console.log(
           `[scrape-captions] ${name}: recently attempted, skipping (retry after 1h)`
         );

@@ -6,6 +6,7 @@
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { recordCaptionScrapeFailure } from "./caption-scrape-state.js";
 
 export type VideoSource = "youtube" | "nhk-kokokoza" | "unknown";
 
@@ -64,17 +65,13 @@ abstract class CaptionHandler {
   }
 
   /**
-   * Mark video as failed with a flag in metadata.json.
+   * Record the failure in the gitignored scrape-state sidecar. Never write
+   * into metadata.json — those are git-tracked content files, and stamping
+   * per-machine failure timestamps into them dirtied the working tree on
+   * every dev-server run without yt-dlp.
    */
   protected markFailed(videoId: string, error: string): void {
-    const metaPath = join(this.getOutDir(videoId), "metadata.json");
-    if (!existsSync(metaPath)) return;
-
-    const meta = JSON.parse(readFileSync(metaPath, "utf8"));
-    meta.captionScrapeAttempts = (meta.captionScrapeAttempts ?? 0) + 1;
-    meta.lastCaptionScrapeError = error;
-    meta.lastCaptionScrapeAttempt = new Date().toISOString();
-    writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+    recordCaptionScrapeFailure(videoId, error);
   }
 }
 

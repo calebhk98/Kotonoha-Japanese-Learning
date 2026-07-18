@@ -3,6 +3,7 @@ import { WordInfo } from '../types';
 import { extractVocabulary, getContentWords } from '../lib/api';
 import { Content } from '../data/content';
 import { WaniKaniData, getWaniKaniMultiplier, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
+import { getDisplayProfile } from '../lib/language/registry';
 
 export function applyWaniKaniToWords(words: WordInfo[], wkData: WaniKaniData): WordInfo[] {
   return words.map(word => {
@@ -44,11 +45,14 @@ export function useContentData() {
     if (savedVocab) {
       try {
         const parsed = JSON.parse(savedVocab);
-        // Validate if old cache format uses baseScore instead of jlptScore
+        // Validate the cached breakdown schema via the language profile
+        // (#258) — same rule as always for ja: legacy pre-jlptScore caches
+        // are discarded.
+        const profile = getDisplayProfile();
         let isValid = true;
         for (const key of Object.keys(parsed)) {
           const arr = parsed[key];
-          if (arr.length > 0 && (!arr[0].breakdown || arr[0].breakdown.jlptScore === undefined || arr[0].breakdown.highestGrade === undefined)) {
+          if (arr.length > 0 && !profile.isValidBreakdown(arr[0].breakdown)) {
             isValid = false;
             break;
           }
@@ -183,7 +187,12 @@ export function useContentData() {
 
   const getContentStatus = useCallback((contentId: string) => {
     const words = contentVocab[contentId];
-    if (!words) return { difficulty: 0, unknownCount: 0, totalCount: 0, score: 0, totalUnknownScore: 0, unknownWords: [], knownWords: [], comprehension: 0 };
+    // #259 C1: `loaded` distinguishes "contentVocab[id] hasn't been populated
+    // yet" from "populated, and this content genuinely has zero words" —
+    // callers used to key their loading spinner off totalCount === 0, which
+    // meant a content item that legitimately extracted to zero vocab words
+    // would show "Analyzing vocabulary..." forever.
+    if (!words) return { difficulty: 0, unknownCount: 0, totalCount: 0, score: 0, totalUnknownScore: 0, unknownWords: [], knownWords: [], comprehension: 0, loaded: false };
 
     const unknownWords = words.filter(w => !isWordKnown(w));
     const knownVocab = words.filter(w => isWordKnown(w));
@@ -211,6 +220,7 @@ export function useContentData() {
       unknownWords,
       knownWords: knownVocab,
       comprehension,
+      loaded: true,
     };
   }, [contentVocab, isWordKnown]);
 

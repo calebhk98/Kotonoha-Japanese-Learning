@@ -2,9 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { WordInfo } from '../types';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { WK_STAGE_NAMES, getWaniKaniSrsStage, loadCachedWaniKaniData } from '../lib/wanikani';
+import { getNativeLanguage, t } from '../lib/i18n';
+import { filterAdultGlosses, isAdultGloss } from '../lib/senseDisplay';
+import { AppHeader, type AppView } from './AppHeader';
 
 interface WordDetailData extends WordInfo {
   entry?: any;
+  // #260: the language the served gloss is actually in, and what was requested,
+  // so we can flag English fallback when the learner asked for another language.
+  glossLang?: string;
+  requestedLang?: string;
 }
 
 export function WordDetailPage({
@@ -12,13 +19,18 @@ export function WordDetailPage({
   onBack,
   allWords = [],
   onNavigateWord,
-  onEdit
+  onEdit,
+  onNavigateView,
+  knownCount,
 }: {
   word: string;
   onBack: () => void;
   allWords?: WordInfo[];
   onNavigateWord?: (word: string) => void;
   onEdit?: (wordInfo: WordInfo) => void;
+  /** #259 I1: jump to a top-level view (Home/Vocab/Scoring/Settings) from the persistent AppHeader. */
+  onNavigateView?: (view: AppView) => void;
+  knownCount?: number;
 }) {
   const [wordData, setWordData] = useState<WordDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +51,21 @@ export function WordDetailPage({
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch(`/api/word/${encodeURIComponent(word)}`);
+        // The in-context reading (when navigation provided one) keeps this
+        // page consistent with the reader/vocab list that was clicked —
+        // without it, homographs re-resolve out of sentence context.
+        const urlParams = new URLSearchParams(window.location.search);
+        const apiParams = new URLSearchParams();
+        const contextReading = urlParams.get('reading');
+        const contextPos = urlParams.get('pos');
+        if (contextReading) apiParams.set('reading', contextReading);
+        if (contextPos) apiParams.set('pos', contextPos);
+        // #260: request glosses in the learner's native language (English is
+        // the server default, so only send when it differs).
+        const nativeLang = getNativeLanguage();
+        if (nativeLang && nativeLang !== 'en') apiParams.set('lang', nativeLang);
+        const query = apiParams.size > 0 ? `?${apiParams.toString()}` : '';
+        const response = await fetch(`/api/word/${encodeURIComponent(word)}${query}`);
         if (!response.ok) {
           throw new Error('Failed to fetch word details');
         }
@@ -89,20 +115,34 @@ export function WordDetailPage({
     fetchWordData();
   }, [word, allWords]);
 
+  // #259 P4: document.title was always the static "Kotonoha" — reflect the
+  // word being viewed (e.g. at /word/猫) once it loads.
+  useEffect(() => {
+    document.title = wordData ? `${wordData.word} — Kotonoha` : `${word} — Kotonoha`;
+  }, [word, wordData]);
+
+  // #259 I1: the persistent nav (AppHeader) and this view's own Back/Edit bar
+  // are wrapped in one sticky container in every state (loading/error/success)
+  // so they scroll-stick together as a single unit.
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F2ED] text-gray-900 font-sans flex flex-col">
-        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
-          <div className="max-w-3xl mx-auto flex items-center">
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-black transition"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium text-sm">Back</span>
-            </button>
-          </div>
-        </header>
+        <div className="sticky top-0 z-20">
+          {onNavigateView && (
+            <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+          )}
+          <header className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-200">
+            <div className="max-w-3xl mx-auto flex items-center">
+              <button
+                onClick={handleBack}
+                className="flex items-center gap-2 text-gray-600 hover:text-black transition"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium text-sm">Back</span>
+              </button>
+            </div>
+          </header>
+        </div>
         <main className="flex-grow flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
         </main>
@@ -113,17 +153,22 @@ export function WordDetailPage({
   if (error || !wordData) {
     return (
       <div className="min-h-screen bg-[#F5F2ED] text-gray-900 font-sans flex flex-col">
-        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
-          <div className="max-w-3xl mx-auto flex items-center">
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-black transition"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium text-sm">Back</span>
-            </button>
-          </div>
-        </header>
+        <div className="sticky top-0 z-20">
+          {onNavigateView && (
+            <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+          )}
+          <header className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-200">
+            <div className="max-w-3xl mx-auto flex items-center">
+              <button
+                onClick={handleBack}
+                className="flex items-center gap-2 text-gray-600 hover:text-black transition"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium text-sm">Back</span>
+              </button>
+            </div>
+          </header>
+        </div>
         <main className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <p className="text-gray-600 text-lg">{error || 'Failed to load word details'}</p>
@@ -135,10 +180,14 @@ export function WordDetailPage({
 
   return (
     <div className="min-h-screen bg-[#F5F2ED] text-gray-900 font-sans flex flex-col">
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-gray-200">
+      <div className="sticky top-0 z-20">
+        {onNavigateView && (
+          <AppHeader activeView={null} onNavigate={onNavigateView} knownCount={knownCount ?? 0} />
+        )}
+        <header className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-200">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="flex items-center gap-2 text-gray-600 hover:text-black transition"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -153,39 +202,54 @@ export function WordDetailPage({
             </button>
           )}
         </div>
-      </header>
+        </header>
+      </div>
 
       <main className="flex-grow max-w-3xl mx-auto w-full p-6 pb-24">
         <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-gray-100 space-y-8">
           {/* Word Header */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <h1 className="text-5xl md:text-6xl font-bold font-serif">{wordData.word}</h1>
-              <p className="text-xl text-gray-600">{wordData.reading}</p>
+              {/* #259 P5: mark the Japanese headword/reading so screen readers
+                  don't read them with English pronunciation rules. */}
+              <h1 lang="ja" className="text-5xl md:text-6xl font-bold font-serif">{wordData.word}</h1>
+              <p lang="ja" className="text-xl text-gray-600">{wordData.reading}</p>
             </div>
             <div className="w-16 h-1 bg-indigo-600 rounded-full" />
           </div>
 
           {/* Primary Meaning */}
           <div className="space-y-3 border-t border-gray-100 pt-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Primary Meaning</h2>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">{t('word.primaryMeaning')}</h2>
             <p className="text-lg text-gray-800">{wordData.meaning}</p>
+            {/* #260: flag English fallback when another language was requested
+                but JMDict has no gloss in it for this word. */}
+            {wordData.requestedLang && wordData.requestedLang !== 'en' && wordData.glossLang === 'eng' && (
+              <p className="text-xs text-amber-600 italic">
+                {t('word.englishFallback', { lang: t(`lang.${wordData.requestedLang}`) })}
+              </p>
+            )}
           </div>
 
-          {/* All Definitions */}
-          {wordData.meanings && wordData.meanings.length > 1 && (
-            <div className="space-y-3 border-t border-gray-100 pt-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">All Definitions</h2>
-              <ul className="space-y-2">
-                {wordData.meanings.map((def, idx) => (
-                  <li key={idx} className="flex gap-3">
-                    <span className="font-semibold text-gray-400 text-sm min-w-6">{idx + 1}.</span>
-                    <span className="text-gray-700">{def}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* All Definitions — adult/vulgar senses filtered for the beginner-facing
+              view (#259 P7); see src/lib/senseDisplay.ts for why this is a
+              display-time text filter rather than a JMDict misc[] tag check. */}
+          {wordData.meanings && wordData.meanings.length > 1 && (() => {
+            const displayMeanings = filterAdultGlosses(wordData.meanings);
+            return displayMeanings.length > 1 ? (
+              <div className="space-y-3 border-t border-gray-100 pt-6">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">{t('word.allDefinitions')}</h2>
+                <ul className="space-y-2">
+                  {displayMeanings.map((def, idx) => (
+                    <li key={idx} className="flex gap-3">
+                      <span className="font-semibold text-gray-400 text-sm min-w-6">{idx + 1}.</span>
+                      <span className="text-gray-700">{def}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null;
+          })()}
 
           {/* Frequency Data */}
           <div className="space-y-3 border-t border-gray-100 pt-6">
@@ -273,21 +337,32 @@ export function WordDetailPage({
             <div className="space-y-3 border-t border-gray-100 pt-6">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Dictionary Entry</h2>
               <div className="bg-gray-50 p-4 rounded-lg space-y-3 text-sm">
-                {wordData.entry.meanings && wordData.entry.meanings.length > 0 && (
-                  <div>
-                    <p className="font-semibold text-gray-600 mb-2">All Senses:</p>
-                    {wordData.entry.meanings.map((sense: any, idx: number) => (
-                      <div key={idx} className="mb-2 pb-2 border-b border-gray-200 last:border-0">
-                        <p className="text-xs text-gray-500 mb-1">
-                          {sense.partOfSpeech?.join(', ')}
-                        </p>
-                        <p className="text-gray-700">
-                          {sense.glosses?.join('; ')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {wordData.entry.meanings && wordData.entry.meanings.length > 0 && (() => {
+                  // Drop glosses that read as adult/vulgar (#259 P7), then drop
+                  // any sense left with nothing to show.
+                  const displaySenses = wordData.entry.meanings
+                    .map((sense: any) => ({
+                      ...sense,
+                      glosses: (sense.glosses || []).filter((g: string) => !isAdultGloss(g)),
+                    }))
+                    .filter((sense: any) => sense.glosses.length > 0);
+                  const senses = displaySenses.length > 0 ? displaySenses : wordData.entry.meanings;
+                  return (
+                    <div>
+                      <p className="font-semibold text-gray-600 mb-2">All Senses:</p>
+                      {senses.map((sense: any, idx: number) => (
+                        <div key={idx} className="mb-2 pb-2 border-b border-gray-200 last:border-0">
+                          <p className="text-xs text-gray-500 mb-1">
+                            {sense.partOfSpeech?.join(', ')}
+                          </p>
+                          <p className="text-gray-700">
+                            {sense.glosses?.join('; ')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -301,6 +376,7 @@ export function WordDetailPage({
                 {relatedWords.map((w, idx) => (
                   <button
                     key={idx}
+                    lang="ja"
                     onClick={() => onNavigateWord?.(w.word)}
                     className="px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
                   >

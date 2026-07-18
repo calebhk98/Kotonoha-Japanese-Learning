@@ -12,6 +12,8 @@ export interface Morpheme {
     surface: string;
     part_of_speech: string[];
     normalized_form: string;
+    reading_form: string;
+    dictionary_form: string;
 }
 
 

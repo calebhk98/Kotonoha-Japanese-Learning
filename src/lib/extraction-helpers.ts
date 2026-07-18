@@ -6,6 +6,8 @@
  * runBatchExtract.  Centralised here so both code paths stay in sync.
  */
 
+import { getMorphemeDefinition } from './morphemeDefinitions.js';
+
 export const PARTICLES = new Set([
   'は', 'が', 'を', 'に', 'へ', 'と', 'で', 'も', 'か', 'の', 'て', 'な', 'だ',
 ]);
@@ -39,6 +41,46 @@ export function isHiraganaWord(s: string): boolean {
 /** Returns true when the entire string is katakana (long-vowel mark inclusive). */
 export function isKatakanaWord(s: string): boolean {
   return s.length > 0 && /^[ァ-ヴー]+$/.test(s);
+}
+
+/**
+ * Returns the grammatical (morpheme-table) definition for a token, or
+ * undefined when the token is ordinary vocabulary.
+ *
+ * The tokenizer keeps grammatical auxiliaries (たい, ない, です, ます…) as
+ * separate tokens so learners see their meanings, but hands back conjugated
+ * SURFACE forms (たく, なかっ, でし) whose base form is the table entry.
+ * Checking only the surface let those fall through to JMDict homograph
+ * lookup, which returned nonsense: たく(たい)→対 "versus", なかっ(ない)→
+ * "nonexistent". The surface definition wins when both exist (ました is more
+ * specific than ます).
+ *
+ * Only pure-kana tokens qualify: a kanji base form (見る for the surface 見)
+ * means the token is a content word and must use the dictionary waterfall.
+ */
+/**
+ * Sudachi normalizes the highest-frequency grammatical verbs to KANJI base
+ * forms (しました→為る, いました→居る, あります→有る). Those kanji have
+ * JMDict homographs that mislead dictionary lookup (為る matches 成る "to
+ * become"), so kana surfaces with these bases route to the corresponding
+ * kana morpheme-table entry instead.
+ */
+const KANJI_GRAMMAR_BASES: Record<string, string> = {
+  '為る': 'する',
+  '居る': 'いる',
+  '有る': 'ある',
+};
+
+export function getGrammarDefinition(surface: string, baseForm: string): string | undefined {
+  if (!/^[ぁ-んー]+$/.test(surface)) return undefined;
+  const surfaceDef = getMorphemeDefinition(surface);
+  if (surfaceDef) return surfaceDef;
+  if (!baseForm || baseForm === surface) return undefined;
+  if (/^[ぁ-んー]+$/.test(baseForm)) {
+    return getMorphemeDefinition(baseForm);
+  }
+  const kanaBase = KANJI_GRAMMAR_BASES[baseForm];
+  return kanaBase ? getMorphemeDefinition(kanaBase) : undefined;
 }
 
 /**

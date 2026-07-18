@@ -22,13 +22,8 @@ import { workerData, parentPort, isMainThread } from 'worker_threads';
 import fs from 'fs';
 import { createTokenizer, Tokenizer } from './tokenizers.js';
 import { DictionaryManager } from './dictionary.js';
-import {
-  getCachedDictionaryEntries,
-  findBestVariant,
-  getWordScoreBreakdown,
-} from './scoring.js';
-import { getMorphemeDefinition } from './morphemeDefinitions.js';
-import { PARTICLES, isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem } from './extraction-helpers.js';
+import { WordResolver } from './wordResolver.js';
+import { isPunctuation, isSingleKana, isHiraganaWord, isKatakanaWord, looksLikePartialStem, getGrammarDefinition } from './extraction-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Public types (imported by server.ts for type-safety on the message channel)
@@ -38,9 +33,6 @@ export interface WorkerInitData {
   jmdictPath: string;
   jmdictFile: string | null;
   jmnedictFile: string | null;
-  /** Serialised entries from the main thread's JishoCache, to avoid re-fetching
-   *  lookups already in the persistent cache. */
-  jishoCacheEntries: [string, any][];
 }
 
 export type WorkerOutMessage =
@@ -58,80 +50,21 @@ export type WorkerInMessage =
 
 let tokenizer: Tokenizer | null = null;
 let dictionary: DictionaryManager | null = null;
+let wordResolver: WordResolver | null = null;
 
-// In-memory kana lookup cache, seeded from the main thread's persistent cache.
-// Avoids redundant Jisho HTTP calls for words already looked up previously.
+// In-memory kana lookup cache, shared across batches processed by this
+// worker's lifetime. Avoids re-resolving the same kana word for every chunk.
 const kanaCache = new Map<string, any>();
 
 // ---------------------------------------------------------------------------
 // Extraction logic (mirrors runBatchExtract in server.ts minus DB writes)
+//
+// Word resolution goes through the shared WordResolver class — this file used
+// to carry its own near-verbatim copy of the pipeline, which meant the vocab
+// lists extracted here could silently diverge from what /api/extract and
+// /api/word returned (the exact multiple-sources-of-truth failure #188/#197
+// were about).
 // ---------------------------------------------------------------------------
-
-async function resolveWordMeaning(
-  wordStr: string,
-  baseForm: string,
-  lookupCache: Map<string, any>,
-): Promise<{ reading: string; meaning: string; meanings: string[] | undefined }> {
-  if (/^[ぁ-んー]+$/.test(wordStr)) {
-    const morphemeDef = getMorphemeDefinition(wordStr);
-    if (morphemeDef) return { reading: wordStr, meaning: morphemeDef, meanings: undefined };
-  }
-
-  let entries = getCachedDictionaryEntries(baseForm);
-  if (entries.length === 0 && baseForm !== wordStr) {
-    entries = getCachedDictionaryEntries(wordStr);
-  }
-  const { variant, entry } = findBestVariant(baseForm, entries);
-
-  let reading = wordStr;
-  let kanjiMeaning = 'Unknown meaning';
-  let kanjiMeanings: string[] | undefined;
-
-  if (entry && variant) {
-    reading = variant.pronounced || wordStr;
-    kanjiMeaning = entry.meanings[0]?.glosses?.join(', ') || kanjiMeaning;
-    const allKanjiMeanings: string[] = [];
-    const seen = new Set<string>();
-    for (const m of entry.meanings) {
-      for (const g of (m.glosses || [])) {
-        if (!seen.has(g)) { seen.add(g); allKanjiMeanings.push(g); }
-      }
-    }
-    if (allKanjiMeanings.length > 1) kanjiMeanings = allKanjiMeanings;
-  }
-
-  let meaning = kanjiMeaning;
-  let meanings = kanjiMeanings;
-
-  if (dictionary) {
-    const cacheKey = baseForm !== wordStr ? baseForm : wordStr;
-    let dictResult: any = lookupCache.get(cacheKey) ?? null;
-
-    if (dictResult === null) {
-      dictResult = await dictionary.lookup(baseForm);
-      if (!dictResult && baseForm !== wordStr) {
-        dictResult = await dictionary.lookup(wordStr);
-      }
-      lookupCache.set(cacheKey, dictResult ?? false);
-    }
-
-    if (dictResult && dictResult !== false) {
-      const jmdictMeaning = dictResult.meaning;
-      if (jmdictMeaning && jmdictMeaning !== 'Unknown') {
-        if (!reading || reading === wordStr) reading = dictResult.reading || reading;
-        meaning = jmdictMeaning;
-        meanings = dictResult.meanings;
-      }
-    }
-  }
-
-  if (meaning === 'Unknown meaning' && /^[ぁ-ん]+$/.test(wordStr)) {
-    const morphemeFallback = getMorphemeDefinition(wordStr);
-    meaning = morphemeFallback || 'Kana particle / expression';
-  }
-
-  return { reading, meaning, meanings };
-}
 
 async function processTokens(
   tokens: any[],
@@ -139,39 +72,40 @@ async function processTokens(
   kanaLookupCache: Map<string, any>,
 ): Promise<any[]> {
   const baseFormCounts = new Map<string, number>();
-  const validWords = new Map<string, string>();
-  const morphemes = new Map<string, number>();
+  const validWords = new Map<string, { baseForm: string; pos?: string; reading?: string }>();
+  const morphemes = new Map<string, { meaning: string; frequency: number }>();
 
   for (const token of tokens) {
     const surface = token.surface;
     if (surface.trim() === '' || isPunctuation(surface)) continue;
 
-    const morphemeDef = getMorphemeDefinition(surface);
-    const isKanaMorpheme = morphemeDef && /^[ぁ-んー]+$/.test(surface);
-    if (isSingleKana(surface) || isKanaMorpheme) {
-      if (morphemeDef) morphemes.set(surface, (morphemes.get(surface) ?? 0) + 1);
+    // Base-form-aware: catches conjugated auxiliary surfaces (たく→たい,
+    // なかっ→ない, でし→です) that used to fall through to homograph lookup.
+    const morphemeDef = getGrammarDefinition(surface, token.baseForm);
+    if (isSingleKana(surface) || morphemeDef) {
+      if (morphemeDef) {
+        const prev = morphemes.get(surface);
+        morphemes.set(surface, { meaning: morphemeDef, frequency: (prev?.frequency ?? 0) + 1 });
+      }
     } else {
       const baseForm = wordStr_baseFormMap.get(surface) ?? token.baseForm;
-      validWords.set(surface, baseForm);
+      validWords.set(surface, { baseForm, pos: token.pos, reading: token.reading });
       baseFormCounts.set(surface, (baseFormCounts.get(surface) ?? 0) + 1);
     }
   }
 
   const results: any[] = [];
 
-  for (const [wordStr, baseForm] of validWords) {
-    const { reading, meaning, meanings } = await resolveWordMeaning(wordStr, baseForm, kanaLookupCache);
-    const entries = getCachedDictionaryEntries(baseForm);
-    const { variant } = findBestVariant(baseForm, entries);
-    const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
+  for (const [wordStr, { baseForm, pos, reading: tokenReading }] of validWords) {
+    const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
+      await wordResolver!.resolve(wordStr, baseForm, kanaLookupCache, pos, tokenReading);
     const frequencyInContent = baseFormCounts.get(wordStr) ?? 1;
-    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent };
+    const wordData: any = { word: wordStr, reading, meaning, jlpt, joyo, score, breakdown, frequencyInContent, ...(pos ? { pos } : {}) };
     if (meanings) wordData.meanings = meanings;
     results.push(wordData);
   }
 
-  for (const [morpheme, frequency] of morphemes) {
-    const meaning = getMorphemeDefinition(morpheme) || 'Grammatical morpheme';
+  for (const [morpheme, { meaning, frequency }] of morphemes) {
     results.push({
       word: morpheme,
       reading: morpheme,
@@ -222,38 +156,30 @@ async function extractBatch(items: BatchItem[]): Promise<BatchResult[]> {
     }
   }
 
-  // Step 3: look up kana words with a concurrency cap; seed from warm cache
+  // Step 3: look up kana words, seeding from (and refilling) the warm cache.
+  //
+  // This used to run through a hand-rolled concurrency-limiting queue whose
+  // only purpose was throttling calls to the since-removed Jisho web
+  // fallback (#256) — dictionary.lookup() is now entirely local
+  // (JMDict/JMnedict/kanji-data), so a plain concurrent lookup is both
+  // simpler and correct.
   const kanaLookupCache = new Map<string, any>(
     Array.from(kanaCache.entries()).filter(([k]) => uniqueKanaWords.has(k)),
   );
 
   if (dictionary && uniqueKanaWords.size > 0) {
     const uncached = Array.from(uniqueKanaWords).filter(w => !kanaLookupCache.has(w));
-    const CONCURRENCY = 5;
-    let active = 0;
-    let idx = 0;
-
-    await new Promise<void>((resolve, reject) => {
-      const next = async () => {
+    await Promise.all(
+      uncached.map(async (word) => {
         try {
-          if (idx >= uncached.length && active === 0) { resolve(); return; }
-          while (active < CONCURRENCY && idx < uncached.length) {
-            const word = uncached[idx++];
-            active++;
-            dictionary!.lookup(word)
-              .then(result => {
-                const val = result ?? false;
-                kanaLookupCache.set(word, val);
-                if (result) kanaCache.set(word, result);
-              })
-              .catch(() => { kanaLookupCache.set(word, false); })
-              .finally(() => { active--; next().catch(reject); });
-          }
-          if (idx >= uncached.length && active === 0) resolve();
-        } catch (err) { reject(err); }
-      };
-      next().catch(reject);
-    });
+          const result = await dictionary!.lookup(word);
+          kanaLookupCache.set(word, result ?? false);
+          if (result) kanaCache.set(word, result);
+        } catch {
+          kanaLookupCache.set(word, false);
+        }
+      }),
+    );
   }
 
   // Step 3.5: pre-populate kanji words from kanji-data (synchronous, fast)
@@ -293,16 +219,7 @@ async function extractBatch(items: BatchItem[]): Promise<BatchResult[]> {
 // ---------------------------------------------------------------------------
 
 async function runWorker(data: WorkerInitData) {
-  // Seed the kana cache from entries the main thread already has persisted.
-  for (const [word, result] of data.jishoCacheEntries) {
-    kanaCache.set(word, result);
-  }
-
   tokenizer = await createTokenizer();
-
-  const onJishoCacheUpdate = (cache: Map<string, any>) => {
-    for (const [k, v] of cache) kanaCache.set(k, v);
-  };
 
   dictionary = new DictionaryManager();
   if (data.jmdictFile && fs.existsSync(data.jmdictFile)) {
@@ -311,19 +228,17 @@ async function runWorker(data: WorkerInitData) {
       data.jmdictPath,
       data.jmdictFile,
       data.jmnedictFile ?? undefined,
-      kanaCache as any,
-      onJishoCacheUpdate,
     );
   } else {
     await dictionary.initialize(
-      'jisho',
+      'kanjidata',
       undefined,
       undefined,
       data.jmnedictFile ?? undefined,
-      kanaCache as any,
-      onJishoCacheUpdate,
     );
   }
+
+  wordResolver = new WordResolver(dictionary);
 
   parentPort!.postMessage({ type: 'ready' } satisfies WorkerOutMessage);
 

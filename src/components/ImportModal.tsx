@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { Content, ContentType } from '../data/content';
+import { useModalDismiss } from '../hooks/useModalDismiss';
 
 const MAX_TEXT_LENGTH = 50000;
 const JAPANESE_SCRIPT = /[぀-ゟ゠-ヿ一-鿿]/;
@@ -27,6 +28,7 @@ export function ImportModal({
   const [type, setType] = useState<ContentType>('story');
   const [mediaUrl, setMediaUrl] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const { onBackdropClick } = useModalDismiss(onClose);
 
   const handleImport = () => {
     if (!title.trim() || !text.trim()) return;
@@ -52,7 +54,10 @@ export function ImportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm"
+      onClick={onBackdropClick}
+    >
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
           <h2 className="text-xl font-bold">Import Custom Content</h2>

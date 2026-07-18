@@ -37,8 +37,9 @@ Express server (single port).
 | Backend           | Express 4 (`server.ts`), run via `tsx`                                |
 | Tokenizer         | **Sudachi WASM** (default); TinySegmenter as emergency dev fallback; Sudachi-TS / Lindera / Kuromoji classes retained but `@deprecated` (packages removed — see tokenizers.ts for reinstall instructions) |
 | Dictionaries      | JMdict (`jmdict-all-3.6.2.json.tgz`), JMnedict (`jmnedict.json.gz`), `kanji-data` (npm) |
-| Persistent cache  | SQLite via `sql.js` → `.cache.db` at repo root                        |
-| Tests             | Vitest (`environment: 'node'`)                                        |
+| Persistent cache  | SQLite via `better-sqlite3` → `.cache.db` at repo root (write-through) |
+| Content resolution| Precomputed `resolved.json` per content item (`npm run resolve-content`, #252) |
+| Tests             | Vitest — unit (`npm test`) + HTTP API suite (`npm run test:api`)      |
 | Icons             | `lucide-react`                                                        |
 | Animations        | `motion`                                                              |
 | Module type       | ESM (`"type": "module"`); imports use `.js` extensions even for `.ts` source |
@@ -51,19 +52,21 @@ Node 18+ required.
 
 ```
 .
-├── server.ts                  # Express backend (1087 lines)
+├── server.ts                  # Express backend (routes + boot + extraction pipeline; splitting it further is an open thread)
 ├── src/
-│   ├── App.tsx                # Main React app (920 lines, single-component-heavy)
+│   ├── App.tsx                # Thin shell (~300 lines) — views live in src/views/, state in src/hooks/
 │   ├── main.tsx               # React entry
 │   ├── types.ts               # WordInfo, ScoreBreakdown, LessonType
 │   ├── index.css
-│   ├── components/            # 7 components (.tsx)
+│   ├── components/            # Reader, detail pages, modals (.tsx)
+│   ├── views/                 # HomeView / VocabView / ScoringView
+│   ├── hooks/                 # useContentData, useUrlRouting, useHomeFilters, useContentBootstrap
 │   ├── hooks/                 # useContentData (+ test)
 │   ├── lib/                   # tokenizers, scoring, dictionary, storyLoader, etc.
 │   ├── data/content.ts        # Content type defs + loader (getContent/getStories/getMusic/getVideos)
-│   ├── stories/               # 123 directories of stories on disk (README claims 104)
-│   ├── music/                 # 21 directories
-│   └── videos/                # 19 directories
+│   ├── stories/               # one folder per story: metadata.json + content.md + resolved.json
+│   ├── music/                 # same, with transcript.md
+│   └── videos/                # same, with transcript.md
 ├── scripts/                   # ~25 setup/maintenance/CLI scripts (.ts and .sh); see scripts/README.md
 │   ├── populate-cache.ts      # Pre-populate the server lookup cache (run via `npm run populate-cache`)
 │   ├── dev/
@@ -71,11 +74,11 @@ Node 18+ required.
 │   └── legacy/
 │       └── script.cjs         # Historical: one-off content generator (pre-disk content model)
 ├── integration/               # Standalone integration scripts (NOT run by `npm test`)
-├── sudachi-wasm-built/        # Output of setup-sudachi.sh (must exist for default tokenizer)
+├── sudachi-wasm-built/        # index_bg.wasm (~2MB glue) + system.dic (~215MB UniDic), shipped as .gz
 ├── jmdict-all-3.6.2.json.tgz  # 25 MB; auto-extracted on server start
 ├── jmnedict.json.gz           # 8.8 MB
-├── .word-cache.json.gz / .jisho-cache.json.gz  # Pre-warmed lookup caches (gzipped)
-├── .word-cache.json / .jisho-cache.json        # Decompressed by setup-cache.sh
+├── .word-cache.json.gz        # Pre-warmed word-cache dump (gzipped)
+├── .word-cache.json           # Decompressed by setup-cache.sh
 ├── .cache.db                  # SQLite DB (created on first run)
 ├── char.def                   # Sudachi character definitions
 ├── sudachi.json               # Sudachi tokenizer config
@@ -83,9 +86,8 @@ Node 18+ required.
 ```
 
 There is **no `src/components/index.ts`** barrel — components are imported
-directly. There are no formal route components either: `App.tsx` is a single
-~900-line component that switches views via local state (`view`, `selectedContent`,
-`selectedWord`).
+directly. There is no router: `App.tsx` switches views via local state
+(`view`, `selectedContent`, `selectedWord`) with URL sync in `useUrlRouting`.
 
 ---
 
@@ -98,7 +100,8 @@ All measured on this checkout, on this machine. Re-measure if you doubt them.
 | `npm install`        | Installs deps + runs `postinstall` (Sudachi + cache setup; can be 3–5 min on a cold machine) | not re-run |
 | `npm run dev`        | Starts Express + Vite dev middleware on port 3000         | port opens ~10 s; see "Dev server startup" below |
 | `npm run lint`       | `tsc --noEmit` on the project (excludes `integration/`)   | **~23 s**, exit 0     |
-| `npm test`           | `vitest run` — **5 test files, 94 tests passing**         | **~21 s**, exit 0     |
+| `npm test`           | `vitest run` — unit tests in `src/**` (counts drift; ~257 across 11 files at last update) | fast, exit 0 |
+| `npm run test:api`   | HTTP tests that spawn the real server (`tests/api/`, own vitest config) | ~1–2 min incl. boot |
 | `npm run test:watch` | Vitest in watch mode                                      | —                     |
 | `npm run build`      | `vite build`                                              | not measured          |
 | `npm run preview`    | Vite preview of build                                     | —                     |
@@ -108,21 +111,21 @@ All measured on this checkout, on this machine. Re-measure if you doubt them.
 | `npm run compress-cache`| Recompress caches                                      | —                     |
 | `npm run add-story`     | `tsx scripts/add-story.ts` — interactive new story     | —                     |
 | `npm run test:stories` / `:full` | Standalone story integration scripts (NOT vitest) | —              |
+| `npm run resolve-content` | Write `resolved.json` for content missing it; `-- --all` re-resolves everything (run after ANY resolution-pipeline change) | ~2–3 min for all 600+ |
+| `npm run scrape-captions` / `fetch-lyrics` | Manual scraper jobs (no longer auto-run by the dev server) | — |
 
-**Note on `npm start`**: the script is `node server.ts`, which will fail because
-`server.ts` is TypeScript. Use `npm run dev` (which uses `tsx`) — `start` looks
-broken.
+`npm start` builds and serves production (`vite build` + `NODE_ENV=production tsx server.ts`).
+For development use `npm run dev`.
 
 ### Vitest scope
 
 `npm test` only runs `*.test.ts` files inside `src/` (vite.config.ts has
-`environment: 'node'`). The 5 test files are:
-
-- `src/lib/data-import-export.test.ts`
-- `src/lib/dictionary.test.ts`
-- `src/lib/scoring.test.ts`
-- `src/lib/vocabulary-extraction.test.ts`
-- `src/hooks/useContentData.test.ts`
+`environment: 'node'`). Key suites: `dictionary`, `wordResolver`,
+`contentResolver`, `scoring`, `extraction-helpers`, `morpheme`/`database`,
+`caption-scraper`, `useContentData`. The HTTP-level suite lives in
+`tests/api/` with its own `vitest.api.config.ts` (`npm run test:api`) — it
+spawns the real server as a subprocess, so it needs the WASM/dictionaries
+set up and must not run while another server holds the LevelDB lock.
 
 Files in `integration/` (e.g. `test-all-stories.ts`, `test-server-api.ts`,
 `test-sudachi-*.mjs`) are **not** picked up by vitest — `tsconfig.json`
@@ -162,11 +165,11 @@ Boot sequence (in `server.ts`):
 1. `tokenizerReady` — `createTokenizer()` from env `TOKENIZER` (default Sudachi WASM)
 2. `jmdictReady` — extract `jmdict-all-3.6.2.json.tgz` if not already extracted
 3. `jmnedictReady` — decompress `jmnedict.json.gz` (via `ensureJmnedictPrepared`)
-4. `dictionaryReady` — `initDatabase()` (sql.js), build `WordsCache` / `JishoCache` / `ContentWordsStore`, `DictionaryManager.initialize(...)`, then `wordsCache.preload()`
+4. `dictionaryReady` — `initDatabase()` (better-sqlite3), build `WordsCache` / `ContentWordsStore`, `DictionaryManager.initialize(...)`, then `wordsCache.preload()`
 5. `app.listen(3000, "0.0.0.0")` — port opens once.
 6. **Background, non-blocking** but very loud:
-   - `loadCachesInBackground()` — loads `.jisho-cache.json` if present (~98 entries observed; takes ~25 ms once decompressed); the gzipped `.word-cache.json.gz` is intentionally skipped.
-   - **Startup extraction**: walks every content item (stories+music+videos = 163 on this checkout) that's missing from `content_words`, and runs `runBatchExtract` in chunks of 20. On a fresh DB this calls Jisho for hundreds of unique kana words per chunk and easily takes **minutes** to finish. The HTTP port is open, but the extraction lives on the same Node event loop, so the server is essentially unresponsive for user-facing API calls during this time. Expect the first `npm run dev` after a wipe of `.cache.db` to take *much* longer than 30 s before the app feels usable.
+   - `loadCachesInBackground()` — the gzipped `.word-cache.json.gz` is intentionally skipped (see "Cache architecture" below).
+   - **Startup extraction**: walks every content item (stories+music+videos = 163 on this checkout) that's missing from both `content_words` and a committed `resolved.json` (see "Precomputed resolution" above — in practice this is close to a no-op on a checkout with resolved.json committed), and runs `runBatchExtract` in chunks of 20 via the local dictionary waterfall (JMDict/JMnedict/kanji-data — no network calls since #256 removed the Jisho fallback). Still worth watching on a fresh DB with un-resolved content, since Sudachi tokenization + JMDict lookups across many items can take a while.
    - On second and later starts (cache hot), the log line `[Server] All content already extracted — skipping startup extraction` is what you want to see.
 
 You'll see `Server running on http://localhost:3000` printed during step 5 even
@@ -177,10 +180,10 @@ load testing".
 there explicitly says do not modify file watching — it's tuned for the AI Studio
 agent environment.
 
-**SIGTERM is ignored** (server.ts catches it and logs "ignoring gracefully")
-plus `setInterval(...30000)` keeps the event loop alive. To stop the dev server
-you have to `SIGINT` (Ctrl+C) or `kill -9`. Don't be surprised when `kill <pid>`
-appears to do nothing.
+**SIGTERM shuts down gracefully** since #253 (closes the HTTP server,
+flushes the DB, exits 0). The old ignore-SIGTERM behavior survives only
+behind `IGNORE_SIGTERM=1` (Codespaces-idle survival). `PORT` env overrides
+the default 3000 (added for the API test harness).
 
 ---
 
@@ -197,7 +200,8 @@ Source of truth: `server.ts`. Endpoints found:
 | POST   | `/api/clear-cache`                  | Clear server-side caches                                     |
 | GET    | `/api/content`                      | List all content items (stories+music+videos from disk)      |
 | GET    | `/api/content/words`                | All known content→words mappings                             |
-| GET    | `/api/content/:contentId/words`     | Words for one content item                                   |
+| GET    | `/api/content/:contentId/story`     | Reader tokens for one item — serves committed `resolved.json` when present (`precomputed: true`), else live-resolves |
+| GET    | `/api/content/:contentId/words`     | Words for one content item (prefers `resolved.json`)          |
 | GET    | `/api/word/:word`                   | Single-word reading + meaning + score                        |
 | POST   | `/api/wanikani/validate`            | Validate WaniKani API token                                  |
 | POST   | `/api/wanikani/sync`                | Pull WaniKani SRS data                                       |
@@ -221,9 +225,9 @@ ceiling that empirically *worked*. If you find yourself wanting to
 raise it, chunk the text on the client instead and use
 `/api/batch-extract` — don't just bump the constant.
 
-`/api/content` returns 163 entries on this checkout (123 stories + 21 music + 19 videos).
-Each entry has `{ id, title, type, description, text, mediaUrl?, imageUrl? }`. Total
-payload was ~440 KB.
+`/api/content` returns one entry per content folder (600+ and growing; the
+count drifts — don't trust docs). Each entry has
+`{ id, title, type, description, text, mediaUrl?, imageUrl? }`.
 
 `/api/extract` example: input `"猫が好きです。本を読みました。"` returned 7 `WordInfo`
 entries in ~0.6 s once the server was warm (with cache hits). Note that the
@@ -270,7 +274,32 @@ the count drifts as stories are added — don't rely on the README number.
 ```bash
 npx tsx scripts/add-story.ts --title "..." --description "..." --level n5
 # then edit src/stories/<new-folder>/content.md
+npm run resolve-content   # writes resolved.json for the new item (see below)
 ```
+
+### Precomputed resolution (issue #252)
+
+Every disk content item carries a committed `resolved.json` — the
+deterministic output of the tokenize+resolve pipeline
+(`src/lib/contentResolver.ts`), written by `npm run resolve-content`. The
+server serves these directly (`GET /api/content/:id/story`, and
+`/api/content/:id/words` prefers them), so disk content needs **no runtime
+extraction and no cache warmup**. Live resolution remains the fallback for
+custom/imported content only — like every other lookup path, it is entirely
+local (JMDict -> JMnedict -> kanji-data) since #256 removed the unofficial
+Jisho web fallback.
+
+Consequences worth knowing:
+- **If you change anything in the resolution pipeline** (tokenizers,
+  wordResolver, dictionary, morphemeDefinitions, scoring), re-run
+  `npm run resolve-content -- --all` and commit the artifact diffs — the
+  diff over resolved.json files IS the regression review.
+- The dictionary waterfall is entirely local (JMDict -> JMnedict -> kanji-data;
+  the unofficial Jisho web fallback was removed in #256), so the resolve
+  script never depends on network responses — determinism is now a property
+  of the pipeline itself, not something the script has to work around.
+- `resolved.json` positions are computed against the **trimmed** text, same
+  as `/api/content` serves it.
 
 After adding content, `STORIES_LIST.md` is hand-maintained; update it if
 relevant. There is no automatic regeneration.
@@ -318,34 +347,57 @@ Sudachi WASM fails to load:
    differences. Fix Sudachi.
 
 Sudachi WASM lives in `sudachi-wasm-built/` (built by
-`scripts/setup-sudachi.sh`). The `index_bg.wasm` blob is ~208 MB and includes
-the UniDic dictionary. Sudachi tokenization mode C (compound) is the default
-for accuracy; see `TOKENIZER_SETUP.md` for modes.
+`scripts/setup-sudachi.sh` from a **pinned commit** of hi-ogawa/sudachi.rs —
+see `SUDACHI_RS_COMMIT` in the script). Since issue #254 the UniDic
+dictionary ships as a separate `system.dic` (~215 MB, committed as
+`system.dic.gz`) loaded at runtime via `Tokenizer.create(dictData)`; the
+wasm binary itself is ~2 MB, so glue changes no longer recommit a 200 MB
+blob. Legacy embedded builds (single >100 MB `index_bg.wasm`) still load.
+Sudachi tokenization mode C (compound) is the default for accuracy; see
+`TOKENIZER_SETUP.md` for modes.
 
-### Word resolution (`resolveWordMeaning` in server.ts)
+**The WASM build is patched.** `scripts/setup-sudachi.sh` applies
+`scripts/sudachi-wasm-reading.patch` after cloning upstream, adding
+`reading_form` and `dictionary_form` to the exposed Morpheme interface.
+The contextual reading (UniDic) drives furigana display and homograph
+disambiguation (家の前→まえ, 頭 read かしら → head/leader entry) via
+`TokenInfo.reading` → `WordResolver` → `LookupHint.reading`. All code
+treats `reading_form` as optional, so an unpatched WASM build still works
+— it just falls back to the POS/uk-only selection.
 
-Single source of truth introduced as fix for issue #188 — three earlier code
-paths had different lookup logic. Order:
+### Word resolution (`src/lib/wordResolver.ts` + `src/lib/contentResolver.ts`)
 
-1. If pure-kana (`/^[ぁ-んー]+$/`), check `getMorphemeDefinition()` first, return early on hit.
-   - Reason: JMnedict stores ます/ない as proper-noun glosses ("Masu", "Nai"); without this guard those would shadow the correct grammatical definition.
-2. `kanji-data` lookup (sync) — used for reading + fallback meaning.
-3. JMDict lookup — preferred when it has a real gloss; sense ordering in JMDict is sorted by `getSenseCommonness()` to bury rare/archaic senses (e.g. 猫→"submissive partner", 春→"New Year").
-4. Final fallback for kana-only: morpheme definition or the literal string `"Kana particle / expression"`.
+`WordResolver.resolve(wordStr, baseForm, lookupCache?, pos?, reading?)` is the
+single resolution pipeline — every consumer (`/api/extract`, `/api/word`,
+`/api/process-story`, the extraction worker, and the build-time
+`resolve-content` script via `contentResolver.ts`) routes through it. Order:
 
-If you change lookup behaviour, update **all** call sites by routing through
-`resolveWordMeaning` — that was the whole point.
+1. **Grammar-morpheme guard** (`getGrammarDefinition` in extraction-helpers):
+   pure-kana surfaces check the morpheme table by surface, then by base form
+   (たく→たい, でし→です), then via the 為る/居る/有る → する/いる/ある map
+   (Sudachi normalizes those to kanji). Prevents JMnedict "Masu"/homograph
+   nonsense (#188 and successors).
+2. `kanji-data` lookup (sync) — fallback meaning; its variant reading is only
+   used for kanji surfaces (a pure-kana surface IS its own reading).
+3. JMDict lookup with **hints**: the token's Sudachi POS and (for
+   non-conjugating POS) its contextual UniDic reading. Entry selection
+   (`pickBestEntry`/`getEntryCommonness` in dictionary.ts) scores exact
+   matches by common flags, primary-form match, POS compatibility,
+   usually-kana (uk, gated by POS compatibility), and reading match (+15,
+   strongest). Sense ordering is **penalties-only** — JMDict's native order
+   is kept; only slang/archaic/rare-marked senses sink. Near-ties surface the
+   runner-up as `" — or: <gloss> (<form>)"` (`findCloseAlternatives`) so
+   beginners see genuine ambiguity (kana あめ → candy or rain) instead of a
+   silent guess.
+4. Kana-only fallback: morpheme table or the literal `"Kana particle / expression"`.
 
-**Design smell**: needing to remember to "route everything through one
-function" is a sign the function isn't actually the only entry point.
-Several handlers still do their own `getCachedDictionaryEntries` /
-`findBestVariant` calls before/after `resolveWordMeaning`, which is how
-#188 happened in the first place. Worth filing an issue to refactor
-this into a `WordResolver` class (or similar) where the lookup pipeline
-is the only public surface and the kanji-data / JMDict / morpheme
-fallbacks are private — that way new endpoints physically can't bypass
-it. Until then, grep for `getCachedDictionaryEntries` whenever you
-touch this code path.
+The tokenizer's contextual reading, when present, is also the displayed
+furigana (読みました→よみました). Waterfall behind DictionaryManager:
+JMDict → JMnedict → kanji-data — entirely local (the Jisho web fallback was
+removed in #256).
+
+If you change ANY of this, re-run `npm run resolve-content -- --all` and
+review the artifact diff — that diff over 600+ items is the regression test.
 
 ### Scoring (`src/lib/scoring.ts`)
 
@@ -363,73 +415,123 @@ Score range exposed externally is 1..100; `WordInfo.score` is the integer-rounde
 final. WaniKani SRS data, when present, multiplies the *base* score by 0.05–1.0
 (`useContentData.applyWaniKaniToWords`).
 
-### Known limitation (from TOKENIZER_ANALYSIS.md, still accurate)
+### Compositional fallback + supplementary dictionary (#257)
 
-The tokenizer outputs *bunsetsu*-style chunks like 描きました, but the dictionaries
-key on base forms (描く). This causes ~40% of conjugated verb forms to land on
-"Unknown meaning" without stemming. `src/lib/stemming.ts` exists as a
-mitigation; don't assume it covers every conjugation.
+When the whole word is unknown, `composeUnknown` in wordResolver derives a
+meaning from transparent parts — every branch requires the parts to resolve,
+so nonsense can't compose. Branches (specific → generic): mimetic 〜と retry,
+reduplication (パチパチパチ→ぱちぱち), trailing-stretch strip (達ァ→達;
+mora-safe — only っ/ー strip after kana), honorific お/ご/御 (Sudachi
+normalizes お→御 in base forms — match the SURFACE too), curated
+prefix/suffix tables, の-compounds, compound verbs (aux table, then
+passive/causative stripping, then generic V1+V2 with kanji-initial tails),
+verbal nouns (振り返り→振り返る), and a best-scored recursive noun-compound
+split (fewest parts, most balanced — picks ガラス+ケース over ガラ+スケース).
+Composition uses `lookupPartStrict`, which rejects proper-noun glosses on
+kana/single-char parts (JMnedict name noise: いしさ→"Ishisa"). Unresolvable
+kana sound-words get honest labels ("onomatopoeia / sound effect" for
+副詞/感動詞, "stretched vocalization" for ー/〜 tokens). Curated one-offs
+(story names, brands, chants, literary coinages) live in
+`src/data/supplementaryDictionary.ts`, checked BEFORE the waterfall so they
+override wrong homographs (なつき ≠ 夏季 "summer season").
+
+### Known limitations (measured against the committed artifacts)
+
+Across all 310k word-occurrences in the resolved artifacts, **6 occurrences
+(0.002%) remain "Unknown meaning"** — two whitespace+long-dash garbage
+tokens, one 8-char address, one ambiguous song lyric, one Chinese character
+in a story that features Chinese. If you touch composition rules, re-run the
+scan and MANUALLY REVIEW the artifact meaning-diff — the composition rules
+were tuned by exactly that review, and "composes to something wrong" is
+worse than "unknown" in this app. Kana homographs with identical signals
+(あめ) resolve to one entry and show the other as an alternative.
+TOKENIZER_ANALYSIS.md predates all of this and is historical.
+
+### Multi-language architecture (#258 target axis, #260 native axis)
+
+Two independent axes, both seamed but ja/en-only in runtime today:
+
+- **Target language (#258)**: `src/lib/language/` holds LanguageProfile —
+  script predicates, Sudachi-POS→neutral-class mapping, score-breakdown
+  rows, plus server-only tokenizer bindings in `serverProfile.ts`. The old
+  scattered Japanese regexes now live ONLY in the ja profile and
+  extraction-helpers (which the profile delegates to). `isPunctuation` is
+  per-profile semantics on purpose — "no target-language content" is only
+  correct scoped to a language. Content metadata carries optional
+  `language` (absent = 'ja'). Adding a language = one display profile +
+  server bindings + dictionary source + content folders.
+- **Native/gloss language (#260)**: JMDict-all already CONTAINS
+  multilingual glosses (spa 68k, ger 336k, …). `dictionary.ts` selects
+  gloss language PER ENTRY (`getEntryGlossLang` — JMDict groups senses by
+  language, English first, so per-sense fallback silently always returns
+  English). `/api/word/:word?lang=es`, `/api/extract {lang}`. UI strings go
+  through `src/lib/i18n.ts` + `src/locales/` (en source of truth, es stub;
+  English is the mandatory fallback). resolved.json stays English-baked;
+  non-English glosses resolve live on demand (see #260 for the
+  entry-id-in-artifact migration plan).
 
 ---
 
 ## Cache architecture
 
-There are two layers of cache, plus two on-disk artefacts:
+There is one layer of cache, plus one on-disk seed artefact:
 
 | Layer                    | Where it lives                                         | Loaded when                       |
 |--------------------------|--------------------------------------------------------|-----------------------------------|
 | In-memory `WordsCache`   | `src/lib/database.ts`, fed by SQLite                   | At server start, lazy-preloaded   |
-| In-memory `JishoCache`   | same                                                   | same                              |
 | `ContentWordsStore`      | same — per-content extracted vocab                     | same                              |
-| SQLite `.cache.db`       | repo root, three tables: `words_cache`, `jisho_cache`, `content_words` | persistent       |
+| SQLite `.cache.db`       | repo root, two tables: `words_cache`, `content_words`  | persistent       |
 | `.word-cache.json[.gz]`  | gzipped pre-warmed dump of the words cache             | optional, background-loaded       |
-| `.jisho-cache.json[.gz]` | gzipped pre-warmed dump of the Jisho lookup cache      | optional, background-loaded       |
 
-### Why the JSON files exist alongside the SQLite DB — DO NOT delete them
+(Prior to #256 there was also a `JishoCache` layer, a `jisho_cache` table, and
+committed `.jisho-cache.json.gz` seed data backing the now-removed unofficial
+Jisho web fallback. All of that is gone — the dictionary waterfall is JMDict
+-> JMnedict -> kanji-data, entirely local, so there is nothing left to
+pre-warm from a network round-trip.)
+
+### Why the JSON file exists alongside the SQLite DB — DO NOT delete it
 
 `.cache.db` is **per-checkout, per-machine**. The server doesn't sync it
-anywhere, and it's gitignored. So a fresh clone or a CI run starts with
-an empty SQLite cache, and the startup-extraction step (see "Dev server
-startup") then has to call Jisho hundreds of times to repopulate it —
-that's the multi-minute warmup penalty.
+anywhere, and it's gitignored. So a fresh clone or a CI run starts with an
+empty SQLite cache. Since #252's precomputed `resolved.json` artifacts cover
+disk content already, this mostly matters for live/custom-content resolution
+and for the startup-extraction fallback (see "Dev server startup") — both of
+which now resolve purely from local dictionaries, so there's no multi-minute
+network warmup penalty to worry about anymore.
 
-The gzipped `.word-cache.json.gz` and `.jisho-cache.json.gz` are how we
-share that pre-warmed cache across machines via git. They're committed
-on purpose. `setup-cache.sh` decompresses them into the bare
-`.word-cache.json` / `.jisho-cache.json` working files; `setup-cache.sh`
-and the server consult the decompressed versions to seed `JishoCache`
-on startup so a fresh clone doesn't have to re-fetch every lookup from
-Jisho.
+The gzipped `.word-cache.json.gz` is how we share a pre-warmed word cache
+across machines via git. It's committed on purpose. `setup-cache.sh`
+decompresses it into the bare `.word-cache.json` working file.
 
-So the four files do four different jobs and **none of them are
+So the three files do three different jobs and **none of them are
 redundant**:
 
 - `.cache.db` — the live, runtime, mutated SQLite cache.
-- `.word-cache.json` / `.jisho-cache.json` — decompressed seed data
-  used at startup. Generated locally; gitignored.
-- `.word-cache.json.gz` / `.jisho-cache.json.gz` — the *committed*
-  shipping format of the seed data. This is the only way new clones
-  inherit a warm cache.
+- `.word-cache.json` — decompressed seed data used at startup. Generated
+  locally; gitignored.
+- `.word-cache.json.gz` — the *committed* shipping format of the seed data.
+  This is the only way new clones inherit a warm cache.
 
-People have deleted `.word-cache.json` / `.jisho-cache.json` thinking
-"the database has all this already" — **don't**. The DB only has what
-*this machine* has happened to look up. If you need to regenerate the
-gzipped versions after intentionally extending the cache, run
-`npm run compress-cache`.
+People have deleted `.word-cache.json` thinking "the database has all this
+already" — **don't**. The DB only has what *this machine* has happened to
+look up. If you need to regenerate the gzipped version after intentionally
+extending the cache, run `npm run compress-cache`.
 
 The current `server.ts` deliberately **skips** loading `.word-cache.json.gz`
 into memory (relies on the SQLite-backed `WordsCache` instead — see the
 `loadCachesInBackground` block). If you find yourself "fixing" that, read the
 comment first.
 
-`saveDatabase()` only writes if `isDirty`; cache flushes are throttled with
-`shouldSaveCache()` / `clearCacheDirtyFlag()` — don't flush on every write.
+Since #253 (`better-sqlite3`) every write goes straight to disk;
+`saveDatabase()` survives only as a no-op shim so old call sites compile.
+Don't reintroduce write batching without measuring first.
 
 ---
 
 ## Frontend architecture (the things that aren't obvious)
 
-- **No router**. `App.tsx` switches `view: 'home' | 'vocab' | 'scoring' | 'settings'`. Word detail uses `window.history.pushState` + `popstate` for `/word/:word` URLs. Don't add `react-router` without a discussion.
+- **No router**. `App.tsx` (~300-line shell after #255) wires views under `src/views/` (HomeView/VocabView/ScoringView) with state in hooks (`useUrlRouting`, `useHomeFilters`, `useContentBootstrap`, `useContentData`). Word detail uses `window.history.pushState` + `popstate` for `/word/:word?reading=&pos=` URLs — the query params carry the clicked token's in-context reading/POS so the detail page resolves the same homograph. Don't add `react-router` without a discussion.
+- **The reader fetches by content id** (`GET /api/content/:id/story` → precomputed tokens) and falls back to POSTing raw text to `/api/process-story` only for custom/imported content.
 - **State persistence is `localStorage` only**. Keys observed: `customContent`, `knownWords`, `contentVocab`. Vocab cache is invalidated on schema mismatch (it checks `breakdown.jlptScore` / `breakdown.highestGrade` exist).
 - **`useContentData` is the data-orchestration hook** — it owns `knownWords`, `contentVocab`, WaniKani data, and the load-vocab-for-content lifecycle. New features that touch user state should go through it.
 - **WaniKani integration** (`src/lib/wanikani.ts`) — server validates the token, then the client applies SRS-stage-based score multipliers in `applyWaniKaniToWords`.
@@ -445,18 +547,18 @@ comment first.
 - Tests sit next to the code they test (`foo.ts` ↔ `foo.test.ts`). Keep them in `src/`, not `integration/`.
 - Don't add deps for things `lucide-react` / `motion` / `tailwindcss` already cover.
 - Don't put new content into `src/data/content.ts` — content is on disk under `src/stories|music|videos/`.
-- Don't push `.cache.db`, `.word-cache.json`, `.jisho-cache.json` to git (the gzipped versions *are* committed). See the "Why the JSON files exist…" section above before deleting any of these.
+- Don't push `.cache.db`, `.word-cache.json` to git (the gzipped version *is* committed). See the "Why the JSON file exists…" section above before deleting either of these.
 - Push to whichever branch the harness or task specifies for your run. Don't push to `main`.
 
 ---
 
 ## Common pitfalls (saves time)
 
-- `npm start` is broken (it tries to `node server.ts`). Use `npm run dev`.
-- The README says 104 stories; the disk has 123. Don't trust counts in docs.
+- Content/test counts in ANY doc (including this one) drift constantly — measure, don't trust.
 - `integration/` is **not** the vitest location — it's standalone integration scripts. New unit tests go into `src/**/*.test.ts`.
 - `DEVELOPMENT.md`'s API endpoint list (`/api/stories`, `/api/analyze`, `/api/dictionary/:word`) is **stale** — see the API table above.
-- Sudachi WASM build needs Rust. If `sudachi-wasm-built/` is missing, the default tokenizer fails to start. Fall back with `TOKENIZER=tinysegmenter npm run dev` while you fix it.
+- Sudachi WASM: `npm run setup-sudachi` decompresses the committed artifacts (no Rust needed); Rust is only required for a full rebuild from the pinned source. The wasm binary and `system.dic` are a MATCHED PAIR — after a git checkout/pull that changes `sudachi-wasm-built/*.gz`, delete the stale decompressed `index_bg.wasm`/`system.dic` and re-run setup, or the wasm-bindgen glue will mismatch the binary at runtime.
+- **Only one process can open `jmdict-db` (LevelDB) at a time** — the dev server, `resolve-content`, the API test suite, and the integration scripts all want that lock. A locked-out DictionaryManager logs "Database is not open" and silently degrades to fallbacks. Kill the server before running scripts, and vice versa.
 - The first start of the server has to extract `jmdict-all-3.6.2.json.tgz` (25 MB → ~270 MB). Don't kill it during that step.
 - `populate-cache.ts` and `tokenizer-comparison.ts` at the repo root are dev utilities — they shouldn't be imported by app code.
 
@@ -505,60 +607,25 @@ Process to apply:
 
 ---
 
-## Issues worth filing (spotted during this orientation pass)
+## Issues worth filing / known open threads
 
-These are things that struck me as wrong / dead / risky while writing
-this guide. None of them are urgent; verify each one against the
-current code before opening a ticket — see the section above about
-issues being starting points, not specs. Some may have already been
-addressed by the time you're reading this.
+The original orientation-pass list (npm start, WordResolver refactor,
+SIGTERM, startup extraction, App.tsx split, dependency pruning) has been
+fully addressed — see issues #250–#256 and their merged implementations.
+Still open or newly observed:
 
-- **`npm start` is broken.** `package.json` script is `node server.ts`,
-  but `server.ts` is TypeScript with ESM imports — the process exits
-  immediately. Either change to `tsx server.ts` or delete the script
-  (it's never been the right command).
-- **`resolveWordMeaning` is a convention, not a guarantee.** The fix for
-  #188 routed three call sites through one resolver function, but
-  endpoints still independently call `getCachedDictionaryEntries` /
-  `findBestVariant` for score calculation, which is exactly how #188
-  happened in the first place. A `WordResolver` class with private
-  helpers and a single public API would make bypass impossible. File
-  it as a refactor, not a bug.
-- **Server SIGTERM handling is hostile to orchestration.** `server.ts`
-  catches SIGTERM and explicitly logs "ignoring gracefully", plus a
-  `setInterval(..., 30000)` keep-alive that prevents Node from exiting
-  on its own. This breaks `docker stop`, systemd, k8s, and CI runners
-  that send SIGTERM and expect the process to drain and exit. Either
-  honour SIGTERM (save DB, close server, exit) or document why we
-  don't.
-- **Startup extraction blocks the event loop.** On a fresh `.cache.db`,
-  the server opens port 3000 and *then* spends minutes calling Jisho
-  hundreds of times in chunks of 20, on the same event loop that
-  serves user requests. The user-visible result: "the server is up
-  but everything times out for 5 minutes". Options: move extraction
-  to a worker thread; throttle / yield between chunks so HTTP
-  requests interleave; or wait until extraction is done before
-  binding the port (and print honest progress).
-- **`TOKENIZER_ANALYSIS.md` is stale.** It quotes ~60% definition
-  accuracy and recommends fixes that may have already shipped via
-  #189's grouping work. Worth re-running its measurement and
-  rewriting (or marking as historical).
-- **Multiple tokenizer packages, only one supported.** `package.json`
-  ships `@didmar/sudachi-wasm`, `@hiogawa/sudachi.wasm`, `sudachi`,
-  `sudachi-ts`, `lindera-nodejs`, `kuromoji`, `mecab-async`, and
-  `tiny-segmenter` even though only Sudachi WASM is the supported
-  path. That's a lot of install footprint and supply-chain surface
-  for emergency-only fallbacks. Pruning candidate.
-- **Repo-root one-offs.** `populate-cache.ts`, `tokenizer-comparison.ts`,
-  and `script.cjs` sit at the root with no obvious owner. Move into
-  `scripts/` (with a README pointer) or delete if nothing imports
-  them.
-- **`App.tsx` is ~920 lines of single-component everything.** Routing,
-  view switching, modal management, vocab loading, filtering,
-  WaniKani, and import/export all live in one component. Worth a
-  splitting pass — at minimum, extract the home view, the vocab
-  view, and the URL-routing effect into siblings under a thin shell
-  component.
+- **#257 — the remaining 0.12% unknown words.** Compositional fallback
+  (お/ご prefixes, productive suffixes, compound verbs) + a small
+  supplementary dictionary for story character names (なつき currently
+  glosses as "summer season") and coinages. Measured breakdown in the issue.
+- **`TOKENIZER_ANALYSIS.md` is historical.** Its accuracy numbers predate
+  the sense-ordering, homograph, reading, and grouping fixes. Re-measure or
+  mark clearly as archival.
+- **`server.ts` decomposition (second half of #255).** The scrapers moved
+  out and App.tsx was split, but server.ts still mixes boot orchestration,
+  routes, and the extraction pipeline in one file.
+- **README/DEVELOPMENT.md drift.** Endpoint lists and content counts in the
+  human docs remain stale.
 
 ---
 
@@ -608,6 +675,61 @@ For everything else — especially anything that touches `server.ts`,
 `src/hooks/useContentData.ts` — write the failing test first.
 
 ---
+
+## Environment quirks (cloud / agent sessions)
+
+Hard-won lessons from working on this repo in sandboxed cloud sessions.
+Most of these will bite silently if you don't know them:
+
+- **The workspace can be restored from an OLD snapshot.** After a container
+  restart, local HEAD and untracked files may lag what was already pushed —
+  while origin has the truth. On resuming: `git fetch`, compare with
+  `origin/<branch>`, fast-forward, then **re-sync generated artifacts**
+  (delete stale `sudachi-wasm-built/index_bg.wasm`/`system.dic`, re-run
+  `npm run setup-sudachi`, `npm install` if package.json moved, delete
+  `.cache.db`). Never conclude work was "lost" from local state alone.
+- **`pkill -f` / `pgrep -f` match their own command line.** A pattern like
+  `pkill -f "resolve-content"` kills the shell running it (the pattern is in
+  its own cmdline) — the compound dies mid-way and later commands never run.
+  Use a self-excluding bracket pattern (`pkill -f "resolve[-]content"`) or
+  kill by collected PIDs. Also scope patterns tightly: a broad
+  `pkill -f "server.ts"` killed sibling worktree agents' dev servers.
+- **One `jmdict-db` lock, one port.** See Common pitfalls — server XOR
+  scripts. Sibling agent worktrees have their OWN clone/lock/node_modules,
+  but they share port 3000 unless they use `PORT`.
+- **Egress goes through a proxy that 403s some hosts.** Seen blocked:
+  GitHub release binary downloads (binaryen/wasm-opt — which is why the
+  Sudachi patch sets `wasm-opt = false`), uta-net, YouTube (yt-dlp also
+  isn't installed). jisho.org was reachable, but the app no longer calls it.
+- **The dev server is heavy**: ~1.9 GB RSS (WASM dictionary in linear
+  memory + JMnedict map + JMDict LevelDB). Don't run several at once.
+- **Long waits**: don't poll with bare `sleep` loops in foreground shells
+  (the harness blocks them); use background tasks with `until` loops.
+
+## Delegating issues to subagents
+
+When farming an issue out to a subagent, **point it at the issue — don't
+paste the issue into the prompt.** The agent must:
+
+1. **Read the issue and its comments itself** (GitHub MCP tools / `gh`).
+   Comments often carry corrections and measurements newer than the body.
+   If you restate the issue in the prompt, the issue stops being the source
+   of truth and the whole point of filing it is lost.
+2. Do the work on a branch based on the **current integration branch** (not
+   `main`) when one is active — agents that branched from main here produced
+   avoidable merge conflicts. Worktree agents: create a named branch from
+   `origin/<integration-branch>` first thing.
+3. Follow this file (TDD, lint/test gates) and NEVER push or open PRs unless
+   told to; report branch + worktree path + commit SHAs for the parent to
+   merge.
+4. **Comment the outcome back on the issue** — what was measured, what was
+   changed, key numbers, commit SHAs. The issue thread is the durable
+   record; a subagent report that only lives in a chat transcript is lost to
+   the next session. (Issue-closing itself happens when the branch merges.)
+
+The prompt should carry only: the issue number, environment constraints the
+agent can't discover (locks, ports, concurrent sessions), scope boundaries
+(files owned by concurrent work), and the base-branch instruction.
 
 ## House rules for agents
 

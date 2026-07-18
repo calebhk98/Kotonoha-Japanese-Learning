@@ -5,7 +5,31 @@ const TinySegmenter = require('tiny-segmenter');
 export interface TokenInfo {
   surface: string;      // The actual word as it appears (with conjugations)
   baseForm: string;     // Dictionary form for lookup (base form)
+  /**
+   * First part-of-speech element from the tokenizer (名詞, 動詞, 助詞, …).
+   * Only Sudachi provides it. Used as a dictionary-lookup hint so kana
+   * homographs resolve to a grammatically compatible entry (verb おく →
+   * 置く "to put", not 奥 "inner part").
+   */
+  pos?: string;
+  /**
+   * Contextual reading of the surface in hiragana (UniDic reading_form,
+   * converted from katakana). Requires a Sudachi WASM built with the
+   * scripts/sudachi-wasm-reading.patch — absent on older builds, in which
+   * case behavior falls back to pre-reading logic. Used for furigana
+   * display and (for non-conjugating tokens) homograph disambiguation:
+   * 家の前 reads まえ, 六人 reads にん.
+   */
+  reading?: string;
 }
+
+/**
+ * Converts katakana to hiragana (ー and other marks pass through).
+ * Canonical implementation lives in the browser-safe language profile
+ * (#258); aliased here for the existing server-side call sites.
+ */
+import { katakanaToHiraganaJa } from './language/japanese.js';
+export const katakanaToHiragana = katakanaToHiraganaJa;
 
 export interface Tokenizer {
   name: string;
@@ -42,6 +66,8 @@ export class SudachiTSImpl implements Tokenizer {
 
   async ready(): Promise<void> {
     try {
+      // @ts-expect-error — the sudachi-ts package was removed (deprecated
+      // fallback; see the class-level notes for reinstall instructions).
       const { DictionaryFactory } = await import('sudachi-ts');
       const path = await import('path');
       const configPath = path.join(process.cwd(), 'sudachi.json');
@@ -96,7 +122,7 @@ export class LinderaImpl implements Tokenizer {
   }
 }
 
-// Hiogawa Sudachi WASM implementation (with built-in dictionary)
+// Hiogawa Sudachi WASM implementation
 export class SudachiWasmImpl implements Tokenizer {
   name = 'Sudachi WASM';
   private tokenizer: any = null;
@@ -105,19 +131,36 @@ export class SudachiWasmImpl implements Tokenizer {
     try {
       const fs = await import('fs');
       const path = await import('path');
+      const join = (path.default || path).join;
 
-      // Load the built WASM module with embedded dictionary
-      const wasmPath = (path.default || path).join(process.cwd(), 'sudachi-wasm-built', 'index_bg.wasm');
+      const wasmPath = join(process.cwd(), 'sudachi-wasm-built', 'index_bg.wasm');
+      // The UniDic dictionary ships as a separate file (issue #254) so glue
+      // changes don't require recommitting a 200MB blob. Older builds embed
+      // the dictionary inside the wasm itself; both are supported.
+      const dictPath = join(process.cwd(), 'sudachi-wasm-built', 'system.dic');
       const wasmModule = await import('../../sudachi-wasm-built/index.js');
       const { initSync, Tokenizer } = wasmModule;
 
       const wasmBuffer = (fs.readFileSync as any)(wasmPath);
-
-      // Initialize the WASM module with embedded dictionary
       initSync({ module: wasmBuffer });
 
-      // Create tokenizer (no dictionary needed - it's embedded)
-      this.tokenizer = Tokenizer.create();
+      if ((fs.existsSync as any)(dictPath)) {
+        // Split build: pass the dictionary explicitly. The buffer is copied
+        // into wasm linear memory by the binding (Storage::Owned), so the
+        // Node-side buffer can be garbage-collected afterwards.
+        const dictBuffer = (fs.readFileSync as any)(dictPath);
+        this.tokenizer = Tokenizer.create(dictBuffer);
+      } else {
+        // Legacy embedded build (or missing dictionary — the binding throws
+        // a clear "requires 'dict_data'" error in that case).
+        try {
+          this.tokenizer = Tokenizer.create();
+        } catch (e: any) {
+          throw new Error(
+            `${e.message ?? e} — sudachi-wasm-built/system.dic is missing; run: npm run setup-sudachi`
+          );
+        }
+      }
       console.log(`[Tokenizer] ${this.name} ready`);
     } catch (e: any) {
       console.warn(`[Tokenizer] ${this.name} initialization failed:`, e.message);
@@ -164,14 +207,34 @@ export class SudachiWasmImpl implements Tokenizer {
     ]);
     let groupSurface = '';
     let groupBaseForm = '';
+    let groupPos = '';
+    let groupReading = '';
+    let groupReadingValid = true;
     let groupIsVerb = false;
     let tePending = false;
 
+    // reading_form exists only on WASM builds patched via
+    // scripts/sudachi-wasm-reading.patch; older builds yield undefined and
+    // every token's reading stays undefined (pre-reading behavior).
+    const readingOf = (m: any): string | null => {
+      const r = m.reading_form;
+      if (typeof r !== 'string' || r === '' || r === '*') return null;
+      return katakanaToHiragana(r);
+    };
+
     const flush = () => {
       if (groupSurface) {
-        result.push({ surface: groupSurface, baseForm: groupBaseForm });
+        result.push({
+          surface: groupSurface,
+          baseForm: groupBaseForm,
+          pos: groupPos || undefined,
+          reading: groupReadingValid && groupReading ? groupReading : undefined,
+        });
         groupSurface = '';
         groupBaseForm = '';
+        groupPos = '';
+        groupReading = '';
+        groupReadingValid = true;
         groupIsVerb = false;
         tePending = false;
       }
@@ -188,30 +251,42 @@ export class SudachiWasmImpl implements Tokenizer {
       }
 
       const baseForm = m.normalized_form || surface;
+      const reading = readingOf(m);
 
-      if (!groupSurface) {
+      const appendReading = () => {
+        if (reading === null) groupReadingValid = false;
+        else groupReading += reading;
+      };
+      const startGroup = () => {
         groupSurface = surface;
         groupBaseForm = baseForm;
+        groupPos = pos;
+        groupReading = reading ?? '';
+        groupReadingValid = reading !== null;
         groupIsVerb = pos === '動詞';
         tePending = false;
+      };
+
+      if (!groupSurface) {
+        startGroup();
       } else if (groupIsVerb && pos === '助動詞' && GROUPABLE_AUX.has(m.normalized_form)) {
         groupSurface += surface;
+        appendReading();
         tePending = false;
       } else if (groupIsVerb && pos === '助詞' && (surface === 'て' || surface === 'で')) {
         // Conjunctive て/で — attach and wait for the continuation verb (いる, くれる, …)
         groupSurface += surface;
+        appendReading();
         tePending = true;
       } else if (tePending && pos === '動詞' && TE_CONTINUATION_VERBS.has(m.normalized_form)) {
         // Grammaticalized continuation verb after te-form (いる, くれる, しまう, …)
         // Content verbs (食べる, 走る, …) fall through to flush — they start a new clause.
         groupSurface += surface;
+        appendReading();
         tePending = false;
       } else {
         flush();
-        groupSurface = surface;
-        groupBaseForm = baseForm;
-        groupIsVerb = pos === '動詞';
-        tePending = false;
+        startGroup();
       }
     }
 

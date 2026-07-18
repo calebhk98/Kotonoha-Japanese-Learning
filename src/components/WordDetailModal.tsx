@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { WordInfo, ScoreBreakdown } from '../types';
 import { X, Save, Zap } from 'lucide-react';
 import { WK_STAGE_NAMES } from '../lib/wanikani';
+import { useModalDismiss } from '../hooks/useModalDismiss';
 
 export const WordDetailModal: React.FC<{
   w: WordInfo;
@@ -18,6 +19,7 @@ export const WordDetailModal: React.FC<{
   const [priorities, setPriorities] = useState(w.breakdown?.priorities?.join(', ') || '');
   const [jlptScore, setJlptScore] = useState(w.breakdown?.jlptScore?.toString() || '0');
   const [wkSrsStage, setWkSrsStage] = useState(w.wkSrsStage?.toString() || '');
+  const { onBackdropClick } = useModalDismiss(onClose);
 
   const handleSave = () => {
     const stage = wkSrsStage !== '' ? parseInt(wkSrsStage) : undefined;
@@ -45,7 +47,10 @@ export const WordDetailModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onBackdropClick}
+    >
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50 flex-shrink-0">
           <div>

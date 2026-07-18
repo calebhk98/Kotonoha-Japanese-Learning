@@ -8,16 +8,16 @@ coverage/
 !.env.example
 # Cache files - ignore uncompressed, track compressed versions for instant setup
 .word-cache.json
-.jisho-cache.json
 .cache.db
+.caption-scrape-state.json
 !.word-cache.json.gz
-!.jisho-cache.json.gz
 jmdict-all-3.6.2.json
 jmdict-db/
 *.dic
 sudachi-dictionary-*/
 # Sudachi WASM: ignore uncompressed binary, track compressed version
 sudachi-wasm-built/index_bg.wasm
+sudachi-wasm-built/system.dic
 !sudachi-wasm-built/*.gz
 tokenization-report-*.json
 .cache/
