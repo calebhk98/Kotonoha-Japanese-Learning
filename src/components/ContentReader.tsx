@@ -1,7 +1,7 @@
 import { Content } from '../data/content';
 import { WordInfo } from '../types';
-import { ArrowLeft, Play, Pause } from 'lucide-react';
-import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react';
+import { ArrowLeft, Play, Pause, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, type KeyboardEvent, type ReactNode } from 'react';
 
 function getYouTubeId(url: string) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -27,6 +27,12 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
   const [showFurigana, setShowFurigana] = useState(true);
   const [showHoverDefs, setShowHoverDefs] = useState(true);
   const [paragraphs, setParagraphs] = useState<ParagraphTokens[]>([]);
+  // #259 B2: the reader used to render just the title on a blank card while
+  // `paragraphs` was still `[]` and the story fetch was slow/hung, with no
+  // spinner and no error text. Tracks loading/error/ready explicitly instead
+  // of inferring state from whether `paragraphs` happens to be empty.
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'error' | 'ready'>('loading');
+  const [retryCount, setRetryCount] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -43,7 +49,10 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
   // resolved.json (issue #252) — instant, no warmup; custom/imported content
   // (unknown id → 404) falls back to live processing of the raw text.
   useEffect(() => {
+    let cancelled = false;
+
     const processStory = async () => {
+      setLoadStatus('loading');
       try {
         let response = await fetch(`/api/content/${encodeURIComponent(content.id)}/story`);
         if (!response.ok) {
@@ -56,6 +65,7 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
 
         if (!response.ok) throw new Error('Failed to process story');
         const data = await response.json();
+        if (cancelled) return;
 
         // Group tokens by paragraph
         const textLines = content.text.split('\n');
@@ -85,16 +95,24 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
         }
 
         setParagraphs(paragraphTokens);
+        setLoadStatus('ready');
       } catch (e) {
         console.error('Failed to process story:', e);
-        // Fallback: create empty token arrays for each paragraph
+        if (cancelled) return;
+        // Fallback: still show the plain (non-interactive) text so the story
+        // is at least readable, but surface an explicit error affordance
+        // (#259 B2) instead of silently rendering a blank-looking card.
         const textLines = content.text.split('\n').filter(p => p.trim() !== '');
         setParagraphs(textLines.map(text => ({ text, tokens: [] })));
+        setLoadStatus('error');
       }
     };
 
     processStory();
-  }, [content.text]);
+    return () => {
+      cancelled = true;
+    };
+  }, [content.text, content.id, retryCount]);
 
   const renderParagraph = (paragraphData: ParagraphTokens) => {
     const { text, tokens } = paragraphData;
@@ -127,12 +145,29 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
           <span>{token.surface}</span>
         );
 
+        // #259 P3: word tokens were plain <span onClick> \u2014 not a button or
+        // link, so keyboard users couldn't Tab to a word or open it without
+        // a mouse. tabIndex + role="button" + Enter/Space activation makes
+        // them keyboard-operable like the rest of the app's controls.
+        const activateWord = () => onWordClick?.(info.word, info.reading, info.pos);
+        const handleWordKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            activateWord();
+          }
+        };
+        const wordAriaLabel = info.meaning ? `${info.word}, ${info.reading}, ${info.meaning}` : `${info.word}, ${info.reading}`;
+
         if (showHoverDefs) {
           elements.push(
             <span
               key={`word-${token.startIndex}`}
-              className="relative group cursor-pointer inline-block mx-0.5 border-b border-dashed border-gray-300 hover:border-indigo-500 transition-colors"
-              onClick={() => onWordClick?.(info.word, info.reading, info.pos)}
+              role="button"
+              tabIndex={0}
+              aria-label={wordAriaLabel}
+              className="relative group cursor-pointer inline-block mx-0.5 border-b border-dashed border-gray-300 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:rounded transition-colors"
+              onClick={activateWord}
+              onKeyDown={handleWordKeyDown}
             >
               {inner}
               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] sm:max-w-xs bg-gray-900 border border-gray-700 text-white p-3 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none text-left">
@@ -158,8 +193,12 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
           elements.push(
             <span
               key={`word-${token.startIndex}`}
-              className="cursor-pointer"
-              onClick={() => onWordClick?.(info.word, info.reading, info.pos)}
+              role="button"
+              tabIndex={0}
+              aria-label={wordAriaLabel}
+              className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:rounded"
+              onClick={activateWord}
+              onKeyDown={handleWordKeyDown}
             >
               {inner}
             </span>
@@ -257,11 +296,32 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
             <div className="w-16 h-1 bg-indigo-600 rounded-full mb-8" />
           </div>
 
-          <div className="space-y-6 text-lg md:text-xl leading-relaxed text-gray-800">
-            {paragraphs.map((p, i) => (
-              <div key={i}>{renderParagraph(p)}</div>
-            ))}
-          </div>
+          {loadStatus === 'loading' && (
+            <div role="status" aria-label="Loading story" className="flex items-center justify-center gap-3 text-gray-400 py-16">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <span>Loading story…</span>
+            </div>
+          )}
+
+          {loadStatus === 'error' && (
+            <div role="alert" className="flex flex-wrap items-center justify-between gap-4 bg-red-50 border border-red-100 text-red-700 rounded-2xl px-5 py-4 mb-2">
+              <span>Couldn't load the interactive reading experience for this story. You can still read the raw text below.</span>
+              <button
+                onClick={() => setRetryCount((c) => c + 1)}
+                className="text-sm font-semibold px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex-shrink-0"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {loadStatus !== 'loading' && (
+            <div className="space-y-6 text-lg md:text-xl leading-relaxed text-gray-800">
+              {paragraphs.map((p, i) => (
+                <div key={i}>{renderParagraph(p)}</div>
+              ))}
+            </div>
+          )}
         </article>
       </main>
     </div>
