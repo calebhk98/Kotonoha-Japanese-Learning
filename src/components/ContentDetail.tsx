@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, PlayCircle, GraduationCap, Loader2, BookOpen, Download, Zap } from 'lucide-react';
 import { Content } from '../data/content';
 import { WordInfo } from '../types';
@@ -47,6 +47,12 @@ export function ContentDetail({
   const [editText, setEditText] = useState(content.text);
   const [showAllWords, setShowAllWords] = useState(false);
   const [showAnkiModal, setShowAnkiModal] = useState(false);
+
+  // #259 P4: reflect the open content item in the tab title instead of the
+  // static "Kotonoha".
+  useEffect(() => {
+    document.title = `${content.title} — Kotonoha`;
+  }, [content.title]);
 
   if (view === 'lesson') {
     return (

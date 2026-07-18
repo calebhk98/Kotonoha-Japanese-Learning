@@ -16,7 +16,13 @@ export function LessonProcess({
   const [showAnswer, setShowAnswer] = useState(false);
   const [learnedWords, setLearnedWords] = useState<string[]>([]);
   const [pendingAction, setPendingAction] = useState<{learned: boolean} | null>(null);
-  
+
+  // #259 P4: reflect the lesson flow in the tab title instead of the static
+  // "Kotonoha".
+  useEffect(() => {
+    document.title = 'Lesson — Kotonoha';
+  }, []);
+
   if (queue.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">

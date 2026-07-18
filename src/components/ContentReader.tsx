@@ -29,6 +29,12 @@ export function ContentReader({ content, vocab, onBack, onWordClick }: { content
   const [paragraphs, setParagraphs] = useState<ParagraphTokens[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // #259 P4: reflect the story/song/video being read in the tab title
+  // instead of the static "Kotonoha".
+  useEffect(() => {
+    document.title = `${content.title} — Kotonoha`;
+  }, [content.title]);
+
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {

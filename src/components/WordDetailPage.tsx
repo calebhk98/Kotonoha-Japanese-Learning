@@ -109,6 +109,12 @@ export function WordDetailPage({
     fetchWordData();
   }, [word, allWords]);
 
+  // #259 P4: document.title was always the static "Kotonoha" — reflect the
+  // word being viewed (e.g. at /word/猫) once it loads.
+  useEffect(() => {
+    document.title = wordData ? `${wordData.word} — Kotonoha` : `${word} — Kotonoha`;
+  }, [word, wordData]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F2ED] text-gray-900 font-sans flex flex-col">
