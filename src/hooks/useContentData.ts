@@ -187,7 +187,12 @@ export function useContentData() {
 
   const getContentStatus = useCallback((contentId: string) => {
     const words = contentVocab[contentId];
-    if (!words) return { difficulty: 0, unknownCount: 0, totalCount: 0, score: 0, totalUnknownScore: 0, unknownWords: [], knownWords: [], comprehension: 0 };
+    // #259 C1: `loaded` distinguishes "contentVocab[id] hasn't been populated
+    // yet" from "populated, and this content genuinely has zero words" —
+    // callers used to key their loading spinner off totalCount === 0, which
+    // meant a content item that legitimately extracted to zero vocab words
+    // would show "Analyzing vocabulary..." forever.
+    if (!words) return { difficulty: 0, unknownCount: 0, totalCount: 0, score: 0, totalUnknownScore: 0, unknownWords: [], knownWords: [], comprehension: 0, loaded: false };
 
     const unknownWords = words.filter(w => !isWordKnown(w));
     const knownVocab = words.filter(w => isWordKnown(w));
@@ -215,6 +220,7 @@ export function useContentData() {
       unknownWords,
       knownWords: knownVocab,
       comprehension,
+      loaded: true,
     };
   }, [contentVocab, isWordKnown]);
 

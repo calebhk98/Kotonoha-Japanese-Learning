@@ -113,6 +113,32 @@ describe('getContentStatus', () => {
     expect(status.score).toBe(0);
   });
 
+  // #259 C1: HomeView's card spinner used `status.totalCount === 0` as its
+  // "still loading" signal, which is indistinguishable from "loaded, and
+  // this content genuinely has zero extracted words" — a card whose vocab
+  // really is empty would show "Analyzing vocabulary..." forever. `loaded`
+  // is the actual "has contentVocab[id] been populated" signal.
+  it('reports loaded:false for content with no vocab entry yet', () => {
+    const { result } = renderHook(() => useContentData());
+    const status = result.current.getContentStatus('nonexistent');
+    expect(status.loaded).toBe(false);
+  });
+
+  it('reports loaded:true once vocab has been set, even for an empty word list', () => {
+    localStorage.setItem('contentVocab', JSON.stringify({ 'empty-story': [] }));
+    const { result } = renderHook(() => useContentData());
+    const status = result.current.getContentStatus('empty-story');
+    expect(status.loaded).toBe(true);
+    expect(status.totalCount).toBe(0);
+  });
+
+  it('reports loaded:true for content with words', () => {
+    localStorage.setItem('contentVocab', JSON.stringify({ 'story-1': [WORD_A, WORD_B] }));
+    const { result } = renderHook(() => useContentData());
+    const status = result.current.getContentStatus('story-1');
+    expect(status.loaded).toBe(true);
+  });
+
   it('counts all words as unknown initially', () => {
     localStorage.setItem('contentVocab', JSON.stringify({ 'story-1': [WORD_A, WORD_B] }));
     const { result } = renderHook(() => useContentData());
