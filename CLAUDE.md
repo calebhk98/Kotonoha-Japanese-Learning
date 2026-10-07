@@ -471,9 +471,10 @@ agents. Outcome-based flags (each fires only when the result actually differs):
   occurrence's resolution. Fires when resolving this occurrence with its own
   reading/POS would give a different meaning or reading (方 かた vs ほう).
 - `KEY≠`: lookup uses Sudachi `normalized_form`; fires when `dictionary_form`
-  would pick a different JMDict entry.
+  would pick a different JMDict entry. Usually normalized_form is the
+  better pick (see below), so read these, don't count them as bugs.
 - `SPLIT≠`: tokenizing the sentence alone differs from tokenizing the whole
-  text. Sudachi's lattice is local, so this is expected to be ~0.
+  text. Rare (23 in the corpus), always at sentence starts.
 - `UNKNOWN`: no definition.
 
 Startup is ~1 min (dictionary load) and it holds the `jmdict-db` lock, so
