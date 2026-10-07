@@ -282,11 +282,13 @@ export class WordResolver {
     // its own JMDict expression; the verb lemma (始める) would lose it.
     // After a grammatical context only a sense noted for it is used
     // (〜てください = "please (do for me)").
-    if (this.dictionary && wordStr !== baseForm && /^[ぁ-んー]+$/.test(wordStr)) {
+    // With a context, kanji surfaces qualify too (贈って下さい): only a sense
+    // noted for that context is accepted, so this can't over-match.
+    if (this.dictionary && wordStr !== baseForm && (/^[ぁ-んー]+$/.test(wordStr) || ctx?.after)) {
       const phrase = await this.expression(wordStr, ctx?.after);
       if (phrase) {
         const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, null);
-        return { reading: wordStr, meaning: phrase.gloss, meanings: undefined, variant: null, entry: null, jlpt, joyo, score, breakdown };
+        return { reading: tokenReading ?? phrase.reading, meaning: phrase.gloss, meanings: undefined, variant: null, entry: null, jlpt, joyo, score, breakdown };
       }
     }
 
