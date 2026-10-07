@@ -482,24 +482,34 @@ stop the dev server first and run one instance at a time. Batch work with
 
 ### Where "wrong words" come from (research + measurement, Oct 2026)
 
-Ranked by measured impact; see `--summary` numbers above before changing any.
-JMDict schema facts below are from the jmdict-simplified types package.
+`--id all --summary` over 607 items / 37,601 sentences: SHARED 2,138
+(313 items), KEY≠ 7,064 (517 items), SPLIT≠ 23, UNKNOWN 3. JMDict schema
+facts below are from the jmdict-simplified types package.
 
-1. **Surface-keyed dedup** (SHARED). Fix = resolve per occurrence (key words
-   by surface+reading+POS), which changes the resolved.json word list.
+1. **Surface-keyed dedup** (SHARED, 2,138). Every later occurrence of a
+   surface shows the first occurrence's resolution (方 かた vs ほう). Fix =
+   resolve per occurrence (key by surface+reading+POS); changes the
+   resolved.json word list.
 2. **Sense filtering is missing.** jmdict-simplified gives every sense
    `partOfSpeech`, `appliesToKanji`, `appliesToKana` (`"*"` = all); none are
-   used. POS is only an entry-level +10 on the FIRST Sudachi POS level, and
-   senses are not filtered, so 方/かた shows "direction" not "person".
+   used. POS is only an entry-level +10 on the FIRST Sudachi POS level and
+   senses are not filtered, so この方 (かた) shows "direction", not "person".
    Form tags (`sK` search-only, `iK`/`ik` irregular, `oK`/`ok` outdated,
    `rK`/`rk` rare) on `kanji[].tags`/`kana[].tags` are ignored too.
-3. **Reading is a +15 boost, not a filter**, and is only passed for
+3. **Reading is a +15 boost, not a filter**, and only passed for
    non-conjugating POS. Yomitan sorts by reading match FIRST.
-4. **Lookup key** (KEY≠): `normalized_form` rewrites spelling (かわいい→可愛い,
-   この→此の, する→為る). Usually harmless; measure before changing.
-5. **Sentence splitting** (SPLIT≠): not a cause. `src/lib/sentenceSplitter.ts`
-   exists for display/inspection; chunking before `segment()` is only worth
-   it for very long unpunctuated input.
+4. **Keep `normalized_form` as the lookup key.** Common advice says "look up
+   dictionary_form", but KEY≠ shows it is much WORSE here: beginner content
+   is written in kana, dictionary_form keeps the kana (せんせい, きょう,
+   ぜんぶ) and kana lookups hit homophones (先制, 京, 前部), while
+   normalized_form restores the kanji (先生, 今日, 全部). The rare
+   exceptions are fillers (えー→ええ "yes" where え "eh?" fits). A high
+   KEY≠ count is therefore expected, not a bug count.
+5. **Sentence splitting** (SPLIT≠, 23): small but real. All cases are
+   sentence-initial: after a newline/space Sudachi splits differently than
+   at a fresh start. Per-sentence was better in 5 of 7 sampled
+   (からだ not から|だ, 区役所, 係長), worse in 2 (三日月 → 三|日|月).
+   `src/lib/sentenceSplitter.ts` exists if this is ever worth acting on.
 
 ### Multi-language architecture (#258 target axis, #260 native axis)
 
