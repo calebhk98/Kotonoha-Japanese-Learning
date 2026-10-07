@@ -206,6 +206,8 @@ export class WordResolver {
       idiom?: { expression: string; gloss: string };
       /** English head words of the verb's subject/object (see LookupHint). */
       argumentWords?: string[];
+      /** Sudachi says 普通名詞 (common noun), not a proper noun. */
+      commonNoun?: boolean;
     }
   ): Promise<WordResolution> {
     // Curated corrections for UniDic's known-bad standalone readings (米→べい).
@@ -361,6 +363,14 @@ export class WordResolver {
       let dictResult: any = lookupCache?.get(cacheKey) ?? null;
 
       if (dictResult === null) {
+        // A kanji surface that differs from its normalized form (何か → 何)
+        // is its own, more specific headword; kanji spellings are not
+        // homophone-ambiguous the way kana ones are.
+        if (wordStr !== baseForm && /[一-鿿々]/.test(wordStr) && pos && NON_CONJUGATING_POS.has(pos)) {
+          dictResult = await this.dictionary.lookup(wordStr, hint);
+        }
+      }
+      if (dictResult === null) {
         dictResult = await this.dictionary.lookup(baseForm, hint);
         if (!dictResult && baseForm !== wordStr) {
           dictResult = await this.dictionary.lookup(wordStr, hint);
@@ -390,7 +400,11 @@ export class WordResolver {
     // but decomposes transparently, compose a meaning from the parts so
     // learners see the structure (試合後 → "match + 後 (after)") instead of
     // "Unknown meaning".
-    if (meaning === 'Unknown meaning' && this.dictionary) {
+    // Sudachi says this is a common noun but only JMnedict knew it (小鮒 →
+    // "Kobuna (name)"): a transparent composition (small + crucian carp)
+    // is the better meaning.
+    const nameOnly = / \(name\)$/.test(meaning);
+    if ((meaning === 'Unknown meaning' || (nameOnly && ctx?.commonNoun)) && this.dictionary) {
       const composed = await this.composeUnknown(wordStr, baseForm, pos);
       if (composed) {
         meaning = composed.meaning;

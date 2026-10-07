@@ -430,6 +430,13 @@ export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint)
   // Grammatical compatibility with the token: Sudachi knows おく in
   // おいていきなさい is a VERB, which rules out 奥 "inner part" and 億
   // "hundred million"; a NOUN 頭 rules out the large-animal counter (ctr).
+  const posMatcher = hint?.pos ? jmdictPosMatcher(hint.pos) : null;
+  if (posMatcher && !entryMatchesPos(entry, hint?.pos)) {
+    // No sense fits the token's POS at all (好き tagged as a verb vs the
+    // adverb 良く/好く): a common-but-wrong-POS entry must not win on its
+    // common flag alone.
+    score -= 8;
+  }
   if (entryMatchesPos(entry, hint?.pos)) {
     score += 10;
     // 感動詞 is only hinted for clear exclamations (Sudachi's own tag, or

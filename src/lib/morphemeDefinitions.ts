@@ -45,7 +45,8 @@ export const morphemeDefinitions: Record<string, string> = {
   // Sentence particles
   ね: "Sentence final particle (agreement/confirmation)",
   よ: "Sentence final particle (assertion/emphasis)",
-  な: "Sentence final particle (prohibition/emphasis)",
+  な: "sentence-final: emphasis / wish (いいな \"how nice\"); after a plain verb: \"don't ...!\"",
+  なあ: "sentence-final exclamation: \"...!\", wistful \"ah, ...\" (いいなあ)",
   もの: "Sentence final particle (explanation)",
   わ: "Sentence final particle (emphasis; feminine)",
   ぞ: "Sentence final particle (strong emphasis; masculine)",
@@ -61,7 +62,7 @@ export const morphemeDefinitions: Record<string, string> = {
   が: "Subject marker",
   は: "Topic marker",
   へ: "Direction marker",
-  に: "Location / target marker",
+  に: "to / at / in (target, place, time); also makes adverbs (一緒に \"together\")",
   で: "at / in / by means of; \"is ... and\" (te-form of だ)",
   と: "quotation marker / with / and; \"when, if\" after a verb",
   から: "From / because",

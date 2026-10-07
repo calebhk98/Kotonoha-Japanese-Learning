@@ -88,6 +88,7 @@ export async function resolveContent(
     context?: GrammaticalContext;
     dictionaryForm?: string;
     idiom?: { expression: string; gloss: string };
+    posDetail?: string[];
   }
   const tokens: WorkToken[] = [];
 
@@ -110,7 +111,7 @@ export async function resolveContent(
     const isJapanese = surface.trim() !== '' && !profile.script.isPunctuation(surface);
     // POS-aware label first (な after 好き is the copula, not the
     // sentence-final particle); null = a content word here (もの "thing").
-    const contextual = getContextualGrammarLabel(surface, t.posDetail);
+    const contextual = getContextualGrammarLabel(surface, t.posDetail, t.baseForm);
     // A lone kana echoed by the next word's first kana is a drawn-out
     // sound (「おおいしい」 → お + おいしい), not the honorific prefix.
     const next = merged[i + 1];
@@ -138,6 +139,7 @@ export async function resolveContent(
       grammarLabel,
       context: grammaticalContext(merged[i - 1], t, text),
       dictionaryForm: t.dictionaryForm,
+      posDetail: t.posDetail,
     });
   });
 
@@ -232,6 +234,7 @@ export async function resolveContent(
               dictionaryForm: token.dictionaryForm,
               notGrammar: true,
               idiom: token.idiom,
+              commonNoun: token.posDetail?.[0] === '名詞' && token.posDetail?.[1] === '普通名詞',
             });
           const info: any = { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown };
           if (meanings) info.meanings = meanings;
@@ -298,7 +301,7 @@ export async function resolveContent(
     formatVersion: RESOLVED_FORMAT_VERSION,
     words,
     tokens: tokens.map((t, idx) => {
-      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, ...rest } = t;
+      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, ...rest } = t;
       return {
         ...rest,
         // For the client, isVocabWord doubles as "hoverable": every Japanese

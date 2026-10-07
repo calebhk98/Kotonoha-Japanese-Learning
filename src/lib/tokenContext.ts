@@ -43,6 +43,18 @@ interface MergeRule {
   key?: (surface: string) => string;
 }
 
+/**
+ * Set phrases Sudachi splits into several tokens, matched on the joined
+ * surface of 2-5 adjacent tokens (conjugated endings included) and looked
+ * up under their JMDict headword.
+ */
+const SET_PHRASES: { re: RegExp; key: string; pos: string }[] = [
+  // よろしく|お|願い|します "please treat me well / nice to meet you"
+  { re: /^よろしくお(願い|ねがい)(します|いたします|致します|しました)$/, key: 'よろしくお願いします', pos: '感動詞' },
+  // か|も|しれません "may, might"
+  { re: /^かもしれ(ない|ません|なかった|ませんでした)$/, key: 'かもしれない', pos: '助動詞' },
+];
+
 const pos0 = (t: PositionedToken) => t.posDetail?.[0] ?? t.pos;
 const pos1 = (t: PositionedToken) => t.posDetail?.[1];
 
@@ -159,6 +171,17 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
       if (getSupplementaryEntry(surface)) {
         // The curated reading beats per-piece readings (てっ辺 is てっぺん).
         out.push({ ...join(span, '名詞'), reading: undefined });
+        i += n;
+        continue outer;
+      }
+    }
+    for (let n = 5; n >= 2; n--) {
+      const span = tokens.slice(i, i + n);
+      if (span.length < n || !adjacent(span)) continue;
+      const surface = span.map((t) => t.surface).join('');
+      const phrase = SET_PHRASES.find((p) => p.re.test(surface));
+      if (phrase) {
+        out.push({ ...join(span, phrase.pos), baseForm: phrase.key, reading: undefined });
         i += n;
         continue outer;
       }

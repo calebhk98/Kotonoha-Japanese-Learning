@@ -96,10 +96,12 @@ export function getGrammarDefinition(surface: string, baseForm: string): string 
  */
 export function getContextualGrammarLabel(
   surface: string,
-  posDetail: string[] | undefined
+  posDetail: string[] | undefined,
+  baseForm?: string
 ): string | null | undefined {
   if (!posDetail) return undefined;
   const [p0, p1] = posDetail;
+
   // Interjections (あ, ええ, はい) are words with dictionary entries
   // ("ah!", "yes"); the kana table only has verb-fragment labels for them.
   if (p0 === '感動詞') return null;
@@ -142,6 +144,12 @@ export function getContextualGrammarLabel(
     case 'でる':
       if (p0 === '助動詞') return 'progressive: "is doing" (contraction of 〜ている)';
       break;
+  }
+  // Any other conjugated auxiliary stem (れ in 言われます) is labelled by
+  // its lemma (れる "passive"), not by the bare-kana stem table.
+  if (p0 === '助動詞' && baseForm && baseForm !== surface && /^[ぁ-ん]+$/.test(baseForm)) {
+    const lemmaLabel = getMorphemeDefinition(baseForm);
+    if (lemmaLabel) return lemmaLabel;
   }
   return undefined;
 }
