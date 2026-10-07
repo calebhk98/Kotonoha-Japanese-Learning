@@ -30,6 +30,14 @@ export interface LookupHint {
   after?: string;
   /** Kana lemma (Sudachi dictionary_form) when the lookup key is a kanji spelling. */
   kanaForm?: string;
+  /** The text writes this word in kana (lookup key may be a kanji spelling). */
+  kanaSurface?: boolean;
+  /**
+   * English head words of the verb's subject/object noun (風が → ['wind']).
+   * Among near-tied homographs, the entry whose glosses mention one wins:
+   * 風がふく is 吹く "to blow (of the wind)", not 拭く "to wipe".
+   */
+  argumentWords?: string[];
 }
 
 export interface Dictionary {
@@ -113,6 +121,17 @@ export function selectSenses(entry: any, word: string, hint?: LookupHint): any[]
   //    occurrence's context go first; context-bound senses whose context is
   //    absent go last (ください with no te-form before it is "please give
   //    me", not "please do for me"). Order is otherwise JMDict's.
+  // 5. kana spelling as a sense signal, for the few verbs where it is
+  //    reliable. A generic "prefer uk senses for kana" rule was measured and
+  //    rejected: it turns kana いく into a slang sense and あう into "to have
+  //    an accident". Kana あげる, though, is the everyday "to give" (the
+  //    "raise" senses are written 上げる).
+  const preferred = hint?.kanaSurface ? KANA_PREFERRED_SENSE[word] : undefined;
+  if (preferred) {
+    const hit = senses.filter((s) => getGlosses(s, ['eng'])[0] === preferred);
+    if (hit.length > 0) senses = [...hit, ...senses.filter((s) => !hit.includes(s))];
+  }
+
   const wanted = hint?.after ? CONTEXT_INFO[hint.after] : undefined;
   const fits = (s: any) => !!wanted && senseInfo(s).some((i) => wanted.test(i));
   const bound = (s: any) => senseInfo(s).some((i) => /\bafter\b/i.test(i));
@@ -122,6 +141,11 @@ export function selectSenses(entry: any, word: string, hint?: LookupHint): any[]
     ...senses.filter((s) => !fits(s) && bound(s)),
   ];
 }
+
+/** Lemma → head gloss of the sense a KANA spelling of it means. */
+const KANA_PREFERRED_SENSE: Record<string, string> = {
+  上げる: 'to give',
+};
 
 const CONTEXT_INFO: Record<string, RegExp> = {
   te: /te[- ]?form/i,
@@ -614,7 +638,22 @@ export class JmdictDictionary implements Dictionary {
       // Among exact matches, pick the entry a learner most likely wants.
       // For words like 行く that have multiple variants (行く, 往く), all exact matches
       // refer to the same underlying word — pick the most common entry.
-      const bestMatch = pickBestEntry(exactMatches, word, hint);
+      let bestMatch = pickBestEntry(exactMatches, word, hint);
+      if (hint?.argumentWords?.length) {
+        const bestScore = getEntryCommonness(bestMatch, word, hint);
+        const mentions = (e: any) =>
+          (e.sense ?? []).some((sn: any) =>
+            getGlosses(sn, ['eng']).some((g: string) =>
+              hint.argumentWords!.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(g))
+            )
+          );
+        if (!mentions(bestMatch)) {
+          const alt = exactMatches.find(
+            (e) => e !== bestMatch && getEntryCommonness(e, word, hint) >= bestScore - 3 && mentions(e)
+          );
+          if (alt) bestMatch = alt;
+        }
+      }
 
       // Native-language gloss priority (#260): default ['eng'] keeps the
       // English-only behaviour byte-identical; ['spa','eng'] gives Spanish

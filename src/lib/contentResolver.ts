@@ -111,8 +111,16 @@ export async function resolveContent(
     // POS-aware label first (な after 好き is the copula, not the
     // sentence-final particle); null = a content word here (もの "thing").
     const contextual = getContextualGrammarLabel(surface, t.posDetail);
-    const grammarLabel =
-      !isJapanese || contextual === null ? undefined : contextual ?? getGrammarDefinition(surface, t.baseForm);
+    // A lone kana echoed by the next word's first kana is a drawn-out
+    // sound (「おおいしい」 → お + おいしい), not the honorific prefix.
+    const next = merged[i + 1];
+    const stretched =
+      /^[ぁ-ん]$/.test(surface) && next && next.startIndex === t.endIndex && next.surface.startsWith(surface);
+    const grammarLabel = stretched
+      ? 'drawn-out sound (おおいしい = おいしい, said with feeling)'
+      : !isJapanese || contextual === null
+        ? undefined
+        : contextual ?? getGrammarDefinition(surface, t.baseForm);
     const isMorpheme = grammarLabel !== undefined;
     const isVocabWord = isJapanese && !isMorpheme && !profile.script.isGrammarFragment(surface);
 
@@ -180,6 +188,7 @@ export async function resolveContent(
   const keyOf = (t: WorkToken) =>
     [t.surface, t.baseForm, t.pos, t.reading, t.grammarLabel, t.context, t.dictionaryForm, t.idiom?.expression].join('\u0000');
   const wordIndexByKey = new Map<string, number>();
+  const argumentOverride = new Map<number, number>(); // token index → word index
   const frequency = new Map<string, number>();
   const uniqueTokens: typeof tokens = [];
 
@@ -245,6 +254,36 @@ export async function resolveContent(
     })
   );
 
+  // ---- second pass: a verb whose meaning is a near-tie between homographs
+  // ("to wipe — or: to blow (of the wind)") is re-resolved with its
+  // subject/object noun's English head words, so 風がふく picks 吹く.
+  const STOP = new Set(['the', 'and', 'for', 'with', 'one', 'esp', 'etc', 'something', 'someone', 'thing']);
+  for (let i = 2; i < tokens.length; i++) {
+    const [n, p, v] = [tokens[i - 2], tokens[i - 1], tokens[i]];
+    const vi = v.wordIndex ?? wordIndexByKey.get(keyOf(v));
+    const ni = wordIndexByKey.get(keyOf(n));
+    if (vi === undefined || ni === undefined || v.pos !== '動詞' || v.idiom) continue;
+    if (!/^[がを]$/.test(p.surface) || n.endIndex !== p.startIndex || !nextTo(text, p, v)) continue;
+    const vWord = words[vi];
+    if (!vWord?.meaning?.includes(' — or: ')) continue;
+    const head = String(words[ni]?.meaning ?? '').split(/[;,(—]/)[0];
+    const argumentWords = (head.toLowerCase().match(/[a-z]{3,}/g) ?? []).filter((w) => !STOP.has(w));
+    if (argumentWords.length === 0) continue;
+    const r = await wordResolver.resolve(v.surface, v.baseForm, lookupCache, v.pos, v.reading, undefined, {
+      after: v.context,
+      dictionaryForm: v.dictionaryForm,
+      notGrammar: true,
+      argumentWords,
+    });
+    if (r.meaning !== vWord.meaning) {
+      // This context gets its own word entry so other occurrences keep theirs.
+      const info: any = { ...vWord, reading: r.reading, meaning: r.meaning };
+      if (r.meanings) info.meanings = r.meanings;
+      words.push(info);
+      argumentOverride.set(i, words.length - 1);
+    }
+  }
+
   // frequencies (per surface, matching the extraction paths' counts)
   for (const w of words) {
     if (!w.isMorpheme || frequency.has(w.word)) {
@@ -255,7 +294,7 @@ export async function resolveContent(
   return {
     formatVersion: RESOLVED_FORMAT_VERSION,
     words,
-    tokens: tokens.map((t) => {
+    tokens: tokens.map((t, idx) => {
       const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, ...rest } = t;
       return {
         ...rest,
@@ -263,7 +302,7 @@ export async function resolveContent(
         // token with word info is clickable in the reader.
         isVocabWord: isJapanese,
         isMorpheme,
-        wordIndex: isJapanese ? wordIndexByKey.get(keyOf(t)) : undefined,
+        wordIndex: isJapanese ? argumentOverride.get(idx) ?? wordIndexByKey.get(keyOf(t)) : undefined,
       };
     }),
   };

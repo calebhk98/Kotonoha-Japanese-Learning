@@ -193,6 +193,8 @@ export class WordResolver {
       notGrammar?: boolean;
       /** JMDict expression this verb completes (実を結ぶ) and its gloss. */
       idiom?: { expression: string; gloss: string };
+      /** English head words of the verb's subject/object (see LookupHint). */
+      argumentWords?: string[];
     }
   ): Promise<WordResolution> {
     // Curated corrections for UniDic's known-bad standalone readings (米→べい).
@@ -304,12 +306,18 @@ export class WordResolver {
         ctx?.dictionaryForm && ctx.dictionaryForm !== baseForm && /^[ぁ-んー]+$/.test(ctx.dictionaryForm)
           ? ctx.dictionaryForm
           : undefined;
-      let hint: { pos?: string; reading?: string; lang?: string[]; after?: string; kanaForm?: string } | undefined;
+      let hint: {
+        pos?: string; reading?: string; lang?: string[]; after?: string;
+        kanaForm?: string; kanaSurface?: boolean; argumentWords?: string[];
+      } | undefined;
       if (pos && hintReading) hint = { pos, reading: hintReading };
       else if (pos) hint = { pos };
       else if (hintReading) hint = { reading: hintReading };
       if (ctx?.after) hint = { ...(hint ?? {}), after: ctx.after };
       if (kanaForm) hint = { ...(hint ?? {}), kanaForm };
+      if (ctx?.argumentWords?.length) hint = { ...(hint ?? {}), argumentWords: ctx.argumentWords };
+      const kanaSurface = /^[ぁ-んー]+$/.test(wordStr) && baseForm !== wordStr;
+      if (kanaSurface) hint = { ...(hint ?? {}), kanaSurface };
       // Native-language gloss priority (#260) only when a non-default language
       // was requested — leaving hint.lang unset keeps English lookups (and
       // their cache keys) byte-identical.
@@ -317,7 +325,7 @@ export class WordResolver {
       // Different languages must not share a cache slot, or a Spanish lookup
       // would serve an English-cached gloss (and vice versa).
       const langKey = glossLang ? glossLang.join(',') : '';
-      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}|${hintReading ?? ''}|${langKey}|${ctx?.after ?? ''}|${kanaForm ?? ''}`;
+      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}|${hintReading ?? ''}|${langKey}|${ctx?.after ?? ''}|${kanaForm ?? ''}|${kanaSurface ? 'k' : ''}|${ctx?.argumentWords?.join(',') ?? ''}`;
       let dictResult: any = lookupCache?.get(cacheKey) ?? null;
 
       if (dictResult === null) {

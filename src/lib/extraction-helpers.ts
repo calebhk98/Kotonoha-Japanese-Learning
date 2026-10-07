@@ -108,7 +108,9 @@ export function getContextualGrammarLabel(
       if (p0 === '助動詞') return 'adverbial ending: "-ly" / "so that, like" (きれいに, ように)';
       break;
     case 'で':
-      if (p0 === '助動詞') return 'copula te-form: "is ... and" / "being ..." (〜で); also part of ので "because"';
+      // Sudachi also tags plain locative で (家で) as the copula, so the
+      // label has to cover both readings.
+      if (p0 === '助動詞') return 'at / in / by means of; or copula te-form "is ... and" (〜で)';
       if (p1 === '接続助詞') return 'te-form connector: "and" / "-ing" (遊んで)';
       if (p1 === '格助詞') return 'at / in / by means of; also "is ... and" (te-form of だ)';
       break;

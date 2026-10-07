@@ -36,6 +36,7 @@ export const SUPPLEMENTARY_DICTIONARY: Record<string, SupplementaryEntry> = {
   象頭: { reading: 'ぞうず', meaning: 'Zozu (mountain at Kotohira shrine; from the Konpira folk song)' },
   ペンパ: { reading: 'ぺんぱ', meaning: 'Penpa (pen-pal name in a letter story)' },
   花すけ: { reading: 'はなすけ', meaning: 'Hanasuke (story character; a dog\'s name)' },
+  はなすけ: { reading: 'はなすけ', meaning: 'Hanasuke (story character; a dog\'s name, 花すけ)' },
   しょこら: { reading: 'しょこら', meaning: 'Shokora (name; from ショコラ "chocolate")' },
 
   // ── Multi-token words Sudachi splits (merged by tokenContext.ts) ───────
@@ -46,6 +47,8 @@ export const SUPPLEMENTARY_DICTIONARY: Record<string, SupplementaryEntry> = {
   てっ辺: { reading: 'てっぺん', meaning: 'top; summit (usually written 天辺 / てっぺん)' },
   支那そば: { reading: 'しなそば', meaning: 'Chinese-style noodles (old name for ramen)' },
   朝ラー: { reading: 'あさらー', meaning: 'ramen eaten in the morning (slang, from 朝ラーメン)' },
+  // JMDict's 炊き込む is only "cook with rice"; ramen broth is also 炊き込む.
+  炊き込む: { reading: 'たきこむ', meaning: 'to cook (ingredients) together, e.g. with rice; to simmer down (broth)' },
   平打ち: { reading: 'ひらうち', meaning: 'flat (noodles); flat-pressed' },
   // JMDict marks only "cone" common, but every コーン in the corpus is corn.
   コーン: { reading: 'こーん', meaning: 'corn (sweetcorn); also: cone' },

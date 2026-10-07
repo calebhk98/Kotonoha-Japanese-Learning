@@ -126,7 +126,8 @@ export function mergeFixedExpressions(tokens: PositionedToken[], text: string): 
       if (span.length < n || !adjacent(span)) continue;
       const surface = span.map((t) => t.surface).join('');
       if (getSupplementaryEntry(surface)) {
-        out.push(join(span, '名詞'));
+        // The curated reading beats per-piece readings (てっ辺 is てっぺん).
+        out.push({ ...join(span, '名詞'), reading: undefined });
         i += n;
         continue outer;
       }
