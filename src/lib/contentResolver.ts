@@ -20,7 +20,8 @@
 
 import type { Tokenizer, TokenInfo } from './tokenizers.js';
 import type { WordResolver } from './wordResolver.js';
-import { getGrammarDefinition } from './extraction-helpers.js';
+import { getGrammarDefinition, getContextualGrammarLabel } from './extraction-helpers.js';
+import { mergeFixedExpressions, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
 import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 
@@ -66,21 +67,53 @@ export async function resolveContent(
 ): Promise<ResolvedContent> {
   const tokenInfos = await tokenizer.segment(text);
 
-  // ---- position mapping + classification (same rules as processStoryText)
-  interface WorkToken extends ResolvedToken { baseForm: string; isJapanese: boolean }
-  const tokens: WorkToken[] = [];
+  // ---- position mapping
+  const positioned: PositionedToken[] = [];
   let searchStart = 0;
-
   for (const t of tokenInfos) {
-    const surface = t.surface;
-    const segmentIndex = text.indexOf(surface, searchStart);
+    const segmentIndex = text.indexOf(t.surface, searchStart);
     if (segmentIndex === -1) continue;
+    positioned.push({ ...t, startIndex: segmentIndex, endIndex: segmentIndex + t.surface.length });
+    searchStart = segmentIndex + t.surface.length;
+  }
 
+  // ---- sentence context: re-join split expressions, then classify each
+  // token with what its neighbour says about it (see tokenContext.ts).
+  const merged = mergeFixedExpressions(positioned, text);
+
+  interface WorkToken extends ResolvedToken {
+    baseForm: string;
+    isJapanese: boolean;
+    grammarLabel?: string;
+    context?: GrammaticalContext;
+    dictionaryForm?: string;
+    idiom?: { expression: string; gloss: string };
+  }
+  const tokens: WorkToken[] = [];
+
+  merged.forEach((tok, i) => {
+    let t = tok;
+    const surface = t.surface;
+    // Kana いった after に/へ is 行った "went"; Sudachi's lattice often
+    // prefers 言った "said" for the bare kana (公園にいった).
+    const prev = merged[i - 1];
+    if (/^いっ/.test(surface) && t.baseForm === '言う' && prev && nextTo(text, prev, t) && /^[にへ]$/.test(prev.surface)) {
+      t = { ...t, baseForm: '行く', dictionaryForm: '行く' };
+    }
     // Script decisions go through the language profile (#258). The grammar
-    // guard (getGrammarDefinition) is still the Japanese table directly —
-    // it becomes a profile member when a second language actually exists.
+    // guard is still the Japanese table directly — it becomes a profile
+    // member when a second language actually exists.
+    // An exclamation (あれ～？) is looked up by its kana: normalization maps
+    // あれ to the pronoun spelling 彼れ, which hides the interjection entry.
+    const interjection = interjectionPos(text, t);
+    if (interjection) t = { ...t, pos: interjection, baseForm: surface };
     const isJapanese = surface.trim() !== '' && !profile.script.isPunctuation(surface);
-    const isMorpheme = isJapanese && getGrammarDefinition(surface, t.baseForm) !== undefined;
+    // POS-aware label first (な after 好き is the copula, not the
+    // sentence-final particle); null = a content word here (もの "thing").
+    const contextual = getContextualGrammarLabel(surface, t.posDetail);
+    const grammarLabel =
+      !isJapanese || contextual === null ? undefined : contextual ?? getGrammarDefinition(surface, t.baseForm);
+    const isMorpheme = grammarLabel !== undefined;
     const isVocabWord = isJapanese && !isMorpheme && !profile.script.isGrammarFragment(surface);
 
     tokens.push({
@@ -88,25 +121,74 @@ export async function resolveContent(
       baseForm: t.baseForm,
       pos: t.pos,
       reading: t.reading,
-      startIndex: segmentIndex,
-      endIndex: segmentIndex + surface.length,
+      startIndex: t.startIndex,
+      endIndex: t.endIndex,
       isVocabWord,
       isMorpheme,
       isJapanese,
+      grammarLabel,
+      context: grammaticalContext(merged[i - 1], t, text),
+      dictionaryForm: t.dictionaryForm,
     });
-    searchStart = segmentIndex + surface.length;
+  });
+
+  // ---- idioms: noun + particle + verb that JMDict lists as one expression
+  // (実を結ぶ "to bear fruit", 時間をかける "to spend time"). The verb shows
+  // the expression's meaning; the noun takes its reading from the expression
+  // (UniDic reads standalone 実 as じつ, but in 実を結ぶ it is み).
+  const expressionCache = new Map<string, Promise<{ reading: string; gloss: string } | null>>();
+  const expression = (text: string) => {
+    if (!expressionCache.has(text)) expressionCache.set(text, wordResolver.expression(text));
+    return expressionCache.get(text)!;
+  };
+  for (let i = 2; i < tokens.length; i++) {
+    const [n, p, v] = [tokens[i - 2], tokens[i - 1], tokens[i]];
+    if (!v.isVocabWord || (v.pos !== '動詞' && v.pos !== '形容詞')) continue;
+    if (!n.isVocabWord || !/^[をがにでとはも]$/.test(p.surface)) continue;
+    if (n.endIndex !== p.startIndex || !nextTo(text, p, v)) continue;
+    // は/も stand in for を/が in running text (時間もかけて = 時間をかけて).
+    const particles = /^[はも]$/.test(p.surface) ? ['を', 'が'] : [p.surface];
+    let found = false;
+    for (const particle of particles) {
+    for (const lemma of new Set([v.baseForm, v.dictionaryForm].filter((f): f is string => !!f))) {
+      const exprText = n.surface + particle + lemma;
+      const hit = await expression(exprText);
+      if (!hit) continue;
+      v.idiom = { expression: exprText, gloss: hit.gloss };
+      // Split the expression reading at the particle where the verb part
+      // starts like the verb token's own reading.
+      const vFirst = v.reading?.[0];
+      for (let k = hit.reading.indexOf(particle); k > 0; k = hit.reading.indexOf(particle, k + 1)) {
+        if (!vFirst || hit.reading[k + 1] === vFirst) {
+          if (/[一-鿿々]/.test(n.surface)) n.reading = hit.reading.slice(0, k);
+          break;
+        }
+      }
+      found = true;
+      break;
+    }
+    if (found) break;
+    }
   }
 
-  // ---- build the unique word list (first-appearance order, keyed by surface)
-  const wordIndexBySurface = new Map<string, number>();
+  // ---- build the unique word list (first-appearance order).
+  // Keyed by every resolver input (surface + base form + POS + contextual
+  // reading), so a homograph that appears in two contexts (この方 かた vs
+  // 右の方 ほう) gets one entry per context instead of every occurrence
+  // inheriting the first one's resolution. buildWordsResponse still collapses
+  // the vocab list to one entry per surface.
+  const keyOf = (t: WorkToken) =>
+    [t.surface, t.baseForm, t.pos, t.reading, t.grammarLabel, t.context, t.dictionaryForm, t.idiom?.expression].join('\u0000');
+  const wordIndexByKey = new Map<string, number>();
   const frequency = new Map<string, number>();
   const uniqueTokens: typeof tokens = [];
 
   for (const token of tokens) {
     if (!token.isJapanese) continue;
     frequency.set(token.surface, (frequency.get(token.surface) ?? 0) + 1);
-    if (wordIndexBySurface.has(token.surface)) continue;
-    wordIndexBySurface.set(token.surface, uniqueTokens.length);
+    const key = keyOf(token);
+    if (wordIndexByKey.has(key)) continue;
+    wordIndexByKey.set(key, uniqueTokens.length);
     uniqueTokens.push(token);
   }
 
@@ -126,7 +208,7 @@ export async function resolveContent(
           words[i] = {
             word: token.surface,
             reading: token.reading ?? token.surface,
-            meaning: getGrammarDefinition(token.surface, token.baseForm) || 'Grammatical morpheme',
+            meaning: token.grammarLabel || 'Grammatical morpheme',
             jlpt: 0,
             joyo: false,
             score: 0,
@@ -135,7 +217,12 @@ export async function resolveContent(
           };
         } else if (token.isVocabWord) {
           const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
-            await wordResolver.resolve(token.surface, token.baseForm, lookupCache, token.pos, token.reading);
+            await wordResolver.resolve(token.surface, token.baseForm, lookupCache, token.pos, token.reading, undefined, {
+              after: token.context,
+              dictionaryForm: token.dictionaryForm,
+              notGrammar: true,
+              idiom: token.idiom,
+            });
           const info: any = { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown };
           if (meanings) info.meanings = meanings;
           if (token.pos) info.pos = token.pos;
@@ -168,14 +255,17 @@ export async function resolveContent(
   return {
     formatVersion: RESOLVED_FORMAT_VERSION,
     words,
-    tokens: tokens.map(({ baseForm, isJapanese, isVocabWord, isMorpheme, ...rest }) => ({
-      ...rest,
-      // For the client, isVocabWord doubles as "hoverable": every Japanese
-      // token with word info is clickable in the reader.
-      isVocabWord: isJapanese,
-      isMorpheme,
-      wordIndex: wordIndexBySurface.get(rest.surface),
-    })),
+    tokens: tokens.map((t) => {
+      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, ...rest } = t;
+      return {
+        ...rest,
+        // For the client, isVocabWord doubles as "hoverable": every Japanese
+        // token with word info is clickable in the reader.
+        isVocabWord: isJapanese,
+        isMorpheme,
+        wordIndex: isJapanese ? wordIndexByKey.get(keyOf(t)) : undefined,
+      };
+    }),
   };
 }
 
@@ -196,7 +286,13 @@ export function buildStoryResponse(resolved: ResolvedContent): any[] {
  * as the extraction paths which never emitted those).
  */
 export function buildWordsResponse(resolved: ResolvedContent): any[] {
-  return resolved.words.filter(
-    (w) => !(w.isMorpheme && w.meaning === 'Kana particle / expression')
-  );
+  // One vocab entry per surface (first context wins); the per-context
+  // variants only matter to the reader's token popups.
+  const seen = new Set<string>();
+  return resolved.words.filter((w) => {
+    if (w.isMorpheme && w.meaning === 'Kana particle / expression') return false;
+    if (seen.has(w.word)) return false;
+    seen.add(w.word);
+    return true;
+  });
 }

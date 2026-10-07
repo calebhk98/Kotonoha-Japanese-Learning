@@ -26,6 +26,10 @@ export interface LookupHint {
   // lookups return English glosses exactly as before. 'eng' should always be
   // last so English remains the mandatory fallback.
   lang?: string[];
+  /** Grammatical context from the previous token (tokenContext.ts), e.g. 'te'. */
+  after?: string;
+  /** Kana lemma (Sudachi dictionary_form) when the lookup key is a kanji spelling. */
+  kanaForm?: string;
 }
 
 export interface Dictionary {
@@ -70,6 +74,68 @@ function entryMatchesPos(entry: any, sudachiPos: string | undefined): boolean {
   return (entry.sense || []).some((s: any) =>
     Array.isArray(s.partOfSpeech) && s.partOfSpeech.some(matches)
   );
+}
+
+/** jmdict-simplified restriction lists: "*" (or absent/empty) = applies to all. */
+function restrictionAllows(list: string[] | undefined, form: string): boolean {
+  return !list || list.length === 0 || list.includes('*') || list.includes(form);
+}
+
+/**
+ * The senses of `entry` that can apply to this occurrence, in JMDict order.
+ * Each filter only narrows when something survives it, so an entry never
+ * ends up with no senses:
+ *   1. spelling: sense.appliesToKanji / appliesToKana must allow the form
+ *      that was looked up
+ *   2. reading: for a kanji form, the token's contextual reading must be in
+ *      sense.appliesToKana (生物 せいぶつ vs なまもの style splits)
+ *   3. POS: the sense's partOfSpeech must fit the token's Sudachi POS, so a
+ *      verb token doesn't lead with a noun sense of the same entry
+ */
+export function selectSenses(entry: any, word: string, hint?: LookupHint): any[] {
+  let senses: any[] = entry.sense || [];
+  const narrow = (keep: (s: any) => boolean) => {
+    const kept = senses.filter(keep);
+    if (kept.length > 0) senses = kept;
+  };
+  const isKanjiForm = (entry.kanji || []).some((k: any) => k.text === word);
+  narrow((s) =>
+    isKanjiForm ? restrictionAllows(s.appliesToKanji, word) : restrictionAllows(s.appliesToKana, word)
+  );
+  if (isKanjiForm && hint?.reading && (entry.kana || []).some((k: any) => k.text === hint.reading)) {
+    narrow((s) => restrictionAllows(s.appliesToKana, hint.reading!));
+  }
+  const matches = hint?.pos ? jmdictPosMatcher(hint.pos) : null;
+  if (matches) narrow((s) => Array.isArray(s.partOfSpeech) && s.partOfSpeech.some(matches));
+
+  // 4. grammatical context: JMDict notes context-bound senses in `info`
+  //    ("after the -te form of a verb"). Senses whose note matches this
+  //    occurrence's context go first; context-bound senses whose context is
+  //    absent go last (ください with no te-form before it is "please give
+  //    me", not "please do for me"). Order is otherwise JMDict's.
+  const wanted = hint?.after ? CONTEXT_INFO[hint.after] : undefined;
+  const fits = (s: any) => !!wanted && senseInfo(s).some((i) => wanted.test(i));
+  const bound = (s: any) => senseInfo(s).some((i) => /\bafter\b/i.test(i));
+  return [
+    ...senses.filter((s) => fits(s)),
+    ...senses.filter((s) => !fits(s) && !bound(s)),
+    ...senses.filter((s) => !fits(s) && bound(s)),
+  ];
+}
+
+const CONTEXT_INFO: Record<string, RegExp> = {
+  te: /te[- ]?form/i,
+  masu: /-?masu[- ]stem/i,
+  'adj-stem': /adj(ective)?\.?[- ]stem/i,
+  'verb-plain': /(present|plain|dictionary)[- ](non-past )?form of a verb/i,
+  'verb-past': /past form of a verb/i,
+};
+
+const senseInfo = (s: any): string[] => (Array.isArray(s.info) ? s.info : []);
+
+/** True when a sense only applies in a grammatical context ("after ..."). */
+export function isContextBoundSense(s: any): boolean {
+  return senseInfo(s).some((i) => /\bafter\b/i.test(i));
 }
 
 /** True when any sense is marked uk ("word usually written using kana alone"). */
@@ -334,12 +400,22 @@ export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint)
   // Grammatical compatibility with the token: Sudachi knows おく in
   // おいていきなさい is a VERB, which rules out 奥 "inner part" and 億
   // "hundred million"; a NOUN 頭 rules out the large-animal counter (ctr).
-  if (entryMatchesPos(entry, hint?.pos)) score += 10;
+  if (entryMatchesPos(entry, hint?.pos)) {
+    score += 10;
+    // 感動詞 is only hinted for clear exclamations (Sudachi's own tag, or
+    // tokenContext.interjectionPos for あれ～？), where an interjection entry
+    // beats a more common pronoun/noun homograph.
+    if (hint?.pos === '感動詞') score += 10;
+  }
 
   // Contextual reading from UniDic — the strongest signal when present.
   // 家の前 reads まえ, so the 前(ぜん) entry cannot match; 六人 reads にん,
   // selecting the people-counter over the standalone-noun ひと entry.
   if (hint?.reading && entry.kana?.some((k: any) => k.text === hint.reading)) {
+    score += 15;
+  } else if (hint?.kanaForm && entry.kana?.some((k: any) => k.text === hint.kanaForm)) {
+    // Same signal for conjugating words: the kana lemma (拘る written
+    // こだわる) names the entry's reading.
     score += 15;
   }
 
@@ -399,7 +475,7 @@ export function findCloseAlternatives(
     // Entry-level language choice (senses are grouped by language), then take
     // the first sense in that language.
     const entryLang = getEntryGlossLang(entry, langPriority) ?? DEFAULT_GLOSS_LANGS[0];
-    const firstSense = (entry.sense || []).find((s: any) => getGlosses(s, [entryLang]).length > 0);
+    const firstSense = selectSenses(entry, word, hint).find((s: any) => getGlosses(s, [entryLang]).length > 0);
     if (!firstSense) continue;
     const gloss = getGlosses(firstSense, [entryLang])[0];
 
@@ -414,6 +490,24 @@ export function findCloseAlternatives(
   }
 
   return alternatives;
+}
+
+/**
+ * The one-line meaning a reader sees on hover. The first sense alone often
+ * isn't the one in use (肉 "flesh" vs "meat", 結ぶ "to tie" vs "to bear
+ * fruit"), so: up to two glosses of the first sense, plus the head gloss of
+ * the next sense when it is ordinary (not slang/archaic, not bound to a
+ * grammatical context) and the line stays short.
+ */
+function buildHeadline(sorted: { sense: any; commonness: number }[], langs: string[]): string | undefined {
+  const usable = sorted.filter(({ sense }) => getGlosses(sense, langs).length > 0);
+  if (usable.length === 0) return undefined;
+  const first = getGlosses(usable[0].sense, langs).slice(0, 2).join(', ');
+  const second = usable[1];
+  if (!second || second.commonness < 0 || isContextBoundSense(second.sense) || first.length >= 40) return first;
+  const extra = getGlosses(second.sense, langs)[0];
+  if (!extra || first.includes(extra)) return first;
+  return `${first}; ${extra}`;
 }
 
 // ==================== JMDict Wrapper Dictionary ====================
@@ -534,7 +628,7 @@ export class JmdictDictionary implements Dictionary {
       // Extract all meanings, deprioritising rare/slang/archaic senses (#187).
       const meanings: string[] = [];
       const senseLangFilter = primaryGlossLang ? [primaryGlossLang] : DEFAULT_GLOSS_LANGS;
-      const sensesWithScores = (bestMatch.sense || []).map((sense: any, idx: number) => ({
+      const sensesWithScores = selectSenses(bestMatch, word, hint).map((sense: any, idx: number) => ({
         sense,
         order: idx,
         commonness: this.getSenseCommonness(sense)
@@ -564,7 +658,7 @@ export class JmdictDictionary implements Dictionary {
       // Beginner-facing ambiguity: when a homograph scores within a hair of
       // the winner (kana あめ: 飴 vs 雨), say so instead of picking silently.
       const alternatives = findCloseAlternatives(exactMatches, bestMatch, word, hint);
-      let meaning = meanings[0];
+      let meaning = buildHeadline(sensesWithScores, senseLangFilter) || meanings[0];
       if (alternatives.length > 0) {
         meaning = `${meaning} — or: ${alternatives.join('; ')}`;
         meanings.push(...alternatives.map((a) => `Other possibility: ${a}`));

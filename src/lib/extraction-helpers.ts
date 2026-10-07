@@ -84,6 +84,64 @@ export function getGrammarDefinition(surface: string, baseForm: string): string 
 }
 
 /**
+ * Grammar label for a kana token using its full UniDic POS, so one surface
+ * gets the label for the job it does HERE (な after 好き is the copula, not
+ * the sentence-final particle; と after a verb is "when/if", not "with").
+ *
+ * Returns:
+ *   - a string: the grammar label to show
+ *   - null: this surface is a CONTENT word here (もの "thing", ある日's ある
+ *     handled as a label, こと "matter") and must be resolved as vocabulary
+ *   - undefined: no POS-specific rule; caller falls back to getGrammarDefinition
+ */
+export function getContextualGrammarLabel(
+  surface: string,
+  posDetail: string[] | undefined
+): string | null | undefined {
+  if (!posDetail) return undefined;
+  const [p0, p1] = posDetail;
+  switch (surface) {
+    case 'な':
+      if (p0 === '助動詞') return 'copula (attributive): links a na-adjective or noun to the noun after it (好きな人)';
+      break;
+    case 'に':
+      if (p0 === '助動詞') return 'adverbial ending: "-ly" / "so that, like" (きれいに, ように)';
+      break;
+    case 'で':
+      if (p0 === '助動詞') return 'copula te-form: "is ... and" / "being ..." (〜で); also part of ので "because"';
+      if (p1 === '接続助詞') return 'te-form connector: "and" / "-ing" (遊んで)';
+      if (p1 === '格助詞') return 'at / in / by means of; also "is ... and" (te-form of だ)';
+      break;
+    case 'と':
+      if (p1 === '接続助詞') return 'conditional: "when / whenever / if" (〜と)';
+      if (p1 === '並立助詞') return 'and (complete list: AとB)';
+      if (p1 === '格助詞') return 'quotation marker ("..." と言う) / with / and';
+      break;
+    case 'が':
+      if (p1 === '接続助詞') return 'but / and (joins two clauses)';
+      break;
+    case 'の':
+      if (p1 === '準体助詞') return 'nominalizer: "the one / the fact that"; explanatory (〜のです)';
+      break;
+    case 'か':
+      if (p1 === '副助詞') return 'question marker; "or"; some- (何か "something", いつか "someday")';
+      break;
+    case 'ある':
+      if (p0 === '連体詞') return 'a certain / one (ある日 "one day")';
+      break;
+    case 'もの':
+    case 'こと':
+      if (p0 === '名詞') return null;
+      break;
+    case 'てる':
+    case 'でる':
+      if (p0 === '助動詞') return 'progressive: "is doing" (contraction of 〜ている)';
+      break;
+  }
+  return undefined;
+}
+
+/**
  * Returns true when a kana word ends in small-tsu (っ), indicating it is a
  * cut-off verb-stem conjugation artifact (e.g. もらっ, 走っ) rather than a
  * complete dictionary entry.  No valid Japanese dictionary form ends in っ, so

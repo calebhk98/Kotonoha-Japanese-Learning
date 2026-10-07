@@ -62,8 +62,8 @@ export const morphemeDefinitions: Record<string, string> = {
   は: "Topic marker",
   へ: "Direction marker",
   に: "Location / target marker",
-  で: "Location / means marker",
-  と: "With / and",
+  で: "at / in / by means of; \"is ... and\" (te-form of だ)",
+  と: "quotation marker / with / and; \"when, if\" after a verb",
   から: "From / because",
   まで: "Until / up to",
   や: "And / or (non-exhaustive listing)",
@@ -90,6 +90,9 @@ export const morphemeDefinitions: Record<string, string> = {
   いく: "To go / to continue",
   くる: "To come",
 
+  // A lone え is almost always the interjection (え～？ "huh?").
+  え: "eh? / huh? / what? (interjection)",
+
   // Small tsu variations
   っ: "Geminate consonant marker",
 
@@ -97,8 +100,8 @@ export const morphemeDefinitions: Record<string, string> = {
   つ: "Counter for things (一つ, 二つ, 三つ…)",
 
   // Additional verb forms
-  られる: "Passive / potential form",
-  れる: "Passive / potential form",
+  られる: "passive / potential / honorific form",
+  れる: "passive / potential / honorific form",
   せる: "Causative form",
 
   // Verb stems and additional components

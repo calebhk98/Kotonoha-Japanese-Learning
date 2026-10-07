@@ -164,6 +164,14 @@ async function inspect(
 ): Promise<any[]> {
   const cache = new Map<string, any>();
   const raw = morphemeSpans(text, tokenizer.rawMorphemes(text, 'C'));
+  // Grouped tokenizer output for the whole text, positioned (before
+  // contentResolver's merges), to compare with tokenizing a sentence alone.
+  let pos = 0;
+  const wholeSeg = (await tokenizer.segment(text)).map((t: any) => {
+    const start = text.indexOf(t.surface, pos);
+    if (start >= 0) pos = start + t.surface.length;
+    return { surface: t.surface, start };
+  });
   const rawAt = new Map(raw.map((m) => [m.start, m]));
 
   // Which (reading,pos) each word entry was actually resolved with: the first
@@ -191,7 +199,10 @@ async function inspect(
 
     // Same sentence tokenized on its own.
     const alone = (await tokenizer.segment(s.text)).map((t: any) => t.surface).join('|');
-    const inContext = tokens.map((t) => t.surface).join('|');
+    const inContext = wholeSeg
+      .filter((t: any) => t.start >= s.start && t.start < s.end)
+      .map((t: any) => t.surface)
+      .join('|');
 
     const rows = [];
     for (const t of tokens) {
@@ -256,7 +267,10 @@ async function inspect(
     if (flag('--flagged') && !flagged) continue;
 
     const entry: any = { n: s.n, start: s.start, text: s.text, flags: sentenceFlags, tokens: rows };
-    if (alone !== inContext) entry.splitAlone = alone;
+    if (alone !== inContext) {
+      entry.splitAlone = alone;
+      entry.inText = inContext;
+    }
     if (flag('--raw')) {
       entry.raw = tokenizer.rawMorphemes(s.text, 'C').map(
         (m: RawMorpheme) => `${m.surface}[${m.normalizedForm}/${m.dictionaryForm ?? '?'}|${hira(m.reading) ?? ''}|${m.pos.filter((p) => p !== '*').join('-')}]`
@@ -282,7 +296,7 @@ function print(out: any[]) {
     console.log(`\n── S${e.n} @${e.start} ${e.flags.join(' ')}`);
     console.log(e.text);
     if (e.splitAlone) {
-      console.log(`  in text : ${e.tokens.map((t: any) => t.surface).join('|')}`);
+      console.log(`  in text : ${e.inText}`);
       console.log(`  alone   : ${e.splitAlone}`);
     }
     if (e.modes) for (const [md, v] of Object.entries(e.modes)) console.log(`  mode ${md}  : ${v}`);

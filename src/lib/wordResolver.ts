@@ -38,6 +38,8 @@ interface DictionaryLike {
     word: string,
     hint?: { pos?: string; reading?: string; lang?: string[] }
   ): Promise<{ reading?: string; meaning?: string; meanings?: string[]; glossLang?: string } | null | false>;
+  /** JMDict-only exact-match entries (DictionaryManager.candidates). */
+  candidates?(word: string, hint?: any): Promise<{ entry: any; score: number; picked: boolean }[]>;
 }
 
 /**
@@ -61,7 +63,25 @@ export const NON_CONJUGATING_POS = new Set([
  */
 const READING_CORRECTIONS: Record<string, { wrong: string; right: string }> = {
   米: { wrong: 'べい', right: 'こめ' },
+  // UniDic reads standalone 私 as the formal わたくし; わたし is the
+  // everyday reading learners need.
+  私: { wrong: 'わたくし', right: 'わたし' },
+  // UniDic reads 木の下 / 桜の下 / 青空の下 as もと, whose first JMDict sense
+  // is "under (guidance, supervision...)". Every もと-read 下 in the corpus
+  // is the physical "under/beneath" (15/15), which is 下/した.
+  下: { wrong: 'もと', right: 'した' },
 };
+
+const VOICED: Record<string, string> = {
+  が: 'か', ぎ: 'き', ぐ: 'く', げ: 'け', ご: 'こ', ざ: 'さ', じ: 'し', ず: 'す', ぜ: 'せ', ぞ: 'そ',
+  だ: 'た', ぢ: 'ち', づ: 'つ', で: 'て', ど: 'と', ば: 'は', び: 'ひ', ぶ: 'ふ', べ: 'へ', ぼ: 'ほ',
+  ぱ: 'は', ぴ: 'ひ', ぷ: 'ふ', ぺ: 'へ', ぽ: 'ほ',
+};
+
+/** True when `voiced` is `plain` with only its first kana voiced (ぶかい / ふかい). */
+function isRendakuOf(voiced: string, plain: string): boolean {
+  return voiced.length === plain.length && VOICED[voiced[0]] === plain[0] && voiced.slice(1) === plain.slice(1);
+}
 
 /**
  * First gloss only, alternatives stripped — composed meanings would otherwise
@@ -138,6 +158,21 @@ const AUX_VERB_GLOSSES: Record<string, string> = {
 export class WordResolver {
   constructor(private dictionary: DictionaryLike | null = null) {}
 
+  /**
+   * The JMDict expression entry (POS exp) written exactly as `text`, if any:
+   * its first reading and up to two glosses of its first sense.
+   */
+  async expression(text: string): Promise<{ reading: string; gloss: string } | null> {
+    if (!this.dictionary?.candidates) return null;
+    const cands = await this.dictionary.candidates(text);
+    const hit = cands.find((c) => (c.entry.sense ?? []).some((s: any) => (s.partOfSpeech ?? []).includes('exp')));
+    if (!hit) return null;
+    const sense = hit.entry.sense.find((s: any) => (s.gloss ?? []).some((g: any) => g.lang === 'eng'));
+    const glosses = (sense?.gloss ?? []).filter((g: any) => g.lang === 'eng').map((g: any) => g.text);
+    if (glosses.length === 0) return null;
+    return { reading: hit.entry.kana?.[0]?.text ?? text, gloss: glosses.slice(0, 2).join(', ') };
+  }
+
   async resolve(
     wordStr: string,
     baseForm: string,
@@ -146,12 +181,29 @@ export class WordResolver {
     tokenReading?: string,
     // Native-language gloss priority (#260), e.g. ['spa','eng']. Defaults to
     // English-only, so every existing caller keeps byte-identical behaviour.
-    glossLang?: string[]
+    glossLang?: string[],
+    // Sentence context from contentResolver: the previous token's
+    // grammatical form (matched against JMDict sense notes like "after the
+    // -te form"), Sudachi's dictionary_form (a kana dictionary_form is the
+    // word's reading: こだわる picks 拘る/こだわる over 関わる), and whether
+    // the caller already ruled out a grammar reading (もの as a noun).
+    ctx?: {
+      after?: string;
+      dictionaryForm?: string;
+      notGrammar?: boolean;
+      /** JMDict expression this verb completes (実を結ぶ) and its gloss. */
+      idiom?: { expression: string; gloss: string };
+    }
   ): Promise<WordResolution> {
     // Curated corrections for UniDic's known-bad standalone readings (米→べい).
     const correction = READING_CORRECTIONS[wordStr];
     if (correction && tokenReading === correction.wrong && wordStr === baseForm) {
       tokenReading = correction.right;
+    }
+    // UniDic's reading_form for 言う is the pronunciation ゆう; the
+    // dictionary (and furigana) reading is いう (言った いった, 言う いう).
+    if (baseForm === '言う' && wordStr.startsWith('言') && tokenReading?.startsWith('ゆ')) {
+      tokenReading = 'い' + tokenReading.slice(1);
     }
 
     // (1) Early-return for known grammatical morphemes.
@@ -162,7 +214,7 @@ export class WordResolver {
     // too (via getGrammarDefinition) so conjugated auxiliary surfaces like
     // たく(たい) / なかっ(ない) / でし(です) don't fall through to homograph
     // dictionary lookup (たく used to resolve to 対 "versus").
-    {
+    if (!ctx?.notGrammar) {
       const morphemeDef = getGrammarDefinition(wordStr, baseForm);
       if (morphemeDef) {
         const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, null);
@@ -246,10 +298,18 @@ export class WordResolver {
       // as a verb; 前 read まえ vs ぜん), so they must be part of the key.
       const hintReading =
         tokenReading && pos && NON_CONJUGATING_POS.has(pos) ? tokenReading : undefined;
-      let hint: { pos?: string; reading?: string; lang?: string[] } | undefined;
+      // A kana dictionary_form under a kanji normalized form IS the lemma's
+      // reading, which the surface reading can't give for conjugated verbs.
+      const kanaForm =
+        ctx?.dictionaryForm && ctx.dictionaryForm !== baseForm && /^[ぁ-んー]+$/.test(ctx.dictionaryForm)
+          ? ctx.dictionaryForm
+          : undefined;
+      let hint: { pos?: string; reading?: string; lang?: string[]; after?: string; kanaForm?: string } | undefined;
       if (pos && hintReading) hint = { pos, reading: hintReading };
       else if (pos) hint = { pos };
       else if (hintReading) hint = { reading: hintReading };
+      if (ctx?.after) hint = { ...(hint ?? {}), after: ctx.after };
+      if (kanaForm) hint = { ...(hint ?? {}), kanaForm };
       // Native-language gloss priority (#260) only when a non-default language
       // was requested — leaving hint.lang unset keeps English lookups (and
       // their cache keys) byte-identical.
@@ -257,7 +317,7 @@ export class WordResolver {
       // Different languages must not share a cache slot, or a Spanish lookup
       // would serve an English-cached gloss (and vice versa).
       const langKey = glossLang ? glossLang.join(',') : '';
-      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}|${hintReading ?? ''}|${langKey}`;
+      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}|${hintReading ?? ''}|${langKey}|${ctx?.after ?? ''}|${kanaForm ?? ''}`;
       let dictResult: any = lookupCache?.get(cacheKey) ?? null;
 
       if (dictResult === null) {
@@ -321,7 +381,18 @@ export class WordResolver {
     // other source: it is the reading of THIS surface in THIS sentence
     // (読みました→よみました, 家→いえ), which is exactly what furigana
     // should show.
+    // A standalone word never undergoes rendaku, so a voiced first kana
+    // (深い read ぶかい, as inside 奥深い) is UniDic carrying a compound
+    // reading over; the dictionary reading is right.
+    if (tokenReading && reading && reading !== tokenReading && isRendakuOf(tokenReading, reading)) {
+      tokenReading = reading;
+    }
     if (tokenReading) reading = tokenReading;
+
+    // The verb completes a JMDict expression with the noun before it
+    // (実を結ぶ "to bear fruit", 時間をかける "to spend time"): that
+    // expression's meaning is what the reader needs.
+    if (ctx?.idiom) meaning = `${ctx.idiom.gloss} (${ctx.idiom.expression})`;
 
     // (5) Score calculation — always uses the same variant selected above.
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
