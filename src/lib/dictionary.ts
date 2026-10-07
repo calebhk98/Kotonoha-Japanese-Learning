@@ -132,8 +132,7 @@ export function selectSenses(entry: any, word: string, hint?: LookupHint): any[]
     if (hit.length > 0) senses = [...hit, ...senses.filter((s) => !hit.includes(s))];
   }
 
-  const wanted = hint?.after ? CONTEXT_INFO[hint.after] : undefined;
-  const fits = (s: any) => !!wanted && senseInfo(s).some((i) => wanted.test(i));
+  const fits = (s: any) => senseFitsHint(s, hint);
   const bound = (s: any) => senseInfo(s).some((i) => /\bafter\b/i.test(i));
   return [
     ...senses.filter((s) => fits(s)),
@@ -156,6 +155,19 @@ const CONTEXT_INFO: Record<string, RegExp> = {
 };
 
 const senseInfo = (s: any): string[] => (Array.isArray(s.info) ? s.info : []);
+
+/**
+ * True when the sense is the one this occurrence's grammatical context
+ * calls for: its JMDict note fits ("after the -te form"), or, after a noun,
+ * it is usable as a suffix (ラーメンバカ: バカ "fervent enthusiast").
+ * lookup() lets such a sense outrank the slang/rare penalty — バカ's
+ * enthusiast sense is tagged sl.
+ */
+export function senseFitsHint(s: any, hint?: LookupHint): boolean {
+  if (!hint?.after) return false;
+  if (hint.after === 'noun') return (s.partOfSpeech ?? []).some((t: string) => t === 'n-suf' || t === 'suf');
+  return senseFitsContext(s, hint.after);
+}
 
 /** True when the sense's JMDict note fits this grammatical context ('te', …). */
 export function senseFitsContext(s: any, after: string): boolean {
@@ -683,7 +695,7 @@ export class JmdictDictionary implements Dictionary {
       const sensesWithScores = selectSenses(bestMatch, word, hint).map((sense: any, idx: number) => ({
         sense,
         order: idx,
-        commonness: this.getSenseCommonness(sense)
+        commonness: this.getSenseCommonness(sense) + (senseFitsHint(sense, hint) ? 100 : 0),
       }));
 
       // Sort by commonness descending; use original order as tiebreaker.

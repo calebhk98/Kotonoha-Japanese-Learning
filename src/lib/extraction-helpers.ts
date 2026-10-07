@@ -128,7 +128,8 @@ export function getContextualGrammarLabel(
       if (p1 === '接続助詞') return 'but / and (joins two clauses)';
       break;
     case 'の':
-      if (p1 === '準体助詞') return 'nominalizer: "the one / the fact that"; explanatory (〜のです)';
+      // Sudachi also tags some possessive の (衣の色) as 準体助詞.
+      if (p1 === '準体助詞') return 'nominalizer: "the one / the fact that"; explanatory (〜のです); also possessive "\'s"';
       break;
     case 'か':
       if (p1 === '副助詞') return 'question marker; "or"; some- (何か "something", いつか "someday")';

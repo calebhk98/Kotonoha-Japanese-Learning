@@ -23,7 +23,7 @@ export interface PositionedToken extends TokenInfo {
   endIndex: number;
 }
 
-export type GrammaticalContext = 'te' | 'masu' | 'adj-stem' | 'verb-plain' | 'verb-past';
+export type GrammaticalContext = 'te' | 'masu' | 'adj-stem' | 'verb-plain' | 'verb-past' | 'noun';
 
 const QUESTION_WORDS = new Set(['いつ', 'どう', '何', 'なに', 'なん', '誰', 'だれ', 'どこ', 'どれ', 'どちら']);
 
@@ -228,5 +228,8 @@ export function grammaticalContext(
   if ((pos === '形容詞' && conj.includes('語幹')) || (pos === '形状詞' && prev.pos === '形状詞')) return 'adj-stem';
   if (pos === '助動詞' && surface === 'た') return 'verb-past';
   if (pos === '動詞' && /^(終止形|連体形)/.test(conj)) return 'verb-plain';
+  // A noun glued to the noun before it (no particle, no space) is used as a
+  // suffix: ラーメン+バカ "ramen fanatic", not "idiot".
+  if (pos === '名詞' && cur.pos === '名詞' && prev.endIndex === cur.startIndex) return 'noun';
   return undefined;
 }
