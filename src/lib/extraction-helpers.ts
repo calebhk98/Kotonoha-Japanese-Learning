@@ -148,6 +148,10 @@ export function getContextualGrammarLabel(
   }
   // Any other conjugated auxiliary stem (れ in 言われます) is labelled by
   // its lemma (れる "passive"), not by the bare-kana stem table.
+  // Only replaces the placeholder stem labels; まし keeps its own
+  // "polite verb stem" (ます's label says non-past, wrong for ました).
+  const own = getMorphemeDefinition(surface);
+  if (own && !/^Verb stem/.test(own)) return undefined;
   if (p0 === '助動詞' && baseForm && baseForm !== surface && /^[ぁ-ん]+$/.test(baseForm)) {
     const lemmaLabel = getMorphemeDefinition(baseForm);
     if (lemmaLabel) return lemmaLabel;

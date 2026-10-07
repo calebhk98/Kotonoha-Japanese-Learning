@@ -230,6 +230,6 @@ export function grammaticalContext(
   if (pos === '動詞' && /^(終止形|連体形)/.test(conj)) return 'verb-plain';
   // A noun glued to the noun before it (no particle, no space) is used as a
   // suffix: ラーメン+バカ "ramen fanatic", not "idiot".
-  if (pos === '名詞' && cur.pos === '名詞' && prev.endIndex === cur.startIndex) return 'noun';
+  if (pos === '名詞' && cur.pos === '名詞' && prev.endIndex === cur.startIndex && pos1(prev) !== '数詞') return 'noun';
   return undefined;
 }

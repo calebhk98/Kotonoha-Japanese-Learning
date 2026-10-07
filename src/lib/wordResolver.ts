@@ -332,8 +332,12 @@ export class WordResolver {
     if (this.dictionary) {
       // The POS/reading hints change homograph selection (おく as a noun vs
       // as a verb; 前 read まえ vs ぜん), so they must be part of the key.
+      // The contextual reading identifies the entry when it is the reading
+      // of the dictionary form: always for non-conjugating words, and for a
+      // conjugating word written in its dictionary form (辛い read つらい
+      // "painful", not からい "spicy").
       const hintReading =
-        tokenReading && pos && NON_CONJUGATING_POS.has(pos) ? tokenReading : undefined;
+        tokenReading && pos && (NON_CONJUGATING_POS.has(pos) || wordStr === baseForm) ? tokenReading : undefined;
       // A kana dictionary_form under a kanji normalized form IS the lemma's
       // reading, which the surface reading can't give for conjugated verbs.
       const kanaForm =

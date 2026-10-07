@@ -159,13 +159,18 @@ const senseInfo = (s: any): string[] => (Array.isArray(s.info) ? s.info : []);
 /**
  * True when the sense is the one this occurrence's grammatical context
  * calls for: its JMDict note fits ("after the -te form"), or, after a noun,
- * it is usable as a suffix (ラーメンバカ: バカ "fervent enthusiast").
+ * its note marks a compound use (ラーメンバカ: バカ "fervent enthusiast",
+ * noted "usu. in compounds").
  * lookup() lets such a sense outrank the slang/rare penalty — バカ's
  * enthusiast sense is tagged sl.
  */
 export function senseFitsHint(s: any, hint?: LookupHint): boolean {
   if (!hint?.after) return false;
-  if (hint.after === 'noun') return (s.partOfSpeech ?? []).some((t: string) => t === 'n-suf' || t === 'suf');
+  // Only senses JMDict NOTES as compound/after-noun uses: a blanket "prefer
+  // n-suf senses after a noun" rule was measured on the corpus and lost
+  // (一 "best", 回 "episode", 畑 "field of specialization", 箱 "counter").
+  // "after a noun" itself is too broad (前's "portion, helping" in 二年前).
+  if (hint.after === 'noun') return senseInfo(s).some((i) => /usu\. in compounds|after a (name|person)/i.test(i));
   return senseFitsContext(s, hint.after);
 }
 
@@ -553,7 +558,13 @@ function buildHeadline(sorted: { sense: any; commonness: number }[], langs: stri
   if (usable.length === 0) return undefined;
   const first = getGlosses(usable[0].sense, langs).slice(0, 2).join(', ');
   const second = usable[1];
-  if (!second || second.commonness < 0 || isContextBoundSense(second.sense) || first.length >= 40) return first;
+  // A second sense is only worth showing when it is everyday Japanese: not
+  // historical/rare/slang/abbreviation and not a specialist field (大学's
+  // "former imperial university (ritsuryō system)" is noise).
+  const niche = (sn: any) =>
+    (sn.field ?? []).length > 0 ||
+    (sn.misc ?? []).some((m: string) => ['hist', 'arch', 'obs', 'rare', 'sl', 'vulg', 'derog', 'abbr', 'dated', 'poet', 'X'].includes(m));
+  if (!second || second.commonness < 0 || niche(second.sense) || isContextBoundSense(second.sense) || first.length >= 40) return first;
   const extra = getGlosses(second.sense, langs)[0];
   if (!extra || first.includes(extra)) return first;
   return `${first}; ${extra}`;
