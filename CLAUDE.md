@@ -466,10 +466,9 @@ every JMDict entry for the key with `pickBestEntry`'s score (✓ = picked);
 `--raw` / `--modes` show ungrouped morphemes and A/B/C splits; `--json` for
 agents. Outcome-based flags (each fires only when the result actually differs):
 
-- `SHARED`: the word list is deduplicated **by surface**
-  (`contentResolver.ts`), so every later occurrence shows the first
-  occurrence's resolution. Fires when resolving this occurrence with its own
-  reading/POS would give a different meaning or reading (方 かた vs ほう).
+- `SHARED`: this occurrence shows a word entry resolved for a different
+  occurrence, and resolving it with its own reading/POS would differ (方
+  かた vs ほう). Words are per-context now, so this should stay at 0.
 - `KEY≠`: lookup uses Sudachi `normalized_form`; fires when `dictionary_form`
   would pick a different JMDict entry. Usually normalized_form is the
   better pick (see below), so read these, don't count them as bugs.
@@ -481,32 +480,68 @@ Startup is ~1 min (dictionary load) and it holds the `jmdict-db` lock, so
 stop the dev server first and run one instance at a time. Batch work with
 `--id a,b,c` / `--id all` instead of parallel processes.
 
+### Sentence context in resolution (what fixed the "wrong words")
+
+Measured by having reviewers grade every token of real texts with
+`inspect-text` (rubric: is the meaning the reader sees right in THIS
+sentence?). Baseline 100/970 wrong (10%); the pieces below took the five
+target texts (Kitsune-to-Tsuru, Hanasuke-Ohanami, Ni-hiki-no-Kaeru,
+Hanamizuki, nhk-japan-ramen) to a handful of residuals. Held-out texts
+graded at 7-12% before their own fixes, so expect new texts to surface new
+gaps: grade them with inspect-text, fix the PATTERN, re-grade.
+
+- **Per-context word entries** (`contentResolver.ts`): words are keyed by
+  surface + base + POS + reading + context, so 方 (かた) and 方 (ほう) get
+  separate entries. `buildWordsResponse` still collapses to one per surface.
+- **Sense selection** (`selectSenses` in dictionary.ts): JMDict senses are
+  filtered by `appliesToKanji/Kana`, the contextual reading and POS, then
+  ordered by grammatical context: senses whose `info` note says "after the
+  -te form" / "-masu stem" / "adj. stem" go first when the previous token
+  fits (下さい after て = "please do"), and context-bound senses go last
+  otherwise. The headline shows the first sense's two glosses plus the
+  next sense when short (肉 "flesh; meat").
+- **Grammar labels follow the full UniDic POS**
+  (`getContextualGrammarLabel`): copula な/に/で, conditional と,
+  conjunctive が, 連体詞 ある, もの/こと as nouns, interjections as words.
+  Sudachi tags locative で (家で) as the copula too, so that label covers both.
+- **tokenContext.ts**: re-joins split expressions (ので, いつか, どうか,
+  五月/12月, ところで, しょうがない, お先に, 今や, でも, なんだ) and
+  curated multi-token supplementary headwords; computes the previous
+  token's grammatical context; tags sentence-initial stretched kana as
+  interjections (あれ～？).
+- **Idioms**: noun + particle + verb that JMDict lists as an expression
+  (~5,100 of them: 実を結ぶ, 時間をかける, 手を伸ばす; は/も stand in for
+  を/が) give the verb the expression's meaning and the noun its reading.
+- **Argument tie-break**: a verb whose meaning is a near-tie ("to wipe —
+  or: to blow") is re-resolved with its subject/object's English head word
+  (風が → wind → 吹く).
+- **Keys and readings**: a kana `dictionary_form` under a kanji normalized
+  form is a reading hint (こだわる); katakana is looked up as written
+  (ワン "woof", not 椀) except interjections (ハイ → はい); one-token set
+  phrases use their JMDict expression (はじめまして); JMnedict names pick
+  the reading in use (京子 きょうこ). Reading corrections: 私 わたし,
+  言う いう, 下 した, 日本 にほん, and rendaku dropped on standalone words.
+
+Rejected after measuring (don't re-add): a generic "prefer uk senses for
+kana verbs" rule (kana いく → slang sense, あう → "to have an accident");
+switching the lookup key to `dictionary_form` (kana homophones: せんせい →
+先制). Known residuals: Sudachi mis-normalizations it is confident about
+(そら → 其れ in a sky context), kana nouns split into fragments
+(しゅくだい → しゅく|だ|い), and senses only world knowledge can pick.
+
 ### Where "wrong words" come from (research + measurement, Oct 2026)
 
-`--id all --summary` over 607 items / 37,601 sentences: SHARED 2,138
-(313 items), KEY≠ 7,064 (517 items), SPLIT≠ 23, UNKNOWN 3. JMDict schema
-facts below are from the jmdict-simplified types package.
+`--id all --summary` over 607 items / 37,601 sentences (BEFORE the fixes
+above): SHARED 2,138 (313 items), KEY≠ 7,064 (517 items), SPLIT≠ 23,
+UNKNOWN 3. After: SHARED 0.
 
-1. **Surface-keyed dedup** (SHARED, 2,138). Every later occurrence of a
-   surface shows the first occurrence's resolution (方 かた vs ほう). Fix =
-   resolve per occurrence (key by surface+reading+POS); changes the
-   resolved.json word list.
-2. **Sense filtering is missing.** jmdict-simplified gives every sense
-   `partOfSpeech`, `appliesToKanji`, `appliesToKana` (`"*"` = all); none are
-   used. POS is only an entry-level +10 on the FIRST Sudachi POS level and
-   senses are not filtered, so この方 (かた) shows "direction", not "person".
-   Form tags (`sK` search-only, `iK`/`ik` irregular, `oK`/`ok` outdated,
-   `rK`/`rk` rare) on `kanji[].tags`/`kana[].tags` are ignored too.
-3. **Reading is a +15 boost, not a filter**, and only passed for
-   non-conjugating POS. Yomitan sorts by reading match FIRST.
-4. **Keep `normalized_form` as the lookup key.** Common advice says "look up
+1. **Keep `normalized_form` as the lookup key.** Common advice says "look up
    dictionary_form", but KEY≠ shows it is much WORSE here: beginner content
    is written in kana, dictionary_form keeps the kana (せんせい, きょう,
    ぜんぶ) and kana lookups hit homophones (先制, 京, 前部), while
-   normalized_form restores the kanji (先生, 今日, 全部). The rare
-   exceptions are fillers (えー→ええ "yes" where え "eh?" fits). A high
-   KEY≠ count is therefore expected, not a bug count.
-5. **Sentence splitting** (SPLIT≠, 23): small but real. All cases are
+   normalized_form restores the kanji (先生, 今日, 全部). A high KEY≠ count
+   is expected, not a bug count.
+2. **Sentence splitting** (SPLIT≠, 23): small but real. All cases are
    sentence-initial: after a newline/space Sudachi splits differently than
    at a fresh start. Per-sentence was better in 5 of 7 sampled
    (からだ not から|だ, 区役所, 係長), worse in 2 (三日月 → 三|日|月).

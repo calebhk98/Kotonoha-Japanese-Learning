@@ -234,7 +234,11 @@ async function inspect(
 
       const row: any = {
         surface: t.surface,
-        lookupKey: m?.normalizedForm,
+        // contentResolver re-joins split expressions; the raw morpheme's key
+        // doesn't describe a merged token.
+        lookupKey: wholeSeg.some((w: any) => w.start === t.startIndex && w.surface === t.surface)
+          ? m?.normalizedForm
+          : '(merged)',
         dictionaryForm: m?.dictionaryForm,
         reading: t.reading,
         pos: m?.pos?.filter((p) => p !== '*').join('-'),
