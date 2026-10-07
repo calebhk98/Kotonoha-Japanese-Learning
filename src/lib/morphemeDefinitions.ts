@@ -30,7 +30,7 @@ export const morphemeDefinitions: Record<string, string> = {
   ました: "polite past form",
   まし: "Polite verb stem (masu-stem form)",
   たい: "want to (do something); desiderative auxiliary",
-  なさい: "Imperative form",
+  なさい: "polite command: \"do ...!\" (〜なさい, e.g. 寝なさい \"go to sleep\")",
 
   // Honorific/humble prefixes
   お: "Honorific prefix",
@@ -68,6 +68,10 @@ export const morphemeDefinitions: Record<string, string> = {
   まで: "Until / up to",
   や: "And / or (non-exhaustive listing)",
   けど: "But / although",
+  より: "than (comparison); from (formal: source, as in 〜より \"from ...\")",
+  // じゃあ/じゃ: Sudachi normalizes to で, whose label is about location.
+  じゃあ: "well then; so (at the start); contraction of では (じゃない \"is not\")",
+  じゃ: "well then; so (at the start); contraction of では (じゃない \"is not\")",
   けれど: "But / although",
   なら: "If / in the case of (conditional)",
   たり: "Doing things like ... (listing actions)",

@@ -157,6 +157,12 @@ const CONTEXT_INFO: Record<string, RegExp> = {
 
 const senseInfo = (s: any): string[] => (Array.isArray(s.info) ? s.info : []);
 
+/** True when the sense's JMDict note fits this grammatical context ('te', …). */
+export function senseFitsContext(s: any, after: string): boolean {
+  const re = CONTEXT_INFO[after];
+  return !!re && senseInfo(s).some((i) => re.test(i));
+}
+
 /** True when a sense only applies in a grammatical context ("after ..."). */
 export function isContextBoundSense(s: any): boolean {
   return senseInfo(s).some((i) => /\bafter\b/i.test(i));
@@ -732,6 +738,8 @@ export class JmdictDictionary implements Dictionary {
 // ==================== JMnedict Dictionary ====================
 export class JmnedictDictionary implements Dictionary {
   private entries: Map<string, WordLookupResult> = new Map();
+  /** Every reading of a kanji-written name (京子: あつこ, きょうこ, …). */
+  private readingsByWritten: Map<string, { kana: string; meanings: string[] }[]> = new Map();
   private initialized = false;
   private cache = new Map<string, WordLookupResult | null>();
 
@@ -778,6 +786,12 @@ export class JmnedictDictionary implements Dictionary {
             }
           }
 
+          if (kanji && kanji !== kana && kana && Array.isArray(meanings)) {
+            const list = this.readingsByWritten.get(kanji) ?? [];
+            list.push({ kana, meanings });
+            this.readingsByWritten.set(kanji, list);
+          }
+
           if (kanji && kanji !== kana) {
             // Also index by kanji/written form
             if (!this.entries.has(kanji)) {
@@ -799,18 +813,28 @@ export class JmnedictDictionary implements Dictionary {
     return this.initialized;
   }
 
-  async lookup(word: string, quiet: boolean = false): Promise<WordLookupResult | null> {
-    // Check cache first
-    if (this.cache.has(word)) {
-      return this.cache.get(word) || null;
+  async lookup(word: string, quiet: boolean = false, hint?: LookupHint): Promise<WordLookupResult | null> {
+    const cacheKey = `${word}|${hint?.reading ?? ''}`;
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey) || null;
     }
 
-    // Look up in entries
-    const result = this.entries.get(word) || null;
+    // A kanji name has many readings (京子 → Atsuko, Kyōko, …); the
+    // contextual reading picks the one the text means.
+    const byReading = hint?.reading
+      ? this.readingsByWritten.get(word)?.find((r) => r.kana === hint.reading)
+      : undefined;
+    const base = byReading
+      ? { meaning: byReading.meanings[0], meanings: byReading.meanings, reading: byReading.kana }
+      : this.entries.get(word) || null;
+    // Name entries list romanization variants of ONE name (エリン: Hellin,
+    // Ellin, Elyn, Erin); show them together and say it is a name, rather
+    // than presenting the first variant as the meaning.
+    const result = base
+      ? { ...base, meaning: `${(base.meanings ?? [base.meaning]).slice(0, 4).join(' / ')} (name)` }
+      : null;
 
-    // Cache the result (including null results to avoid repeated lookups)
-    this.cache.set(word, result);
-
+    this.cache.set(cacheKey, result);
     return result;
   }
 }
@@ -874,7 +898,7 @@ export class DictionaryManager {
     // or kanji-written (e.g. 和彦, 山城屋). The previous guard limited this to
     // pure-hiragana only, causing kanji-written names to always return null here.
     if (this.fallback1) {
-      const jmnedictResult = await this.fallback1.lookup(word);
+      const jmnedictResult = await this.fallback1.lookup(word, false, hint);
       if (jmnedictResult) return jmnedictResult;
     }
 

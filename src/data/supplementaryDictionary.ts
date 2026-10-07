@@ -47,6 +47,8 @@ export const SUPPLEMENTARY_DICTIONARY: Record<string, SupplementaryEntry> = {
   てっ辺: { reading: 'てっぺん', meaning: 'top; summit (usually written 天辺 / てっぺん)' },
   支那そば: { reading: 'しなそば', meaning: 'Chinese-style noodles (old name for ramen)' },
   朝ラー: { reading: 'あさらー', meaning: 'ramen eaten in the morning (slang, from 朝ラーメン)' },
+  タケコプター: { reading: 'たけこぷたー', meaning: 'Take-copter (Doraemon\'s bamboo-copter gadget)' },
+  アンアンアン: { reading: 'あんあんあん', meaning: 'an-an-an (sing-song chant, Doraemon theme)' },
   // JMDict's 炊き込む is only "cook with rice"; ramen broth is also 炊き込む.
   炊き込む: { reading: 'たきこむ', meaning: 'to cook (ingredients) together, e.g. with rice; to simmer down (broth)' },
   平打ち: { reading: 'ひらうち', meaning: 'flat (noodles); flat-pressed' },

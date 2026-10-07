@@ -122,7 +122,8 @@ export async function resolveContent(
         ? undefined
         : contextual ?? getGrammarDefinition(surface, t.baseForm);
     const isMorpheme = grammarLabel !== undefined;
-    const isVocabWord = isJapanese && !isMorpheme && !profile.script.isGrammarFragment(surface);
+    // A lone kana interjection (あ, え) is a real word ("ah!"), not a fragment.
+    const isVocabWord = isJapanese && !isMorpheme && (t.pos === '感動詞' || !profile.script.isGrammarFragment(surface));
 
     tokens.push({
       surface,
@@ -263,7 +264,9 @@ export async function resolveContent(
     const vi = v.wordIndex ?? wordIndexByKey.get(keyOf(v));
     const ni = wordIndexByKey.get(keyOf(n));
     if (vi === undefined || ni === undefined || v.pos !== '動詞' || v.idiom) continue;
-    if (!/^[がを]$/.test(p.surface) || n.endIndex !== p.startIndex || !nextTo(text, p, v)) continue;
+    // 風が、ふきました: a comma may separate the subject from its verb.
+    const gap = text.slice(p.endIndex, v.startIndex);
+    if (!/^[がを]$/.test(p.surface) || n.endIndex !== p.startIndex || !/^[ \u3000、,]*$/.test(gap)) continue;
     const vWord = words[vi];
     if (!vWord?.meaning?.includes(' — or: ')) continue;
     const head = String(words[ni]?.meaning ?? '').split(/[;,(—]/)[0];

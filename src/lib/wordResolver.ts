@@ -1,3 +1,4 @@
+import { senseFitsContext } from './dictionary.js';
 import {
   getCachedDictionaryEntries,
   findBestVariant,
@@ -66,11 +67,16 @@ const READING_CORRECTIONS: Record<string, { wrong: string; right: string }> = {
   // UniDic reads standalone 私 as the formal わたくし; わたし is the
   // everyday reading learners need.
   私: { wrong: 'わたくし', right: 'わたし' },
+  // Both are valid, but にほん is the everyday reading (NHK uses it).
+  日本: { wrong: 'にっぽん', right: 'にほん' },
   // UniDic reads 木の下 / 桜の下 / 青空の下 as もと, whose first JMDict sense
   // is "under (guidance, supervision...)". Every もと-read 下 in the corpus
   // is the physical "under/beneath" (15/15), which is 下/した.
   下: { wrong: 'もと', right: 'した' },
 };
+
+const katakanaToHiraganaStr = (s: string) =>
+  s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 const VOICED: Record<string, string> = {
   が: 'か', ぎ: 'き', ぐ: 'く', げ: 'け', ご: 'こ', ざ: 'さ', じ: 'し', ず: 'す', ぜ: 'せ', ぞ: 'そ',
@@ -162,12 +168,17 @@ export class WordResolver {
    * The JMDict expression entry (POS exp) written exactly as `text`, if any:
    * its first reading and up to two glosses of its first sense.
    */
-  async expression(text: string): Promise<{ reading: string; gloss: string } | null> {
+  async expression(text: string, after?: string): Promise<{ reading: string; gloss: string } | null> {
     if (!this.dictionary?.candidates) return null;
     const cands = await this.dictionary.candidates(text);
     const hit = cands.find((c) => (c.entry.sense ?? []).some((s: any) => (s.partOfSpeech ?? []).includes('exp')));
     if (!hit) return null;
-    const sense = hit.entry.sense.find((s: any) => (s.gloss ?? []).some((g: any) => g.lang === 'eng'));
+    const english = (s: any) => (s.gloss ?? []).some((g: any) => g.lang === 'eng');
+    // With a grammatical context, only a sense noted for it will do
+    // (ください after a te-form: "please (do for me)").
+    const sense = after
+      ? hit.entry.sense.find((s: any) => english(s) && senseFitsContext(s, after))
+      : hit.entry.sense.find(english);
     const glosses = (sense?.gloss ?? []).filter((g: any) => g.lang === 'eng').map((g: any) => g.text);
     if (glosses.length === 0) return null;
     return { reading: hit.entry.kana?.[0]?.text ?? text, gloss: glosses.slice(0, 2).join(', ') };
@@ -253,6 +264,27 @@ export class WordResolver {
           score,
           breakdown,
         };
+      }
+    }
+
+    // Sudachi normalizes katakana to hiragana (ワン → わん), which turns a
+    // dog's "woof" into 椀 "bowl"; a katakana word is looked up as written.
+    // Interjections go the other way: はい "yes" is filed under はい only, so
+    // katakana ハイ (which Sudachi leaves as ハイ) is looked up in hiragana.
+    if (/^[ァ-ヴー]+$/.test(wordStr)) {
+      if (pos === '感動詞') baseForm = katakanaToHiraganaStr(wordStr);
+      else if (baseForm !== wordStr && katakanaToHiraganaStr(wordStr) === baseForm) baseForm = wordStr;
+    }
+
+    // A set phrase written as one token (はじめまして, いただきます) is
+    // its own JMDict expression; the verb lemma (始める) would lose it.
+    // After a grammatical context only a sense noted for it is used
+    // (〜てください = "please (do for me)").
+    if (this.dictionary && wordStr !== baseForm && /^[ぁ-んー]+$/.test(wordStr)) {
+      const phrase = await this.expression(wordStr, ctx?.after);
+      if (phrase) {
+        const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, null);
+        return { reading: wordStr, meaning: phrase.gloss, meanings: undefined, variant: null, entry: null, jlpt, joyo, score, breakdown };
       }
     }
 

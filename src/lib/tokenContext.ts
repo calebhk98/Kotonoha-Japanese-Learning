@@ -78,6 +78,21 @@ const MERGE_RULES: MergeRule[] = [
     match: ([a, b, c]) => a.surface === 'お' && b.surface === '先' && c.surface === 'に',
     pos: '副詞',
   },
+  // Sentence-initial なんだ before punctuation is the exclamation
+  // "what! / oh, it's just ..." (なんだ、そうか), not "what" + copula.
+  {
+    length: 2,
+    match: ([a, b], text) =>
+      a.surface === 'なん' && b.surface === 'だ' && atSentenceStart(text, a.startIndex) && /^[、。！？!?…ー～]/.test(text.slice(b.endIndex)),
+    pos: '感動詞',
+  },
+  // Sentence-initial でも before a comma is the conjunction "but; however".
+  {
+    length: 2,
+    match: ([a, b], text) =>
+      a.surface === 'で' && b.surface === 'も' && atSentenceStart(text, a.startIndex) && /^[、,]/.test(text.slice(b.endIndex)),
+    pos: '接続詞',
+  },
   // 今や "now (in contrast to the past)"
   {
     length: 2,

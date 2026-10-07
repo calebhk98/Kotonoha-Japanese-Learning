@@ -100,6 +100,9 @@ export function getContextualGrammarLabel(
 ): string | null | undefined {
   if (!posDetail) return undefined;
   const [p0, p1] = posDetail;
+  // Interjections (あ, ええ, はい) are words with dictionary entries
+  // ("ah!", "yes"); the kana table only has verb-fragment labels for them.
+  if (p0 === '感動詞') return null;
   switch (surface) {
     case 'な':
       if (p0 === '助動詞') return 'copula (attributive): links a na-adjective or noun to the noun after it (好きな人)';
