@@ -39,6 +39,8 @@ interface MergeRule {
   match: (toks: PositionedToken[], text: string) => boolean;
   /** POS for the merged token (drives lookup hints). */
   pos: string;
+  /** Dictionary lookup key for the merged surface, when it differs. */
+  key?: (surface: string) => string;
 }
 
 const pos0 = (t: PositionedToken) => t.posDetail?.[0] ?? t.pos;
@@ -87,6 +89,8 @@ const MERGE_RULES: MergeRule[] = [
     length: 2,
     match: ([a, b]) => pos1(a) === '数詞' && b.surface === '月',
     pos: '名詞',
+    // JMDict writes months with full-width digits (２月) or kanji, never 2月.
+    key: (s) => s.replace(/[0-9]/g, (d) => String.fromCharCode(d.charCodeAt(0) + 0xfee0)),
   },
 ];
 
@@ -116,7 +120,19 @@ const adjacent = (toks: PositionedToken[]) =>
   toks.every((t, i) => i === 0 || toks[i - 1].endIndex === t.startIndex);
 
 /** Re-join split fixed expressions and curated multi-token headwords. */
-export function mergeFixedExpressions(tokens: PositionedToken[], text: string): PositionedToken[] {
+export function mergeFixedExpressions(input: PositionedToken[], text: string): PositionedToken[] {
+  // Sudachi splits multi-digit numbers digit by digit (12 → 1|2); join runs
+  // of number tokens first so 12月 becomes one month, not 1 + 2月.
+  const tokens: PositionedToken[] = [];
+  for (const t of input) {
+    const prev = tokens[tokens.length - 1];
+    if (prev && pos1(prev) === '数詞' && pos1(t) === '数詞' && prev.endIndex === t.startIndex && /^[0-9０-９]+$/.test(prev.surface + t.surface)) {
+      // Per-digit readings don't concatenate (1+2 is not じゅうに).
+      tokens[tokens.length - 1] = { ...join([prev, t], prev.pos ?? '名詞'), posDetail: prev.posDetail, reading: undefined };
+    } else {
+      tokens.push(t);
+    }
+  }
   const out: PositionedToken[] = [];
   let i = 0;
   outer: while (i < tokens.length) {
@@ -135,7 +151,12 @@ export function mergeFixedExpressions(tokens: PositionedToken[], text: string): 
     for (const rule of MERGE_RULES) {
       const span = tokens.slice(i, i + rule.length);
       if (span.length === rule.length && adjacent(span) && rule.match(span, text)) {
-        out.push(join(span, rule.pos));
+        const joined = join(span, rule.pos);
+        if (rule.key) {
+          joined.baseForm = rule.key(joined.surface);
+          joined.reading = undefined; // the dictionary entry's reading (じゅうにがつ)
+        }
+        out.push(joined);
         i += rule.length;
         continue outer;
       }
