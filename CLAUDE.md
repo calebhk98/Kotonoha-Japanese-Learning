@@ -447,6 +447,60 @@ worse than "unknown" in this app. Kana homographs with identical signals
 (あめ) resolve to one entry and show the other as an alternative.
 TOKENIZER_ANALYSIS.md predates all of this and is historical.
 
+### Inspecting output: `scripts/inspect-text.ts` (use this, not tests, for definition quality)
+
+Which definition is "right" for a token is a judgement call, so a unit test
+that pins a gloss string mostly pins whatever the code did on the day it was
+written. To judge tokenization and definition choice, LOOK at the output:
+
+```bash
+npx tsx scripts/inspect-text.ts --text "右の方へ行った。"     # or --file ch1.txt, --id <contentId>, stdin
+npx tsx scripts/inspect-text.ts --id <contentId> --flagged --candidates
+npx tsx scripts/inspect-text.ts --id all --summary          # flag counts per item (whole corpus)
+```
+
+It runs the real pipeline (`resolveContent` on the whole text, exactly like
+resolve-content), then prints per sentence: surface, lookup key, shown
+reading, full UniDic POS, and the meaning the app shows. `--candidates` lists
+every JMDict entry for the key with `pickBestEntry`'s score (✓ = picked);
+`--raw` / `--modes` show ungrouped morphemes and A/B/C splits; `--json` for
+agents. Outcome-based flags (each fires only when the result actually differs):
+
+- `SHARED`: the word list is deduplicated **by surface**
+  (`contentResolver.ts`), so every later occurrence shows the first
+  occurrence's resolution. Fires when resolving this occurrence with its own
+  reading/POS would give a different meaning or reading (方 かた vs ほう).
+- `KEY≠`: lookup uses Sudachi `normalized_form`; fires when `dictionary_form`
+  would pick a different JMDict entry.
+- `SPLIT≠`: tokenizing the sentence alone differs from tokenizing the whole
+  text. Sudachi's lattice is local, so this is expected to be ~0.
+- `UNKNOWN`: no definition.
+
+Startup is ~1 min (dictionary load) and it holds the `jmdict-db` lock, so
+stop the dev server first and run one instance at a time. Batch work with
+`--id a,b,c` / `--id all` instead of parallel processes.
+
+### Where "wrong words" come from (research + measurement, Oct 2026)
+
+Ranked by measured impact; see `--summary` numbers above before changing any.
+JMDict schema facts below are from the jmdict-simplified types package.
+
+1. **Surface-keyed dedup** (SHARED). Fix = resolve per occurrence (key words
+   by surface+reading+POS), which changes the resolved.json word list.
+2. **Sense filtering is missing.** jmdict-simplified gives every sense
+   `partOfSpeech`, `appliesToKanji`, `appliesToKana` (`"*"` = all); none are
+   used. POS is only an entry-level +10 on the FIRST Sudachi POS level, and
+   senses are not filtered, so 方/かた shows "direction" not "person".
+   Form tags (`sK` search-only, `iK`/`ik` irregular, `oK`/`ok` outdated,
+   `rK`/`rk` rare) on `kanji[].tags`/`kana[].tags` are ignored too.
+3. **Reading is a +15 boost, not a filter**, and is only passed for
+   non-conjugating POS. Yomitan sorts by reading match FIRST.
+4. **Lookup key** (KEY≠): `normalized_form` rewrites spelling (かわいい→可愛い,
+   この→此の, する→為る). Usually harmless; measure before changing.
+5. **Sentence splitting** (SPLIT≠): not a cause. `src/lib/sentenceSplitter.ts`
+   exists for display/inspection; chunking before `segment()` is only worth
+   it for very long unpunctuated input.
+
 ### Multi-language architecture (#258 target axis, #260 native axis)
 
 Two independent axes, both seamed but ja/en-only in runtime today:
@@ -669,6 +723,11 @@ Exceptions where TDD is overkill:
 - Pure docs / comment changes.
 - New stories or content additions in `src/stories|music|videos/`.
 - Mechanical renames where `tsc` is the actual safety net.
+- Definition / sense / homograph choice. There is often no single correct
+  gloss, so a test just freezes today's output. Judge with
+  `scripts/inspect-text.ts` and the `resolve-content -- --all` artifact diff
+  instead. (Keep tests for well-defined behaviour: positions, splitting,
+  scoring math, grammar-morpheme guards.)
 
 For everything else — especially anything that touches `server.ts`,
 `src/lib/scoring.ts`, `src/lib/dictionary.ts`, `src/lib/tokenizers.ts`, or

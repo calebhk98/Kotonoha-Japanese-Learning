@@ -473,6 +473,22 @@ export class JmdictDictionary implements Dictionary {
     );
   }
 
+  /**
+   * Every exact-match entry for `word` with the score pickBestEntry ranks it
+   * by, for inspection tooling (scripts/inspect-text.ts). Not used by lookup.
+   */
+  async candidates(word: string, hint?: LookupHint): Promise<{ entry: any; score: number; picked: boolean }[]> {
+    if (!this.db || typeof this.db.values !== 'function') return [];
+    const [kana, kanji] = await Promise.all([this.searchExact(word, 'kana'), this.searchExact(word, 'kanji')]);
+    const seen = new Set<string>();
+    const all = [...kana, ...kanji].filter((e) => !seen.has(e.id) && seen.add(e.id));
+    if (all.length === 0) return [];
+    const best = pickBestEntry(all, word, hint);
+    return all
+      .map((entry) => ({ entry, score: getEntryCommonness(entry, word, hint), picked: entry.id === best.id }))
+      .sort((a, b) => b.score - a.score);
+  }
+
   async lookup(word: string, quiet: boolean = false, hint?: LookupHint): Promise<WordLookupResult | null> {
     if (!this.db) return null;
 
@@ -706,6 +722,11 @@ export class DictionaryManager {
     const jmnedictDict = new JmnedictDictionary();
     await jmnedictDict.initialize(jmnedictFile);
     this.fallback1 = jmnedictDict;
+  }
+
+  /** JMDict exact-match candidates for inspection tooling; [] without JMDict. */
+  async candidates(word: string, hint?: LookupHint) {
+    return this.primary instanceof JmdictDictionary ? this.primary.candidates(word, hint) : [];
   }
 
   async lookup(word: string, hint?: LookupHint): Promise<WordLookupResult | null> {

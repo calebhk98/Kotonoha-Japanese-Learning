@@ -46,7 +46,7 @@ interface DictionaryLike {
  * adjectives, and auxiliaries conjugate — their surface reading (よみました)
  * doesn't describe the base form (よむ), so no reading hint is passed.
  */
-const NON_CONJUGATING_POS = new Set([
+export const NON_CONJUGATING_POS = new Set([
   '名詞', '代名詞', '副詞', '連体詞', '接続詞', '感動詞', '接頭辞', '接尾辞', '形状詞',
 ]);
 

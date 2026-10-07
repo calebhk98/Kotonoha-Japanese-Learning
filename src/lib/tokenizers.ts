@@ -2,6 +2,14 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const TinySegmenter = require('tiny-segmenter');
 
+export interface RawMorpheme {
+  surface: string;
+  pos: string[];
+  normalizedForm: string;
+  dictionaryForm?: string;
+  reading?: string;
+}
+
 export interface TokenInfo {
   surface: string;      // The actual word as it appears (with conjugations)
   baseForm: string;     // Dictionary form for lookup (base form)
@@ -166,6 +174,22 @@ export class SudachiWasmImpl implements Tokenizer {
       console.warn(`[Tokenizer] ${this.name} initialization failed:`, e.message);
       throw e;
     }
+  }
+
+  /**
+   * Raw, ungrouped Sudachi morphemes for inspection tooling
+   * (scripts/inspect-text.ts). Not used by the resolution pipeline.
+   * reading_form / dictionary_form are only present on patched builds.
+   */
+  rawMorphemes(text: string, mode: 'A' | 'B' | 'C' = 'C'): RawMorpheme[] {
+    if (!this.tokenizer) throw new Error('Sudachi WASM not initialized');
+    return this.tokenizer.run(text, mode).map((m: any) => ({
+      surface: m.surface,
+      pos: m.part_of_speech,
+      normalizedForm: m.normalized_form,
+      dictionaryForm: m.dictionary_form,
+      reading: m.reading_form,
+    }));
   }
 
   async segment(text: string): Promise<TokenInfo[]> {
