@@ -499,7 +499,10 @@ gaps: grade them with inspect-text, fix the PATTERN, re-grade.
   -te form" / "-masu stem" / "adj. stem" go first when the previous token
   fits (下さい after て = "please do"), and context-bound senses go last
   otherwise. The headline shows the first sense's two glosses plus the
-  next sense when short (肉 "flesh; meat").
+  next everyday sense as "(also: …)" (肉 "flesh (also: meat)"). Measured on
+  120 corpus tokens: the extra sense was the right one 8 times where the
+  first was wrong, and odd-but-harmless 19 times; niche senses (hist/rare/
+  sl/abbr/field-tagged) are never shown. Drop it if that trade looks wrong.
 - **Grammar labels follow the full UniDic POS**
   (`getContextualGrammarLabel`): copula な/に/で, conditional と,
   conjunctive が, 連体詞 ある, もの/こと as nouns, interjections as words.
@@ -522,7 +525,10 @@ gaps: grade them with inspect-text, fix the PATTERN, re-grade.
   the reading in use (京子 きょうこ). Reading corrections: 私 わたし,
   言う いう, 下 した, 日本 にほん, and rendaku dropped on standalone words.
 
-Rejected after measuring (don't re-add): a generic "prefer uk senses for
+Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
+after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
+of specialization"; only senses noted "usu. in compounds"/"after a name"
+count now); a generic "prefer uk senses for
 kana verbs" rule (kana いく → slang sense, あう → "to have an accident");
 switching the lookup key to `dictionary_form` (kana homophones: せんせい →
 先制). Known residuals: Sudachi mis-normalizations it is confident about

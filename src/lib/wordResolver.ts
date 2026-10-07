@@ -96,7 +96,7 @@ function isRendakuOf(voiced: string, plain: string): boolean {
  * not truncate to "to fall (e.g. blossoms".
  */
 function shortGloss(meaning: string): string {
-  const head = meaning.split(' — or:')[0];
+  const head = meaning.split(' — or:')[0].replace(/ \(also: [^)]*\)$/, '');
   let depth = 0;
   for (let i = 0; i < head.length; i++) {
     const c = head[i];
