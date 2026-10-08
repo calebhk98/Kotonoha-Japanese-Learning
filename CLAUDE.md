@@ -525,6 +525,28 @@ gaps: grade them with inspect-text, fix the PATTERN, re-grade.
   the reading in use (京子 きょうこ). Reading corrections: 私 わたし,
   言う いう, 下 した, 日本 にほん, and rendaku dropped on standalone words.
 
+- **Longest-match against JMDict** (`mergeDictionaryWords`): 2-5
+  adjacent tokens whose joined surface (or lemma) is a JMDict headword
+  become one token (として, かも知れない, 以下の通り, 在庫切れ). Guards, each
+  from a graded failure: no span opening with a verb/adjective/auxiliary
+  (いる|か ≠ "dolphin"), a number (80万|人 ≠ 万人), or を/が/へ/は/も (except
+  を巡って-type patterns); none ending in は/が/を/も/へ (今日|は ≠ "hello",
+  except 又は-type coordinators) or 名詞+から; all-kana spans only into
+  headwords written in kana (と|なり ≠ 隣); conjunctions only at a clause
+  start (そこで "there"+で mid-sentence).
+- **Proper nouns**: Sudachi 固有名詞 → JMDict's capitalised sense (日産
+  Nissan), else JMnedict for 人名/地名/組織 with the reading in use.
+- **Formal nouns** after a modifier (ため, はず, わけ, うち…), dates/months/
+  numbers with computed readings, kana readings in parentheses, and
+  katakana terms glossed by the text itself (ポストクロッシング
+  (Postcrossing)) are decided in tokenContext.ts.
+- **Measured on unseen random text** (Wikipedia/Wikinews/Aozora, graded by
+  Sonnet with the inspect-text rubric): 7.7% wrong before this work, 5.9%
+  after two fix rounds on two fresh test sets. The rate stopped falling
+  between rounds: what remains is long-tail (names, literary compounds
+  missing from JMDict, sense choice that needs world knowledge). A local
+  embedding-model sense chooser was prototyped and rejected (net loss).
+
 Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
 after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
 of specialization"; only senses noted "usu. in compounds"/"after a name"

@@ -175,7 +175,14 @@ export async function resolveContent(
       isMorpheme,
       isJapanese,
       grammarLabel,
-      context: grammaticalContext(merged[i - 1], t, text),
+      context: (() => {
+        const c = grammaticalContext(merged[i - 1], t, text);
+        // "after the plain/past form of a verb" senses (ところ "about to",
+        // "just did") are the construction 〜ところだ; without the copula
+        // after it, ところ is the plain noun ("place, point").
+        if ((c === 'verb-plain' || c === 'verb-past') && !/^(だ|です|でし|だっ|である)/.test(merged[i + 1]?.surface ?? '')) return undefined;
+        return c;
+      })(),
       dictionaryForm: t.dictionaryForm,
       posDetail: t.posDetail,
       fixed: t.fixed,
@@ -284,6 +291,7 @@ export async function resolveContent(
               commonNoun: token.posDetail?.[0] === '名詞' && token.posDetail?.[1] === '普通名詞',
               properNoun: token.posDetail?.[1] === '固有名詞',
               placeName: token.posDetail?.[1] === '固有名詞' && token.posDetail?.[2] === '地名',
+              nameType: token.posDetail?.[1] === '固有名詞' && ['人名', '地名', '組織'].includes(token.posDetail?.[2] ?? ''),
             });
           const info: any = { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown };
           if (meanings) info.meanings = meanings;
@@ -320,9 +328,12 @@ export async function resolveContent(
     const gap = text.slice(p.endIndex, v.startIndex);
     if (!/^[がを]$/.test(p.surface) || n.endIndex !== p.startIndex || !/^[ \u3000、,]*$/.test(gap)) continue;
     const vWord = words[vi];
-    if (!vWord?.meaning?.includes(' — or: ')) continue;
+    // Every verb with an object/subject is re-checked: the argument can pick
+    // the entry (near-tied homographs) or the sense (結ぶ "to conclude (a
+    // contract)"); only a changed meaning gets its own word entry.
+    if (!vWord?.meaning) continue;
     const head = String(words[ni]?.meaning ?? '').split(/[;,(—]/)[0];
-    const argumentWords = (head.toLowerCase().match(/[a-z]{3,}/g) ?? []).filter((w) => !STOP.has(w));
+    const argumentWords = (head.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter((w) => !STOP.has(w));
     if (argumentWords.length === 0) continue;
     const r = await wordResolver.resolve(v.surface, v.baseForm, lookupCache, v.pos, v.reading, undefined, {
       after: v.context,

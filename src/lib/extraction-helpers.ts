@@ -108,6 +108,11 @@ export function getContextualGrammarLabel(
   // A conjugated する written in kana (さ in された, し in しない, す in
   // classical すべく): the bare-kana table only has stem placeholders.
   if (p0 === '動詞' && baseForm === '為る') return 'form of する "to do" (された "was done", しない "doesn\'t")';
+  // い of ていない, あっ of あった: the verb いる/ある, not the kana-table
+  // fragment labels ("Adjective ending").
+  if (p0 === '動詞' && (baseForm === '居る' || baseForm === '有る')) {
+    return getMorphemeDefinition(baseForm === '居る' ? 'いる' : 'ある');
+  }
   switch (surface) {
     case 'な':
       if (p0 === '助動詞') return 'copula (attributive): links a na-adjective or noun to the noun after it (好きな人)';

@@ -209,8 +209,16 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
   for (const t of input) {
     const prev = tokens[tokens.length - 1];
     if (prev && pos1(prev) === '数詞' && pos1(t) === '数詞' && prev.endIndex === t.startIndex && !Number.isNaN(numberValue(prev.surface + t.surface))) {
-      // Per-digit readings don't concatenate (1+2 is not じゅうに).
-      tokens[tokens.length - 1] = { ...join([prev, t], prev.pos ?? '名詞'), posDetail: prev.posDetail, reading: undefined };
+      // Per-digit readings don't concatenate (1+2 is not じゅうに); a bare
+      // number is glossed as its value (三十一 is 31, not "Mitoi (name)").
+      const joinedNum = join([prev, t], prev.pos ?? '名詞');
+      const value = numberValue(joinedNum.surface);
+      tokens[tokens.length - 1] = {
+        ...joinedNum,
+        posDetail: prev.posDetail,
+        reading: value < 100 ? numberReading(value) : undefined,
+        fixed: { meaning: `${value} (number)` },
+      };
     } else {
       tokens.push(t);
     }
@@ -309,6 +317,12 @@ export function grammaticalContext(
 
 const KANJI = /[一-鿿々]/;
 
+/** Coordinating conjunctions that join nouns mid-sentence (A又はB "A or B"). */
+const COORDINATORS = new Set(['又は', 'または', '若しくは', 'もしくは', '及び', 'および', '並びに', 'ならびに', '或いは', 'あるいは', '且つ', 'かつ', 'ないし']);
+
+/** Grammar patterns that do open with を (〜を巡って "concerning"). */
+const PARTICLE_PATTERNS = /^を(巡|めぐ|通じ|通し|はじめ|始め|もって|以て|問わ)/;
+
 /**
  * Longest-match against JMDict (what Yomitan does on hover): 2-5 adjacent
  * tokens whose joined surface — or joined surface with the last token in
@@ -355,10 +369,19 @@ export async function mergeDictionaryWords(
       if (surface.length < 3 && !KANJI.test(surface)) continue;
       // A span opening with を/が/へ/は/も is a phrase boundary (を|して is
       // "doing ... (object)", not the causative-patient expression をして).
-      if (/^[をがへはも]$/.test(span[0].surface)) continue;
+      if (/^[をがへはも]$/.test(span[0].surface) && !PARTICLE_PATTERNS.test(span.map((t) => t.surface).join(''))) continue;
+      const joined = span.map((t) => t.surface).join('');
+      const coordinator = COORDINATORS.has(joined);
       // …and one CLOSING with them is noun + particle (今日|は is "today"
-      // + topic, not the greeting 今日は "hello").
-      if (/^[をがへはも]$/.test(span[span.length - 1].surface)) continue;
+      // + topic, not the greeting 今日は "hello") — except the coordinating
+      // conjunctions 又は / もしくは "or".
+      if (/^[をがへはも]$/.test(span[span.length - 1].surface) && !coordinator) continue;
+      // Noun + から is "from <noun>" (側から), not an idiom like 側から "as soon as".
+      if (span[span.length - 1].surface === 'から' && pos0(span[0]) === '名詞') continue;
+      // …の right before a noun is the genitive: 以上のもの|の|ボイラー is
+      // "the boiler of …", not ものの "although".
+      const after = tokens[i + span.length];
+      if (span[span.length - 1].surface === 'の' && after && pos0(after) === '名詞' && after.startIndex === span[span.length - 1].endIndex) continue;
       if (isGrammar(surface)) continue;
       const last = span[n - 1];
       if (n === 2 && last.surface === 'に' && pos0(span[0]) === '名詞') {
@@ -371,17 +394,19 @@ export async function mergeDictionaryWords(
       if (key && !KANJI.test(key) && !(await isKanaHeadword(key))) key = null;
       // A conjunction (そこで "so", それで "and then") only opens a clause;
       // mid-sentence the same kana is the pieces (そこで = "there" + で).
-      if (key && !atClauseStart(text, span[0].startIndex) && (await isConjunctionOnly(key))) key = null;
+      if (key && !coordinator && !atClauseStart(text, span[0].startIndex) && (await isConjunctionOnly(key))) key = null;
       if (!key) continue;
       const readings = span.map((t) => t.reading);
       merged = {
         surface,
         baseForm: key,
+        // An exact headword reads as the dictionary says (一杯 いっぱい, not
+        // いち+はい); a conjugated span keeps its contextual reading.
         // No Sudachi POS for a multi-word span: an expression's JMDict POS
         // (exp) has no Sudachi equivalent, and a guessed one would filter
         // the right senses out.
         pos: undefined,
-        reading: readings.every((r) => r) ? readings.join('') : undefined,
+        reading: key === surface ? undefined : readings.every((r) => r) ? readings.join('') : undefined,
         posDetail: undefined,
         dictionaryForm: key,
         tail: last.tail,
@@ -417,7 +442,9 @@ export async function mergeDictionaryWords(
  */
 export function markParenthesizedReadings(tokens: PositionedToken[], text: string): PositionedToken[] {
   const spans: { start: number; end: number; reading: string; of: string }[] = [];
-  const re = /([一-鿿々ヶ〆0-9０-９A-Za-zＡ-Ｚａ-ｚァ-ヴー]+)[（(]([ぁ-ゖー・　 、]+)[）)]/g;
+  // The reading may keep katakana parts (ボイラー・タービンしゅにん…) but
+  // must contain hiragana, or it is just a katakana gloss.
+  const re = /([一-鿿々ヶ〆0-9０-９A-Za-zＡ-Ｚａ-ｚァ-ヴー・]+)[（(]([ぁ-ゖァ-ヴー・　 、]*[ぁ-ゖ][ぁ-ゖァ-ヴー・　 、]*)[）)]/g;
   for (let m; (m = re.exec(text)); ) {
     const start = m.index + m[1].length + 1;
     spans.push({ start, end: start + m[2].length, reading: m[2].replace(/[\s　、・]/g, ''), of: m[1] });

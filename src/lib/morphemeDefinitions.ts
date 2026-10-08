@@ -97,6 +97,7 @@ export const morphemeDefinitions: Record<string, string> = {
   いく: "To go / to continue",
   くる: "To come",
 
+  ら: "plural suffix (彼ら \"they\", これら \"these\"); 等",
   // A lone え is almost always the interjection (え～？ "huh?").
   え: "eh? / huh? / what? (interjection)",
 

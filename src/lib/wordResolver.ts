@@ -229,6 +229,8 @@ export class WordResolver {
       commonNoun?: boolean;
       /** Sudachi says 固有名詞 (proper noun); 地名 subtype in placeName. */
       properNoun?: boolean;
+      /** Proper noun of a name subtype (人名/地名/組織). */
+      nameType?: boolean;
       placeName?: boolean;
     }
   ): Promise<WordResolution> {
@@ -375,7 +377,7 @@ export class WordResolver {
           : undefined;
       let hint: {
         pos?: string; reading?: string; lang?: string[]; after?: string;
-        kanaForm?: string; kanaSurface?: boolean; argumentWords?: string[]; properNoun?: boolean;
+        kanaForm?: string; kanaSurface?: boolean; argumentWords?: string[]; properNoun?: boolean; nameType?: boolean;
       } | undefined;
       if (pos && hintReading) hint = { pos, reading: hintReading };
       else if (pos) hint = { pos };
@@ -383,7 +385,7 @@ export class WordResolver {
       if (ctx?.after) hint = { ...(hint ?? {}), after: ctx.after };
       if (kanaForm) hint = { ...(hint ?? {}), kanaForm };
       if (ctx?.argumentWords?.length) hint = { ...(hint ?? {}), argumentWords: ctx.argumentWords };
-      if (ctx?.properNoun) hint = { ...(hint ?? {}), properNoun: true };
+      if (ctx?.properNoun) hint = { ...(hint ?? {}), properNoun: true, nameType: !!ctx.nameType };
       const kanaSurface = /^[ぁ-んー]+$/.test(wordStr) && baseForm !== wordStr;
       if (kanaSurface) hint = { ...(hint ?? {}), kanaSurface };
       // Native-language gloss priority (#260) only when a non-default language
@@ -393,7 +395,7 @@ export class WordResolver {
       // Different languages must not share a cache slot, or a Spanish lookup
       // would serve an English-cached gloss (and vice versa).
       const langKey = glossLang ? glossLang.join(',') : '';
-      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${ctx?.dictionaryForm ?? ''}|${pos ?? ''}|${hintReading ?? ''}|${langKey}|${ctx?.after ?? ''}|${kanaForm ?? ''}|${kanaSurface ? 'k' : ''}|${ctx?.argumentWords?.join(',') ?? ''}|${ctx?.properNoun ? 'P' : ''}`;
+      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${ctx?.dictionaryForm ?? ''}|${pos ?? ''}|${hintReading ?? ''}|${langKey}|${ctx?.after ?? ''}|${kanaForm ?? ''}|${kanaSurface ? 'k' : ''}|${ctx?.argumentWords?.join(',') ?? ''}|${ctx?.properNoun ? 'P' : ''}${ctx?.nameType ? 'N' : ''}`;
       let dictResult: any = lookupCache?.get(cacheKey) ?? null;
 
       if (dictResult === null) {
@@ -445,7 +447,9 @@ export class WordResolver {
     // "Kobuna (name)"): a transparent composition (small + crucian carp)
     // is the better meaning.
     const nameOnly = / \(name\)$/.test(meaning);
-    if ((meaning === 'Unknown meaning' || (nameOnly && ctx?.commonNoun)) && this.dictionary) {
+    // Same for a 固有名詞-一般 compound (日本国内 is not "Japan Domestic
+    // Airlines"): only person/place/organization tags trust JMnedict.
+    if ((meaning === 'Unknown meaning' || (nameOnly && (ctx?.commonNoun || (ctx?.properNoun && !ctx?.nameType)))) && this.dictionary) {
       const composed = await this.composeUnknown(wordStr, baseForm, pos);
       if (composed) {
         meaning = composed.meaning;

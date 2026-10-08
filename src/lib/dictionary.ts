@@ -34,6 +34,8 @@ export interface LookupHint {
   kanaSurface?: boolean;
   /** Sudachi tags the token as a proper noun (固有名詞). */
   properNoun?: boolean;
+  /** ...specifically a person/place/organization name (人名/地名/組織). */
+  nameType?: boolean;
   /**
    * English head words of the verb's subject/object noun (風が → ['wind']).
    * Among near-tied homographs, the entry whose glosses mention one wins:
@@ -179,6 +181,13 @@ export function senseFitsHint(s: any, hint?: LookupHint): boolean {
   // "after a noun" itself is too broad (前's "portion, helping" in 二年前).
   if (hint.after === 'noun') return senseInfo(s).some((i) => /usu\. in compounds|after a (name|person)/i.test(i));
   return senseFitsContext(s, hint.after);
+}
+
+/** True when a gloss of the sense names one of the hint's argument words. */
+export function senseMentionsArgument(s: any, hint?: LookupHint): boolean {
+  const words = hint?.argumentWords;
+  if (!words?.length) return false;
+  return getGlosses(s, ['eng']).some((g: string) => words.some((w) => new RegExp(`\\b${w}s?\\b`, 'i').test(g)));
 }
 
 /** True when the sense's JMDict note fits this grammatical context ('te', …). */
@@ -473,7 +482,11 @@ export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint)
   // 家の前 reads まえ, so the 前(ぜん) entry cannot match; 六人 reads にん,
   // selecting the people-counter over the standalone-noun ひと entry.
   if (hint?.reading && entry.kana?.some((k: any) => k.text === hint.reading)) {
-    score += 15;
+    // For a kanji word the contextual reading is the strongest signal there
+    // is (第2種 しゅ "kind" vs たね "seed"; 等 とう vs ら): it must beat a
+    // more common homograph's common-flag lead. Known-bad UniDic readings
+    // are corrected before this point (READING_CORRECTIONS etc.).
+    score += word && /[一-鿿々]/.test(word) ? 30 : 15;
   } else if (hint?.kanaForm && entry.kana?.some((k: any) => k.text === hint.kanaForm)) {
     // Same signal for conjugating words: the kana lemma (拘る written
     // こだわる) names the entry's reading.
@@ -742,7 +755,12 @@ export class JmdictDictionary implements Dictionary {
       const sensesWithScores = selectSenses(bestMatch, word, hint).map((sense: any, idx: number) => ({
         sense,
         order: idx,
-        commonness: this.getSenseCommonness(sense) + (senseFitsHint(sense, hint) ? 100 : 0),
+        commonness:
+          this.getSenseCommonness(sense) +
+          (senseFitsHint(sense, hint) ? 100 : 0) +
+          // A sense whose gloss names this verb's actual object/subject
+          // (契約を結ぶ → "to conclude (e.g. a contract)") is the one in use.
+          (senseMentionsArgument(sense, hint) ? 60 : 0),
       }));
 
       // Sort by commonness descending; use original order as tiebreaker.
@@ -993,7 +1011,7 @@ export class DictionaryManager {
     // one (日本 "Japan", 日産 "Nissan" — selectSenses puts capitalised
     // senses first); otherwise the name dictionary does (平作 "Heisaku",
     // バリ "Bali"), not a common-noun homograph ("normal crop", "burr").
-    if (hint?.properNoun && this.fallback1 && !(result && /^[A-Z]/.test(result.meaning))) {
+    if (hint?.properNoun && hint.nameType && this.fallback1 && !(result && /^[A-Z]/.test(result.meaning))) {
       const name = await this.fallback1.lookup(word, false, hint);
       if (name) return name;
     }
