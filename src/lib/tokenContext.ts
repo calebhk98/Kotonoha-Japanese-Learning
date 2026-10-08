@@ -324,6 +324,7 @@ export async function mergeDictionaryWords(
   tokens: PositionedToken[],
   text: string,
   hasForm: (s: string) => Promise<boolean>,
+  isKanaHeadword: (s: string) => Promise<boolean>,
   isGrammar: (s: string) => boolean
 ): Promise<PositionedToken[]> {
   const out: PositionedToken[] = [];
@@ -337,6 +338,9 @@ export async function mergeDictionaryWords(
       if (span.every((t) => ['助詞', '助動詞'].includes(pos0(t) ?? ''))) continue;
       const surface = span.map((t) => t.surface).join('');
       if (surface.length < 3 && !KANJI.test(surface)) continue;
+      // A span opening with を/が/へ/は/も is a phrase boundary (を|して is
+      // "doing ... (object)", not the causative-patient expression をして).
+      if (/^[をがへはも]$/.test(span[0].surface)) continue;
       if (isGrammar(surface)) continue;
       const last = span[n - 1];
       if (n === 2 && last.surface === 'に' && pos0(span[0]) === '名詞') {
@@ -344,7 +348,9 @@ export async function mergeDictionaryWords(
         if (before && before.endIndex === span[0].startIndex && (before.surface === 'の' || ['動詞', '形容詞', '連体詞', '助動詞'].includes(pos0(before) ?? ''))) continue;
       }
       const lemmaForm = span.slice(0, -1).map((t) => t.surface).join('') + (last.lemmaSurface ?? last.surface);
-      const key = (await hasForm(surface)) ? surface : lemmaForm !== surface && (await hasForm(lemmaForm)) ? lemmaForm : null;
+      let key = (await hasForm(surface)) ? surface : lemmaForm !== surface && (await hasForm(lemmaForm)) ? lemmaForm : null;
+      // All-kana: only headwords really written in kana (see isKanaHeadword).
+      if (key && !KANJI.test(key) && !(await isKanaHeadword(key))) key = null;
       if (!key) continue;
       const readings = span.map((t) => t.reading);
       merged = {
@@ -414,4 +420,40 @@ export function markParenthesizedReadings(tokens: PositionedToken[], text: strin
     i = j;
   }
   return out;
+}
+
+/**
+ * Formal nouns: after a modifier (verb/adjective/auxiliary, の, この/その)
+ * these are grammar, and their JMDict first senses mislead (ため "good,
+ * advantage", はず "nock of a bow"). Graded wrong 10+ times on unseen text.
+ */
+const FORMAL_NOUNS: Record<string, string> = {
+  ため: 'for (the sake of); in order to; because of',
+  為: 'for (the sake of); in order to; because of',
+  はず: 'should (be), is expected to',
+  筈: 'should (be), is expected to',
+  わけ: 'reason; it means that, that is why',
+  訳: 'reason; it means that, that is why',
+  つもり: 'intention, plan (to do)',
+  積もり: 'intention, plan (to do)',
+  まま: 'as it is; while still (〜たまま)',
+  儘: 'as it is; while still (〜たまま)',
+  うち: 'while, during; within (〜ないうちに "before")',
+  せい: 'because of, due to (blame)',
+  おかげ: 'thanks to',
+  間: 'while, during',
+  あいだ: 'while, during',
+};
+
+/** Grammatical meaning of a formal noun used after a modifier, if any. */
+export function formalNounMeaning(prev: PositionedToken | undefined, cur: PositionedToken, text: string): string | undefined {
+  const meaning = FORMAL_NOUNS[cur.surface];
+  if (!meaning || !prev || !nextTo(text, prev, cur)) return undefined;
+  const p = pos0(prev);
+  const modifier =
+    p === '動詞' || p === '形容詞' || p === '連体詞' ||
+    (p === '助動詞' && /^(た|だ|ない|ぬ|な|の)$/.test(prev.tail?.surface ?? prev.surface)) ||
+    (prev.surface === 'の' && pos1(prev) === '格助詞') ||
+    prev.tail?.pos === '動詞' || prev.tail?.pos === '助動詞';
+  return modifier ? meaning : undefined;
 }

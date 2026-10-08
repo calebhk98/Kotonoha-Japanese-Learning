@@ -23,7 +23,7 @@ import type { WordResolver } from './wordResolver.js';
 import { getGrammarDefinition, getContextualGrammarLabel } from './extraction-helpers.js';
 import { getMorphemeDefinition } from './morphemeDefinitions.js';
 import { getWordScoreBreakdown } from './scoring.js';
-import { mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
+import { mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
 import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 
@@ -85,6 +85,7 @@ export async function resolveContent(
     mergeFixedExpressions(markParenthesizedReadings(positioned, text), text),
     text,
     (s) => wordResolver.hasForm(s),
+    (s) => wordResolver.isKanaHeadword(s),
     (s) => getMorphemeDefinition(s) !== undefined
   );
 
@@ -120,6 +121,14 @@ export async function resolveContent(
     // POS-aware label first (な after 好き is the copula, not the
     // sentence-final particle); null = a content word here (もの "thing").
     const contextual = getContextualGrammarLabel(surface, t.posDetail, t.baseForm);
+    // 後 opening a parenthetical in encyclopedic text ((後の東京都…),
+    // （後に…）) is のち "later", which UniDic reads あと "behind".
+    if ((surface === '後' || surface === '後に') && /[（(、]$/.test(text.slice(0, t.startIndex))) {
+      t = { ...t, reading: surface === '後' ? 'のち' : 'のちに', pos: surface === '後' ? '名詞' : '副詞' };
+    }
+    // Formal nouns after a modifier are grammar (補助金のため "because of").
+    const formal = formalNounMeaning(merged[i - 1], t, text);
+    if (formal) t = { ...t, fixed: { meaning: formal } };
     // A lone kana echoed by the next word's first kana is a drawn-out
     // sound (「おおいしい」 → お + おいしい), not the honorific prefix.
     const next = merged[i + 1];
@@ -255,6 +264,8 @@ export async function resolveContent(
               notGrammar: true,
               idiom: token.idiom,
               commonNoun: token.posDetail?.[0] === '名詞' && token.posDetail?.[1] === '普通名詞',
+              properNoun: token.posDetail?.[1] === '固有名詞',
+              placeName: token.posDetail?.[1] === '固有名詞' && token.posDetail?.[2] === '地名',
             });
           const info: any = { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown };
           if (meanings) info.meanings = meanings;

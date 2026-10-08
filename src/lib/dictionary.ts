@@ -32,6 +32,8 @@ export interface LookupHint {
   kanaForm?: string;
   /** The text writes this word in kana (lookup key may be a kanji spelling). */
   kanaSurface?: boolean;
+  /** Sudachi tags the token as a proper noun (固有名詞). */
+  properNoun?: boolean;
   /**
    * English head words of the verb's subject/object noun (風が → ['wind']).
    * Among near-tied homographs, the entry whose glosses mention one wins:
@@ -115,6 +117,11 @@ export function selectSenses(entry: any, word: string, hint?: LookupHint): any[]
   }
   const matches = hint?.pos ? jmdictPosMatcher(hint.pos) : null;
   if (matches) narrow((s) => Array.isArray(s.partOfSpeech) && s.partOfSpeech.some(matches));
+  // A proper noun's capitalised sense (日産: "daily output" → "Nissan").
+  if (hint?.properNoun) {
+    const proper = senses.filter((sn) => /^[A-Z]/.test(getGlosses(sn, ['eng'])[0] ?? ''));
+    if (proper.length > 0) senses = [...proper, ...senses.filter((sn) => !proper.includes(sn))];
+  }
 
   // 4. grammatical context: JMDict notes context-bound senses in `info`
   //    ("after the -te form of a verb"). Senses whose note matches this
@@ -940,6 +947,23 @@ export class DictionaryManager {
     this.fallback1 = jmnedictDict;
   }
 
+  /**
+   * True when `text` (all kana) is a headword that is actually WRITTEN in
+   * kana: a kana-only entry, a usually-kana (uk) sense, or a grammatical
+   * expression. と|なり must not merge into 隣 "next to" just because
+   * となり is that word's reading.
+   */
+  async isKanaHeadword(text: string): Promise<boolean> {
+    if (!(this.primary instanceof JmdictDictionary)) return false;
+    const cands = await this.primary.candidates(text);
+    const GRAMMATICAL = new Set(['exp', 'conj', 'adv', 'int', 'prt', 'aux', 'aux-v', 'aux-adj', 'pn', 'adj-pn']);
+    return cands.some(({ entry }) =>
+      (entry.kana ?? []).some((k: any) => k.text === text) &&
+      ((entry.kanji ?? []).length === 0 ||
+        (entry.sense ?? []).some((sn: any) => (sn.misc ?? []).includes('uk') || (sn.partOfSpeech ?? []).some((p: string) => GRAMMATICAL.has(p))))
+    );
+  }
+
   /** True when JMDict has an entry written exactly `text`. */
   async hasForm(text: string): Promise<boolean> {
     return this.primary instanceof JmdictDictionary ? this.primary.hasForm(text) : false;
@@ -956,6 +980,14 @@ export class DictionaryManager {
     // Try primary dictionary first. The hint only means something to JMDict
     // (homograph entry selection); the other dictionaries ignore extra args.
     const result = await this.primary.lookup(word, false, hint);
+    // Sudachi says proper noun: JMDict's proper-noun sense wins when it has
+    // one (日本 "Japan", 日産 "Nissan" — selectSenses puts capitalised
+    // senses first); otherwise the name dictionary does (平作 "Heisaku",
+    // バリ "Bali"), not a common-noun homograph ("normal crop", "burr").
+    if (hint?.properNoun && this.fallback1 && !(result && /^[A-Z]/.test(result.meaning))) {
+      const name = await this.fallback1.lookup(word, false, hint);
+      if (name) return name;
+    }
     if (result) return result;
 
     // Try JMnedict for names and proper nouns — these can be hiragana, katakana,

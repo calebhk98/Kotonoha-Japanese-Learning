@@ -41,6 +41,7 @@ interface DictionaryLike {
   ): Promise<{ reading?: string; meaning?: string; meanings?: string[]; glossLang?: string } | null | false>;
   /** True when JMDict has an entry written exactly `text`. */
   hasForm?(text: string): Promise<boolean>;
+  isKanaHeadword?(text: string): Promise<boolean>;
   /** JMDict-only exact-match entries (DictionaryManager.candidates). */
   candidates?(word: string, hint?: any): Promise<{ entry: any; score: number; picked: boolean }[]>;
 }
@@ -175,6 +176,11 @@ export class WordResolver {
     return this.dictionary?.hasForm ? this.dictionary.hasForm(text) : Promise.resolve(false);
   }
 
+  /** See DictionaryManager.isKanaHeadword. */
+  isKanaHeadword(text: string): Promise<boolean> {
+    return this.dictionary?.isKanaHeadword ? this.dictionary.isKanaHeadword(text) : Promise.resolve(false);
+  }
+
   async expression(text: string, after?: string): Promise<{ reading: string; gloss: string } | null> {
     if (!this.dictionary?.candidates) return null;
     const cands = await this.dictionary.candidates(text);
@@ -215,6 +221,9 @@ export class WordResolver {
       argumentWords?: string[];
       /** Sudachi says 普通名詞 (common noun), not a proper noun. */
       commonNoun?: boolean;
+      /** Sudachi says 固有名詞 (proper noun); 地名 subtype in placeName. */
+      properNoun?: boolean;
+      placeName?: boolean;
     }
   ): Promise<WordResolution> {
     // Curated corrections for UniDic's known-bad standalone readings (米→べい).
@@ -355,7 +364,7 @@ export class WordResolver {
           : undefined;
       let hint: {
         pos?: string; reading?: string; lang?: string[]; after?: string;
-        kanaForm?: string; kanaSurface?: boolean; argumentWords?: string[];
+        kanaForm?: string; kanaSurface?: boolean; argumentWords?: string[]; properNoun?: boolean;
       } | undefined;
       if (pos && hintReading) hint = { pos, reading: hintReading };
       else if (pos) hint = { pos };
@@ -363,6 +372,7 @@ export class WordResolver {
       if (ctx?.after) hint = { ...(hint ?? {}), after: ctx.after };
       if (kanaForm) hint = { ...(hint ?? {}), kanaForm };
       if (ctx?.argumentWords?.length) hint = { ...(hint ?? {}), argumentWords: ctx.argumentWords };
+      if (ctx?.properNoun) hint = { ...(hint ?? {}), properNoun: true };
       const kanaSurface = /^[ぁ-んー]+$/.test(wordStr) && baseForm !== wordStr;
       if (kanaSurface) hint = { ...(hint ?? {}), kanaSurface };
       // Native-language gloss priority (#260) only when a non-default language
@@ -372,7 +382,7 @@ export class WordResolver {
       // Different languages must not share a cache slot, or a Spanish lookup
       // would serve an English-cached gloss (and vice versa).
       const langKey = glossLang ? glossLang.join(',') : '';
-      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${ctx?.dictionaryForm ?? ''}|${pos ?? ''}|${hintReading ?? ''}|${langKey}|${ctx?.after ?? ''}|${kanaForm ?? ''}|${kanaSurface ? 'k' : ''}|${ctx?.argumentWords?.join(',') ?? ''}`;
+      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${ctx?.dictionaryForm ?? ''}|${pos ?? ''}|${hintReading ?? ''}|${langKey}|${ctx?.after ?? ''}|${kanaForm ?? ''}|${kanaSurface ? 'k' : ''}|${ctx?.argumentWords?.join(',') ?? ''}|${ctx?.properNoun ? 'P' : ''}`;
       let dictResult: any = lookupCache?.get(cacheKey) ?? null;
 
       if (dictResult === null) {
@@ -429,6 +439,22 @@ export class WordResolver {
       if (composed) {
         meaning = composed.meaning;
         if (composed.reading && (!reading || reading === wordStr)) reading = composed.reading;
+      }
+    }
+
+    // (3.6) A long place token the dictionaries don't hold as one word
+    // (東京都千代田区丸の内): name its administrative parts.
+    if (meaning === 'Unknown meaning' && ctx?.placeName && this.dictionary) {
+      const parts = wordStr.match(/.+?(?:都|道|府|県|市|区|町|村|郡|$)/g)?.filter(Boolean) ?? [];
+      if (parts.length > 1) {
+        const named = await Promise.all(
+          parts.map(async (p) => {
+            const r = await this.dictionary!.lookup(p, { properNoun: true } as any);
+            const gloss = r && r.meaning ? shortGloss(r.meaning).replace(/ \(name\)$/, '') : '';
+            return gloss ? `${p} ${gloss}` : p;
+          })
+        );
+        meaning = `place name: ${named.join(' / ')}`;
       }
     }
 
