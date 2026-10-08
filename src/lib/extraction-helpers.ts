@@ -105,6 +105,9 @@ export function getContextualGrammarLabel(
   // Interjections (あ, ええ, はい) are words with dictionary entries
   // ("ah!", "yes"); the kana table only has verb-fragment labels for them.
   if (p0 === '感動詞') return null;
+  // A conjugated する written in kana (さ in された, し in しない, す in
+  // classical すべく): the bare-kana table only has stem placeholders.
+  if (p0 === '動詞' && baseForm === '為る') return 'form of する "to do" (された "was done", しない "doesn\'t")';
   switch (surface) {
     case 'な':
       if (p0 === '助動詞') return 'copula (attributive): links a na-adjective or noun to the noun after it (好きな人)';
@@ -113,6 +116,7 @@ export function getContextualGrammarLabel(
       if (p0 === '助動詞') return 'adverbial ending: "-ly" / "so that, like" (きれいに, ように)';
       break;
     case 'で':
+      if (p0 === '接続詞') return 'and so; then (で at the start of a sentence)';
       // Sudachi also tags plain locative で (家で) as the copula, so the
       // label has to cover both readings.
       if (p0 === '助動詞') return 'at / in / by means of; or copula te-form "is ... and" (〜で)';
@@ -140,6 +144,23 @@ export function getContextualGrammarLabel(
     case 'もの':
     case 'こと':
       if (p0 === '名詞') return null;
+      break;
+    case 'げ':
+      if (p0 === '接尾辞') return '-looking, seeming (ありげ "seemingly there", 楽しげ "cheerful-looking")';
+      break;
+    case 'ん':
+      if (p1 === '準体助詞') return 'explanatory の (んです "it is that ...")';
+      break;
+    case 'って':
+      if (p1 === '接続助詞') return 'and / -ing (colloquial て: 寒くって "it\'s cold and")';
+      break;
+    case 'し':
+      if (p1 === '接続助詞') return 'and (what\'s more), listing reasons (雨だし "it\'s raining, and ...")';
+      break;
+    case 'なら':
+    case 'より':
+      // Verb なる (どうにもならない) and adverb より "more" are words.
+      if (p0 === '動詞' || p0 === '副詞') return null;
       break;
     case 'てる':
     case 'でる':

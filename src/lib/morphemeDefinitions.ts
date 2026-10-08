@@ -11,7 +11,7 @@ export const morphemeDefinitions: Record<string, string> = {
   す: "Causative marker",
   される: "Passive voice marker",
   さ: "Nominalizing suffix (-ness, e.g. 高さ); sentence-final emphasis; causative stem (させる)",
-  せ: "Causative passive",
+  せ: "causative: make / let someone do (聞かせる \"tell\", 待たせる \"keep waiting\")",
   ん: "Negative form / Emphatic particle",
   ぬ: "Negative form (classical)",
   ない: "not; negative form",
@@ -69,6 +69,8 @@ export const morphemeDefinitions: Record<string, string> = {
   まで: "Until / up to",
   や: "And / or (non-exhaustive listing)",
   けど: "But / although",
+  べく: "in order to, so as to (formal: 〜すべく \"in order to do\")",
+  べき: "should, ought to (〜べきだ)",
   より: "than (comparison); from (formal: source, as in 〜より \"from ...\")",
   // じゃあ/じゃ: Sudachi normalizes to で, whose label is about location.
   じゃあ: "well then; so (at the start); contraction of では (じゃない \"is not\")",

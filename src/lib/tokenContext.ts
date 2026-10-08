@@ -21,7 +21,55 @@ import { getSupplementaryEntry } from '../data/supplementaryDictionary.js';
 export interface PositionedToken extends TokenInfo {
   startIndex: number;
   endIndex: number;
+  /** Meaning decided here (dates, readings in parentheses); skips lookup. */
+  fixed?: { meaning: string; reading?: string };
 }
+
+const KANJI_DIGIT: Record<string, number> = { 〇: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+
+/** Value of a number written in Arabic or kanji digits (up to 9999); NaN otherwise. */
+export function numberValue(s: string): number {
+  const ascii = s.replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xfee0));
+  if (/^[0-9]+$/.test(ascii)) return Number(ascii);
+  if (!/^[〇一二三四五六七八九十百千]+$/.test(s)) return NaN;
+  let total = 0;
+  let cur = 0;
+  for (const ch of s) {
+    if (ch in KANJI_DIGIT) cur = cur * 10 + KANJI_DIGIT[ch];
+    else {
+      const unit = ch === '十' ? 10 : ch === '百' ? 100 : 1000;
+      total += (cur || 1) * unit;
+      cur = 0;
+    }
+  }
+  return total + cur;
+}
+
+const ONES = ['', 'いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう'];
+function numberReading(n: number): string {
+  if (n >= 10 && n < 100) {
+    const tens = Math.floor(n / 10);
+    return (tens > 1 ? ONES[tens] : '') + 'じゅう' + ONES[n % 10];
+  }
+  return ONES[n] ?? String(n);
+}
+
+const DAY_SPECIAL: Record<number, string> = {
+  1: 'ついたち', 2: 'ふつか', 3: 'みっか', 4: 'よっか', 5: 'いつか', 6: 'むいか', 7: 'なのか',
+  8: 'ようか', 9: 'ここのか', 10: 'とおか', 14: 'じゅうよっか', 20: 'はつか', 24: 'にじゅうよっか',
+};
+
+/** Reading of N日: the irregular day forms, else <number>にち (17 じゅうしちにち, 19 じゅうくにち). */
+export function dayReading(n: number): string | undefined {
+  if (!(n >= 1 && n <= 31)) return undefined;
+  if (DAY_SPECIAL[n]) return DAY_SPECIAL[n];
+  const ones = n % 10;
+  const tens = Math.floor(n / 10);
+  const onesR = ones === 7 ? 'しち' : ones === 9 ? 'く' : ones === 4 ? 'よ' : ONES[ones];
+  return (tens > 1 ? ONES[tens] : '') + (tens > 0 ? 'じゅう' : '') + onesR + 'にち';
+}
+
+const MONTH_READING = ['', 'いち', 'に', 'さん', 'し', 'ご', 'ろく', 'しち', 'はち', 'く', 'じゅう', 'じゅういち', 'じゅうに'];
 
 export type GrammaticalContext = 'te' | 'masu' | 'adj-stem' | 'verb-plain' | 'verb-past' | 'noun';
 
@@ -62,7 +110,9 @@ const MERGE_RULES: MergeRule[] = [
   // ので "because": UniDic splits it into nominalizer の + copula で.
   {
     length: 2,
-    match: ([a, b]) => a.surface === 'の' && pos1(a) === '準体助詞' && b.surface === 'で' && pos0(b) === '助動詞',
+    // …but のである / のであった is "it is (was) that …", not "because".
+    match: ([a, b], text) =>
+      a.surface === 'の' && pos1(a) === '準体助詞' && b.surface === 'で' && pos0(b) === '助動詞' && !/^\s*あ/.test(text.slice(b.endIndex)),
     pos: '助詞',
   },
   // しょうがない / しようがない "it can't be helped"
@@ -153,7 +203,7 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
   const tokens: PositionedToken[] = [];
   for (const t of input) {
     const prev = tokens[tokens.length - 1];
-    if (prev && pos1(prev) === '数詞' && pos1(t) === '数詞' && prev.endIndex === t.startIndex && /^[0-9０-９]+$/.test(prev.surface + t.surface)) {
+    if (prev && pos1(prev) === '数詞' && pos1(t) === '数詞' && prev.endIndex === t.startIndex && !Number.isNaN(numberValue(prev.surface + t.surface))) {
       // Per-digit readings don't concatenate (1+2 is not じゅうに).
       tokens[tokens.length - 1] = { ...join([prev, t], prev.pos ?? '名詞'), posDetail: prev.posDetail, reading: undefined };
     } else {
@@ -175,6 +225,21 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
         continue outer;
       }
     }
+    // N日: the day of the month (or N days), with its irregular reading.
+    const [numTok, dayTok] = [tokens[i], tokens[i + 1]];
+    if (numTok && dayTok && pos1(numTok) === '数詞' && dayTok.surface === '日' && numTok.endIndex === dayTok.startIndex) {
+      const n = numberValue(numTok.surface);
+      const reading = dayReading(n);
+      if (reading) {
+        out.push({
+          ...join([numTok, dayTok], '名詞'),
+          reading,
+          fixed: { meaning: `the ${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'} (day of the month); ${n} day${n === 1 ? '' : 's'}`, reading },
+        });
+        i += 2;
+        continue outer;
+      }
+    }
     for (let n = 5; n >= 2; n--) {
       const span = tokens.slice(i, i + n);
       if (span.length < n || !adjacent(span)) continue;
@@ -192,7 +257,10 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
         const joined = join(span, rule.pos);
         if (rule.key) {
           joined.baseForm = rule.key(joined.surface);
-          joined.reading = undefined; // the dictionary entry's reading (じゅうにがつ)
+          // Month reading computed, so 一月 is いちがつ "January" (the
+          // dictionary also has ひとつき "one month" under the same kanji).
+          const m = numberValue(span[0].surface);
+          joined.reading = m >= 1 && m <= 12 ? MONTH_READING[m] + 'がつ' : undefined;
         }
         out.push(joined);
         i += rule.length;
@@ -232,4 +300,118 @@ export function grammaticalContext(
   // suffix: ラーメン+バカ "ramen fanatic", not "idiot".
   if (pos === '名詞' && cur.pos === '名詞' && prev.endIndex === cur.startIndex && pos1(prev) !== '数詞') return 'noun';
   return undefined;
+}
+
+const KANJI = /[一-鿿々]/;
+
+/**
+ * Longest-match against JMDict (what Yomitan does on hover): 2-5 adjacent
+ * tokens whose joined surface — or joined surface with the last token in
+ * dictionary form (付いて|来た → 付いて来る) — is a JMDict headword become
+ * one token looked up under that headword. Fixes the split set phrases
+ * graded wrong on unseen text: として, ことにする, それでも, かも知れない,
+ * ものの, 以下の通り, により, 在庫切れ, 途方もない, 急に.
+ *
+ * Guards (each from a measured failure mode):
+ *   - joined text must be ≥3 chars or contain kanji (には, でも, のに are
+ *     usually two separate particles)
+ *   - not a pure particle/auxiliary chain
+ *   - not something the grammar table already labels (ている, でした)
+ *   - noun+に after a modifier stays split: 子供の時に is "when", not
+ *     時に "sometimes" (急に, 本当に still merge)
+ */
+export async function mergeDictionaryWords(
+  tokens: PositionedToken[],
+  text: string,
+  hasForm: (s: string) => Promise<boolean>,
+  isGrammar: (s: string) => boolean
+): Promise<PositionedToken[]> {
+  const out: PositionedToken[] = [];
+  let i = 0;
+  while (i < tokens.length) {
+    let merged: PositionedToken | null = null;
+    let used = 0;
+    for (let n = Math.min(5, tokens.length - i); n >= 2 && !merged; n--) {
+      const span = tokens.slice(i, i + n);
+      if (!adjacent(span)) continue;
+      if (span.every((t) => ['助詞', '助動詞'].includes(pos0(t) ?? ''))) continue;
+      const surface = span.map((t) => t.surface).join('');
+      if (surface.length < 3 && !KANJI.test(surface)) continue;
+      if (isGrammar(surface)) continue;
+      const last = span[n - 1];
+      if (n === 2 && last.surface === 'に' && pos0(span[0]) === '名詞') {
+        const before = tokens[i - 1];
+        if (before && before.endIndex === span[0].startIndex && (before.surface === 'の' || ['動詞', '形容詞', '連体詞', '助動詞'].includes(pos0(before) ?? ''))) continue;
+      }
+      const lemmaForm = span.slice(0, -1).map((t) => t.surface).join('') + (last.lemmaSurface ?? last.surface);
+      const key = (await hasForm(surface)) ? surface : lemmaForm !== surface && (await hasForm(lemmaForm)) ? lemmaForm : null;
+      if (!key) continue;
+      const readings = span.map((t) => t.reading);
+      merged = {
+        surface,
+        baseForm: key,
+        // No Sudachi POS for a multi-word span: an expression's JMDict POS
+        // (exp) has no Sudachi equivalent, and a guessed one would filter
+        // the right senses out.
+        pos: undefined,
+        reading: readings.every((r) => r) ? readings.join('') : undefined,
+        posDetail: undefined,
+        dictionaryForm: key,
+        tail: last.tail,
+        lemmaSurface: key,
+        startIndex: span[0].startIndex,
+        endIndex: last.endIndex,
+      };
+      used = n;
+    }
+    if (merged) {
+      out.push(merged);
+      i += used;
+      continue;
+    }
+    // A single grouped token whose lemma is a dictionary expression
+    // (付いて来た → 付いて来る "to follow").
+    const t = tokens[i];
+    if (t.lemmaSurface && t.lemmaSurface !== t.baseForm && t.lemmaSurface !== t.surface && t.surface.length > 2 && (await hasForm(t.lemmaSurface))) {
+      out.push({ ...t, baseForm: t.lemmaSurface, pos: undefined, posDetail: undefined });
+    } else {
+      out.push(t);
+    }
+    i++;
+  }
+  return out;
+}
+
+/**
+ * A kana reading in parentheses right after a word (三菱仲15号館（みつびし
+ * なかじゅうごごうかん）, common in encyclopedic and news text) is the
+ * word's reading, not more words: tokenizing it produced junk like ごうかん
+ * "rape" for 号館. Its tokens become one token labelled as that reading.
+ */
+export function markParenthesizedReadings(tokens: PositionedToken[], text: string): PositionedToken[] {
+  const spans: { start: number; end: number; reading: string; of: string }[] = [];
+  const re = /([一-鿿々ヶ〆0-9０-９A-Za-zＡ-Ｚａ-ｚァ-ヴー]+)[（(]([ぁ-ゖー・　 、]+)[）)]/g;
+  for (let m; (m = re.exec(text)); ) {
+    const start = m.index + m[1].length + 1;
+    spans.push({ start, end: start + m[2].length, reading: m[2].replace(/[\s　、・]/g, ''), of: m[1] });
+  }
+  if (spans.length === 0) return tokens;
+  const out: PositionedToken[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const span = spans.find((s) => tokens[i].startIndex >= s.start && tokens[i].endIndex <= s.end);
+    if (!span) {
+      out.push(tokens[i]);
+      continue;
+    }
+    let j = i;
+    while (j + 1 < tokens.length && tokens[j + 1].endIndex <= span.end) j++;
+    const inner = tokens.slice(i, j + 1);
+    out.push({
+      ...join(inner, '名詞'),
+      reading: inner.map((t) => t.surface).join(''),
+      fixed: { meaning: `(reading of ${span.of}: ${span.reading})` },
+    });
+    i = j;
+  }
+  return out;
 }

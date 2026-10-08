@@ -39,6 +39,8 @@ interface DictionaryLike {
     word: string,
     hint?: { pos?: string; reading?: string; lang?: string[] }
   ): Promise<{ reading?: string; meaning?: string; meanings?: string[]; glossLang?: string } | null | false>;
+  /** True when JMDict has an entry written exactly `text`. */
+  hasForm?(text: string): Promise<boolean>;
   /** JMDict-only exact-match entries (DictionaryManager.candidates). */
   candidates?(word: string, hint?: any): Promise<{ entry: any; score: number; picked: boolean }[]>;
 }
@@ -168,6 +170,11 @@ export class WordResolver {
    * The JMDict expression entry (POS exp) written exactly as `text`, if any:
    * its first reading and up to two glosses of its first sense.
    */
+  /** True when JMDict has a headword written exactly `text`. */
+  hasForm(text: string): Promise<boolean> {
+    return this.dictionary?.hasForm ? this.dictionary.hasForm(text) : Promise.resolve(false);
+  }
+
   async expression(text: string, after?: string): Promise<{ reading: string; gloss: string } | null> {
     if (!this.dictionary?.candidates) return null;
     const cands = await this.dictionary.candidates(text);
@@ -365,7 +372,7 @@ export class WordResolver {
       // Different languages must not share a cache slot, or a Spanish lookup
       // would serve an English-cached gloss (and vice versa).
       const langKey = glossLang ? glossLang.join(',') : '';
-      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${pos ?? ''}|${hintReading ?? ''}|${langKey}|${ctx?.after ?? ''}|${kanaForm ?? ''}|${kanaSurface ? 'k' : ''}|${ctx?.argumentWords?.join(',') ?? ''}`;
+      const cacheKey = `${baseForm !== wordStr ? baseForm : wordStr}|${ctx?.dictionaryForm ?? ''}|${pos ?? ''}|${hintReading ?? ''}|${langKey}|${ctx?.after ?? ''}|${kanaForm ?? ''}|${kanaSurface ? 'k' : ''}|${ctx?.argumentWords?.join(',') ?? ''}`;
       let dictResult: any = lookupCache?.get(cacheKey) ?? null;
 
       if (dictResult === null) {
@@ -375,6 +382,13 @@ export class WordResolver {
         if (wordStr !== baseForm && /[一-鿿々]/.test(wordStr) && pos && NON_CONJUGATING_POS.has(pos)) {
           dictResult = await this.dictionary.lookup(wordStr, hint);
         }
+      }
+      // Likewise a kanji dictionary_form that normalization collapsed onto a
+      // more common spelling (捕る → 取る, 訊く → 聞く, 抑える → 押さえる):
+      // the text's own spelling names the right entry.
+      const kanjiLemma = ctx?.dictionaryForm;
+      if (dictResult === null && kanjiLemma && kanjiLemma !== baseForm && /[一-鿿々]/.test(kanjiLemma)) {
+        dictResult = await this.dictionary.lookup(kanjiLemma, hint);
       }
       if (dictResult === null) {
         dictResult = await this.dictionary.lookup(baseForm, hint);

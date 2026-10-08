@@ -21,7 +21,9 @@
 import type { Tokenizer, TokenInfo } from './tokenizers.js';
 import type { WordResolver } from './wordResolver.js';
 import { getGrammarDefinition, getContextualGrammarLabel } from './extraction-helpers.js';
-import { mergeFixedExpressions, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
+import { getMorphemeDefinition } from './morphemeDefinitions.js';
+import { getWordScoreBreakdown } from './scoring.js';
+import { mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
 import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 
@@ -79,12 +81,18 @@ export async function resolveContent(
 
   // ---- sentence context: re-join split expressions, then classify each
   // token with what its neighbour says about it (see tokenContext.ts).
-  const merged = mergeFixedExpressions(positioned, text);
+  const merged = await mergeDictionaryWords(
+    mergeFixedExpressions(markParenthesizedReadings(positioned, text), text),
+    text,
+    (s) => wordResolver.hasForm(s),
+    (s) => getMorphemeDefinition(s) !== undefined
+  );
 
   interface WorkToken extends ResolvedToken {
     baseForm: string;
     isJapanese: boolean;
     grammarLabel?: string;
+    fixed?: { meaning: string; reading?: string };
     context?: GrammaticalContext;
     dictionaryForm?: string;
     idiom?: { expression: string; gloss: string };
@@ -117,14 +125,17 @@ export async function resolveContent(
     const next = merged[i + 1];
     const stretched =
       /^[ぁ-ん]$/.test(surface) && next && next.startIndex === t.endIndex && next.surface.startsWith(surface);
-    const grammarLabel = stretched
+    const grammarLabel = t.fixed
+      ? undefined
+      : stretched
       ? 'drawn-out sound (おおいしい = おいしい, said with feeling)'
       : !isJapanese || contextual === null
         ? undefined
         : contextual ?? getGrammarDefinition(surface, t.baseForm);
     const isMorpheme = grammarLabel !== undefined;
     // A lone kana interjection (あ, え) is a real word ("ah!"), not a fragment.
-    const isVocabWord = isJapanese && !isMorpheme && (t.pos === '感動詞' || !profile.script.isGrammarFragment(surface));
+    const isVocabWord =
+      isJapanese && !isMorpheme && (!!t.fixed || t.pos === '感動詞' || !profile.script.isGrammarFragment(surface));
 
     tokens.push({
       surface,
@@ -140,6 +151,7 @@ export async function resolveContent(
       context: grammaticalContext(merged[i - 1], t, text),
       dictionaryForm: t.dictionaryForm,
       posDetail: t.posDetail,
+      fixed: t.fixed,
     });
   });
 
@@ -189,7 +201,7 @@ export async function resolveContent(
   // inheriting the first one's resolution. buildWordsResponse still collapses
   // the vocab list to one entry per surface.
   const keyOf = (t: WorkToken) =>
-    [t.surface, t.baseForm, t.pos, t.reading, t.grammarLabel, t.context, t.dictionaryForm, t.idiom?.expression].join('\u0000');
+    [t.surface, t.baseForm, t.pos, t.reading, t.grammarLabel, t.context, t.dictionaryForm, t.idiom?.expression, t.fixed?.meaning].join('\u0000');
   const wordIndexByKey = new Map<string, number>();
   const argumentOverride = new Map<number, number>(); // token index → word index
   const frequency = new Map<string, number>();
@@ -216,7 +228,15 @@ export async function resolveContent(
       while (next < uniqueTokens.length) {
         const i = next++;
         const token = uniqueTokens[i];
-        if (token.isMorpheme) {
+        if (token.fixed) {
+          const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(token.surface, null);
+          words[i] = {
+            word: token.surface,
+            reading: token.fixed.reading ?? token.reading ?? token.surface,
+            meaning: token.fixed.meaning,
+            jlpt, joyo, score, breakdown,
+          };
+        } else if (token.isMorpheme) {
           words[i] = {
             word: token.surface,
             reading: token.reading ?? token.surface,
@@ -301,7 +321,7 @@ export async function resolveContent(
     formatVersion: RESOLVED_FORMAT_VERSION,
     words,
     tokens: tokens.map((t, idx) => {
-      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, ...rest } = t;
+      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, fixed, ...rest } = t;
       return {
         ...rest,
         // For the client, isVocabWord doubles as "hoverable": every Japanese

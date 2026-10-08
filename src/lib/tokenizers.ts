@@ -39,6 +39,11 @@ export interface TokenInfo {
    * ("after the -te form", "after the -masu stem").
    */
   tail?: { surface: string; pos: string; conj: string };
+  /**
+   * The token with its LAST morpheme in dictionary form (付いて来た →
+   * 付いて来る): the headword a conjugated multi-morpheme token would have.
+   */
+  lemmaSurface?: string;
 }
 
 /**
@@ -251,6 +256,8 @@ export class SudachiWasmImpl implements Tokenizer {
     let groupPosDetail: string[] | undefined;
     let groupDictForm: string | undefined;
     let groupTail: TokenInfo['tail'];
+    let groupHead = ''; // surface before the group's last morpheme
+    let groupLastDict = '';
 
     // reading_form exists only on WASM builds patched via
     // scripts/sudachi-wasm-reading.patch; older builds yield undefined and
@@ -271,6 +278,7 @@ export class SudachiWasmImpl implements Tokenizer {
           posDetail: groupPosDetail,
           dictionaryForm: groupDictForm,
           tail: groupTail,
+          lemmaSurface: groupHead + (groupLastDict || groupTail?.surface || ''),
         });
         groupSurface = '';
         groupBaseForm = '';
@@ -300,6 +308,14 @@ export class SudachiWasmImpl implements Tokenizer {
         if (reading === null) groupReadingValid = false;
         else groupReading += reading;
         groupTail = tail;
+        // The lemma replaces the group's LAST VERB with its dictionary form
+        // (付いて+来た → 付いて来る; し+た → する); trailing auxiliaries
+        // (ます, た) are conjugation, not part of the headword.
+        // groupSurface already includes this morpheme when this runs.
+        if (pos === '動詞') {
+          groupHead = groupSurface.slice(0, groupSurface.length - surface.length);
+          groupLastDict = m.dictionary_form || surface;
+        }
       };
       const startGroup = () => {
         groupSurface = surface;
@@ -312,6 +328,8 @@ export class SudachiWasmImpl implements Tokenizer {
         groupPosDetail = [...m.part_of_speech];
         groupDictForm = m.dictionary_form || undefined;
         groupTail = tail;
+        groupHead = '';
+        groupLastDict = m.dictionary_form || surface;
       };
 
       if (!groupSurface) {

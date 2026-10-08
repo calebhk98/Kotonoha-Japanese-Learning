@@ -630,6 +630,32 @@ export class JmdictDictionary implements Dictionary {
     );
   }
 
+  private forms: Promise<Set<string>> | null = null;
+
+  /**
+   * Every JMDict written form (kanji and kana), loaded once from the
+   * LevelDB index keys (`indexes/{kana|kanji}/{text}-{id}`). Lets callers
+   * test "is this span of tokens a dictionary word?" without a lookup per
+   * span (longest-match merging in contentResolver).
+   */
+  hasForm(text: string): Promise<boolean> {
+    if (!this.forms) {
+      this.forms = (async () => {
+        const set = new Set<string>();
+        if (!this.db || typeof this.db.keys !== 'function') return set;
+        for (const kind of ['kana', 'kanji']) {
+          const prefix = `indexes/${kind}/`;
+          for await (const key of this.db.keys({ gte: prefix, lt: `indexes/${kind}0` })) {
+            const k = String(key);
+            set.add(k.slice(prefix.length, k.lastIndexOf('-')));
+          }
+        }
+        return set;
+      })();
+    }
+    return this.forms.then((set) => set.has(text));
+  }
+
   /**
    * Every exact-match entry for `word` with the score pickBestEntry ranks it
    * by, for inspection tooling (scripts/inspect-text.ts). Not used by lookup.
@@ -912,6 +938,11 @@ export class DictionaryManager {
     const jmnedictDict = new JmnedictDictionary();
     await jmnedictDict.initialize(jmnedictFile);
     this.fallback1 = jmnedictDict;
+  }
+
+  /** True when JMDict has an entry written exactly `text`. */
+  async hasForm(text: string): Promise<boolean> {
+    return this.primary instanceof JmdictDictionary ? this.primary.hasForm(text) : false;
   }
 
   /** JMDict exact-match candidates for inspection tooling; [] without JMDict. */
