@@ -42,6 +42,7 @@ interface DictionaryLike {
   /** True when JMDict has an entry written exactly `text`. */
   hasForm?(text: string): Promise<boolean>;
   isKanaHeadword?(text: string): Promise<boolean>;
+  isConjunctionOnly?(text: string): Promise<boolean>;
   /** JMDict-only exact-match entries (DictionaryManager.candidates). */
   candidates?(word: string, hint?: any): Promise<{ entry: any; score: number; picked: boolean }[]>;
 }
@@ -176,6 +177,11 @@ export class WordResolver {
     return this.dictionary?.hasForm ? this.dictionary.hasForm(text) : Promise.resolve(false);
   }
 
+  /** See DictionaryManager.isConjunctionOnly. */
+  isConjunctionOnly(text: string): Promise<boolean> {
+    return this.dictionary?.isConjunctionOnly ? this.dictionary.isConjunctionOnly(text) : Promise.resolve(false);
+  }
+
   /** See DictionaryManager.isKanaHeadword. */
   isKanaHeadword(text: string): Promise<boolean> {
     return this.dictionary?.isKanaHeadword ? this.dictionary.isKanaHeadword(text) : Promise.resolve(false);
@@ -235,6 +241,11 @@ export class WordResolver {
     // dictionary (and furigana) reading is いう (言った いった, 言う いう).
     if (baseForm === '言う' && wordStr.startsWith('言') && tokenReading?.startsWith('ゆ')) {
       tokenReading = 'い' + tokenReading.slice(1);
+    }
+    // 得る: UniDic reads うる (literary); える is the everyday reading
+    // (資格を得る, 得た, 得ます).
+    if (baseForm === '得る' && tokenReading?.startsWith('う')) {
+      tokenReading = 'え' + tokenReading.slice(1);
     }
 
     // (1) Early-return for known grammatical morphemes.

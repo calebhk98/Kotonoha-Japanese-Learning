@@ -964,6 +964,15 @@ export class DictionaryManager {
     );
   }
 
+  /** True when every JMDict entry written `text` is only a conjunction. */
+  async isConjunctionOnly(text: string): Promise<boolean> {
+    if (!(this.primary instanceof JmdictDictionary)) return false;
+    const cands = await this.primary.candidates(text);
+    return cands.length > 0 && cands.every(({ entry }) =>
+      (entry.sense ?? []).every((sn: any) => (sn.partOfSpeech ?? []).every((p: string) => p === 'conj' || p === 'exp'))
+      && (entry.sense ?? []).some((sn: any) => (sn.partOfSpeech ?? []).includes('conj')));
+  }
+
   /** True when JMDict has an entry written exactly `text`. */
   async hasForm(text: string): Promise<boolean> {
     return this.primary instanceof JmdictDictionary ? this.primary.hasForm(text) : false;

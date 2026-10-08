@@ -23,7 +23,7 @@ import type { WordResolver } from './wordResolver.js';
 import { getGrammarDefinition, getContextualGrammarLabel } from './extraction-helpers.js';
 import { getMorphemeDefinition } from './morphemeDefinitions.js';
 import { getWordScoreBreakdown } from './scoring.js';
-import { mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
+import { mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, markGlossaryTerms, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
 import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 
@@ -82,11 +82,12 @@ export async function resolveContent(
   // ---- sentence context: re-join split expressions, then classify each
   // token with what its neighbour says about it (see tokenContext.ts).
   const merged = await mergeDictionaryWords(
-    mergeFixedExpressions(markParenthesizedReadings(positioned, text), text),
+    mergeFixedExpressions(markGlossaryTerms(markParenthesizedReadings(positioned, text), text), text),
     text,
     (s) => wordResolver.hasForm(s),
     (s) => wordResolver.isKanaHeadword(s),
-    (s) => getMorphemeDefinition(s) !== undefined
+    (s) => getMorphemeDefinition(s) !== undefined,
+    (s) => wordResolver.isConjunctionOnly(s)
   );
 
   interface WorkToken extends ResolvedToken {
@@ -121,10 +122,26 @@ export async function resolveContent(
     // POS-aware label first (な after 好き is the copula, not the
     // sentence-final particle); null = a content word here (もの "thing").
     const contextual = getContextualGrammarLabel(surface, t.posDetail, t.baseForm);
+    // UniDic reads standalone 他 as た; ほか is the everyday reading except
+    // in その他 (そのた).
+    if (surface === '他' && t.reading === 'た' && merged[i - 1]?.surface !== 'その') {
+      t = { ...t, reading: 'ほか' };
+    }
     // 後 opening a parenthetical in encyclopedic text ((後の東京都…),
     // （後に…）) is のち "later", which UniDic reads あと "behind".
     if ((surface === '後' || surface === '後に') && /[（(、]$/.test(text.slice(0, t.startIndex))) {
       t = { ...t, reading: surface === '後' ? 'のち' : 'のちに', pos: surface === '後' ? '名詞' : '副詞' };
+    }
+    // An adverb-capable noun (副詞可能) that modifies a predicate instead of
+    // taking a particle is an adverb: いつも食う "always", 挙句に… — the
+    // noun-only POS filter would show いつも "usual".
+    const following = merged[i + 1];
+    if (
+      t.posDetail?.[0] === '名詞' && t.posDetail?.[2] === '副詞可能' &&
+      following && !['助詞', '助動詞'].includes(following.posDetail?.[0] ?? following.pos ?? '') &&
+      following.surface !== 'の'
+    ) {
+      t = { ...t, pos: '副詞' };
     }
     // Formal nouns after a modifier are grammar (補助金のため "because of").
     const formal = formalNounMeaning(merged[i - 1], t, text);
@@ -132,8 +149,9 @@ export async function resolveContent(
     // A lone kana echoed by the next word's first kana is a drawn-out
     // sound (「おおいしい」 → お + おいしい), not the honorific prefix.
     const next = merged[i + 1];
+    // Vowels only, never a particle: は before はがき is the topic marker.
     const stretched =
-      /^[ぁ-ん]$/.test(surface) && next && next.startIndex === t.endIndex && next.surface.startsWith(surface);
+      /^[あいうえお]$/.test(surface) && t.pos !== '助詞' && next && next.startIndex === t.endIndex && next.surface.startsWith(surface);
     const grammarLabel = t.fixed
       ? undefined
       : stretched

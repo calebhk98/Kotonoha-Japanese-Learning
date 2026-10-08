@@ -75,6 +75,11 @@ export type GrammaticalContext = 'te' | 'masu' | 'adj-stem' | 'verb-plain' | 've
 
 const QUESTION_WORDS = new Set(['いつ', 'どう', '何', 'なに', 'なん', '誰', 'だれ', 'どこ', 'どれ', 'どちら']);
 
+/** Sentence start, or right after a comma / opening bracket. */
+function atClauseStart(text: string, index: number): boolean {
+  return atSentenceStart(text, index) || /[、，,]\s*$/.test(text.slice(0, index));
+}
+
 /** True when `text` before `index` is a sentence/line start. */
 function atSentenceStart(text: string, index: number): boolean {
   const before = text.slice(0, index).replace(/[ 　\t]+$/, '');
@@ -325,7 +330,8 @@ export async function mergeDictionaryWords(
   text: string,
   hasForm: (s: string) => Promise<boolean>,
   isKanaHeadword: (s: string) => Promise<boolean>,
-  isGrammar: (s: string) => boolean
+  isGrammar: (s: string) => boolean,
+  isConjunctionOnly: (s: string) => Promise<boolean> = async () => false
 ): Promise<PositionedToken[]> {
   const out: PositionedToken[] = [];
   let i = 0;
@@ -336,11 +342,23 @@ export async function mergeDictionaryWords(
       const span = tokens.slice(i, i + n);
       if (!adjacent(span)) continue;
       if (span.every((t) => ['助詞', '助動詞'].includes(pos0(t) ?? ''))) continue;
+      // A span opening with a verb/adjective/auxiliary is conjugation, not
+      // a set phrase: いる|か is "is ... ?", not いるか "dolphin"; し|たり,
+      // 知ら|ない, ない|と. (Conjugated headwords are matched through the
+      // grouped token's lemma instead.)
+      if (['動詞', '形容詞', '助動詞'].includes(pos0(span[0]) ?? '')) continue;
+      // Numbers + counters are handled by the date/month merges; 80万|人
+      // must not become 万人 "everybody", nor 4|人目 "public notice".
+      const before = tokens[i - 1];
+      if (pos1(span[0]) === '数詞' || (before && pos1(before) === '数詞' && before.endIndex === span[0].startIndex)) continue;
       const surface = span.map((t) => t.surface).join('');
       if (surface.length < 3 && !KANJI.test(surface)) continue;
       // A span opening with を/が/へ/は/も is a phrase boundary (を|して is
       // "doing ... (object)", not the causative-patient expression をして).
       if (/^[をがへはも]$/.test(span[0].surface)) continue;
+      // …and one CLOSING with them is noun + particle (今日|は is "today"
+      // + topic, not the greeting 今日は "hello").
+      if (/^[をがへはも]$/.test(span[span.length - 1].surface)) continue;
       if (isGrammar(surface)) continue;
       const last = span[n - 1];
       if (n === 2 && last.surface === 'に' && pos0(span[0]) === '名詞') {
@@ -351,6 +369,9 @@ export async function mergeDictionaryWords(
       let key = (await hasForm(surface)) ? surface : lemmaForm !== surface && (await hasForm(lemmaForm)) ? lemmaForm : null;
       // All-kana: only headwords really written in kana (see isKanaHeadword).
       if (key && !KANJI.test(key) && !(await isKanaHeadword(key))) key = null;
+      // A conjunction (そこで "so", それで "and then") only opens a clause;
+      // mid-sentence the same kana is the pieces (そこで = "there" + で).
+      if (key && !atClauseStart(text, span[0].startIndex) && (await isConjunctionOnly(key))) key = null;
       if (!key) continue;
       const readings = span.map((t) => t.reading);
       merged = {
@@ -453,7 +474,51 @@ export function formalNounMeaning(prev: PositionedToken | undefined, cur: Positi
   const modifier =
     p === '動詞' || p === '形容詞' || p === '連体詞' ||
     (p === '助動詞' && /^(た|だ|ない|ぬ|な|の)$/.test(prev.tail?.surface ?? prev.surface)) ||
-    (prev.surface === 'の' && pos1(prev) === '格助詞') ||
+    prev.surface === 'の' || prev.surface === 'な' ||
     prev.tail?.pos === '動詞' || prev.tail?.pos === '助動詞';
   return modifier ? meaning : undefined;
+}
+
+/**
+ * English given by the text itself for a katakana term — the encyclopedic /
+ * news convention ポストクロッシング (Postcrossing), 「ポストクロッサー
+ * (Postcrossers)」. Coinages like these are in no dictionary, and Sudachi
+ * splits them into junk (クロ "black", サー "Sir").
+ */
+export function textGlossary(text: string): Map<string, string> {
+  const glossary = new Map<string, string>();
+  const re = /([ァ-ヴー・]{3,})\s*[（(](?:英[:：]\s*)?([A-Za-z][A-Za-z .'\-]{1,40})[)）]/g;
+  for (let m; (m = re.exec(text)); ) {
+    if (!glossary.has(m[1])) glossary.set(m[1], m[2].trim());
+  }
+  return glossary;
+}
+
+/** Re-join every occurrence of a glossary term and give it the text's English. */
+export function markGlossaryTerms(tokens: PositionedToken[], text: string): PositionedToken[] {
+  const glossary = textGlossary(text);
+  if (glossary.size === 0) return tokens;
+  const spans: { start: number; end: number; english: string }[] = [];
+  for (const [term, english] of glossary) {
+    for (let at = text.indexOf(term); at >= 0; at = text.indexOf(term, at + term.length)) {
+      spans.push({ start: at, end: at + term.length, english });
+    }
+  }
+  const out: PositionedToken[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const span = spans.find((sp) => tokens[i].startIndex === sp.start);
+    if (!span) {
+      out.push(tokens[i]);
+      continue;
+    }
+    let j = i;
+    while (j + 1 < tokens.length && tokens[j + 1].endIndex <= span.end) j++;
+    if (tokens[j].endIndex !== span.end) {
+      out.push(tokens[i]);
+      continue;
+    }
+    out.push({ ...join(tokens.slice(i, j + 1), '名詞'), fixed: { meaning: `${span.english} (as given in the text)` } });
+    i = j;
+  }
+  return out;
 }
