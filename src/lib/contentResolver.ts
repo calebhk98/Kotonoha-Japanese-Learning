@@ -26,6 +26,8 @@ import { getWordScoreBreakdown } from './scoring.js';
 import { atClauseStart, counterReading, numberValue, mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, markGlossaryTerms, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
 import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
+import { chooseSense, type ContextModel, type ContextSentenceIn } from './contextModel.js';
+import { splitSentences } from './sentenceSplitter.js';
 
 export const RESOLVED_FORMAT_VERSION = 1;
 
@@ -45,6 +47,8 @@ export interface ResolvedContent {
   formatVersion: number;
   words: any[];
   tokens: ResolvedToken[];
+  /** Sentence translations (only when resolved with a ContextModel). */
+  sentences?: { start: number; end: number; translation: string | null }[];
 }
 
 const EMPTY_BREAKDOWN = {
@@ -65,7 +69,8 @@ export async function resolveContent(
   tokenizer: Tokenizer,
   wordResolver: WordResolver,
   lookupCache?: Map<string, any>,
-  profile: LanguageDisplayProfile = getDisplayProfile()
+  profile: LanguageDisplayProfile = getDisplayProfile(),
+  context?: ContextModel
 ): Promise<ResolvedContent> {
   const tokenInfos = await tokenizer.segment(text);
 
@@ -311,7 +316,7 @@ export async function resolveContent(
             isMorpheme: true,
           };
         } else if (token.isVocabWord) {
-          const { reading, meaning, meanings, jlpt, joyo, score, breakdown } =
+          const { reading, meaning, meanings, senseSizes, jlpt, joyo, score, breakdown } =
             await wordResolver.resolve(token.surface, token.baseForm, lookupCache, token.pos, token.reading, undefined, {
               after: token.context,
               dictionaryForm: token.dictionaryForm,
@@ -324,6 +329,7 @@ export async function resolveContent(
             });
           const info: any = { word: token.surface, reading: token.counterReading ?? reading, meaning, jlpt, joyo, score, breakdown };
           if (meanings) info.meanings = meanings;
+          if (meanings && senseSizes) info.senseSizes = senseSizes;
           if (token.pos) info.pos = token.pos;
           words[i] = info;
         } else {
@@ -379,6 +385,76 @@ export async function resolveContent(
     }
   }
 
+  // ---- translation context (optional): translate each sentence and let a
+  // content word switch to another sense of the SAME dictionary entry when
+  // the translation clearly favours it (see contextModel.ts for the
+  // measured margin). The switched occurrence gets its own word entry.
+  let sentences: ResolvedContent['sentences'];
+  if (context) {
+    const spans = splitSentences(text);
+    const senseGroups = (w: any): string[][] | null => {
+      const sizes: number[] | undefined = w?.senseSizes;
+      if (!sizes || sizes.length < 2 || !Array.isArray(w.meanings)) return null;
+      const groups: string[][] = [];
+      let o = 0;
+      for (const n of sizes) {
+        groups.push(w.meanings.slice(o, o + n));
+        o += n;
+      }
+      // Only when the headline still shows sense 1 (not an idiom, a
+      // composed meaning or a fixed label that replaced it).
+      return String(w.meaning ?? '').startsWith(groups[0][0]) ? groups : null;
+    };
+    const CONTENT_POS = new Set(['名詞', '動詞', '形容詞', '形状詞']);
+    const tokenWord = (idx: number) => argumentOverride.get(idx) ?? wordIndexByKey.get(keyOf(tokens[idx]));
+    const asked: { idx: number; groups: string[][] }[][] = [];
+    const request: ContextSentenceIn[] = spans.map((s) => {
+      const mine: { idx: number; groups: string[][] }[] = [];
+      tokens.forEach((t, idx) => {
+        if (t.startIndex < s.start || t.startIndex >= s.end || !t.isVocabWord || t.isMorpheme || t.fixed || t.idiom) return;
+        // Sudachi POS only: merged expressions (no POS), pronouns and
+        // proper nouns keep their dictionary sense.
+        if (!CONTENT_POS.has(t.posDetail?.[0] ?? '') || t.posDetail?.[1] === '固有名詞') return;
+        const wi = tokenWord(idx);
+        const groups = wi === undefined ? null : senseGroups(words[wi]);
+        if (groups) mine.push({ idx, groups });
+      });
+      asked.push(mine);
+      return {
+        text: text.slice(s.start, s.end),
+        candidates: mine.map(({ idx, groups }) => ({
+          start: tokens[idx].startIndex - s.start,
+          end: tokens[idx].endIndex - s.start,
+          senses: groups,
+        })),
+      };
+    });
+    const answers = await context.enrich(request);
+    sentences = spans.map((s, i) => ({ start: s.start, end: s.end, translation: answers[i]?.translation ?? null }));
+    const switched = new Map<string, number>(); // `${wordIndex}:${sense}` → new word index
+    asked.forEach((mine, si) => {
+      mine.forEach(({ idx, groups }, ci) => {
+        const sense = chooseSense(answers[si]?.candidates[ci]?.sims ?? []);
+        if (sense === 0 || sense >= groups.length) return;
+        const base = tokenWord(idx)!;
+        const key = `${base}:${sense}`;
+        if (!switched.has(key)) {
+          const w = words[base];
+          const order = [groups[sense], ...groups.filter((_, k) => k !== sense)];
+          words.push({
+            ...w,
+            meaning: `${groups[sense].slice(0, 2).join(', ')} (also: ${groups[0][0]})`,
+            meanings: order.flat(),
+            senseSizes: order.map((g) => g.length),
+            contextSense: sense,
+          });
+          switched.set(key, words.length - 1);
+        }
+        argumentOverride.set(idx, switched.get(key)!);
+      });
+    });
+  }
+
   // frequencies (per surface, matching the extraction paths' counts)
   for (const w of words) {
     if (!w.isMorpheme || frequency.has(w.word)) {
@@ -388,6 +464,7 @@ export async function resolveContent(
 
   return {
     formatVersion: RESOLVED_FORMAT_VERSION,
+    ...(sentences ? { sentences } : {}),
     words,
     tokens: tokens.map((t, idx) => {
       const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, fixed, ...rest } = t;

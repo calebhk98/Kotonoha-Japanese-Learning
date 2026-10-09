@@ -3,6 +3,8 @@ import { createRequire } from 'module';
 export interface WordLookupResult {
   meaning: string;
   meanings?: string[]; // All available meanings/senses
+  /** Glosses per sense, in `meanings` order (JMDict only). */
+  senseSizes?: number[];
   reading?: string;
   // The language the returned gloss text is actually in (normalised 3-letter
   // tag, e.g. 'spa' | 'eng'), for the requested-vs-served comparison that lets
@@ -751,6 +753,10 @@ export class JmdictDictionary implements Dictionary {
 
       // Extract all meanings, deprioritising rare/slang/archaic senses (#187).
       const meanings: string[] = [];
+      // How many glosses each sense contributed, in `meanings` order, so a
+      // later step can treat them as senses again (the translation context
+      // step picks a sense, not a gloss).
+      const senseSizes: number[] = [];
       const senseLangFilter = primaryGlossLang ? [primaryGlossLang] : DEFAULT_GLOSS_LANGS;
       const sensesWithScores = selectSenses(bestMatch, word, hint).map((sense: any, idx: number) => ({
         sense,
@@ -776,6 +782,7 @@ export class JmdictDictionary implements Dictionary {
         const glossTexts = getGlosses(sense, senseLangFilter);
         if (glossTexts.length > 0) {
           meanings.push(...glossTexts);
+          senseSizes.push(glossTexts.length);
         }
       }
 
@@ -803,6 +810,7 @@ export class JmdictDictionary implements Dictionary {
       return {
         meaning,
         meanings: meanings.length > 1 ? meanings : undefined,
+        ...(senseSizes.length > 1 ? { senseSizes } : {}),
         reading: matchedKana || word,
         ...(primaryGlossLang ? { glossLang: primaryGlossLang } : {}),
       };

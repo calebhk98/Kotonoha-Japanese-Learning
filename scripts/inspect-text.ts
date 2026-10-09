@@ -22,6 +22,7 @@
  *   --sentences a-b  only sentence numbers a..b (1-based)
  *   --flagged        only sentences with at least one flag
  *   --json           machine-readable output (one object per sentence)
+ *   --no-context     skip the sentence-translation step (dictionary-only resolution)
  *   --stored         with --id: print the SAVED document the app serves (resolved.json,
  *                    or a saved import from data/imports/) instead of re-resolving;
  *                    --id also accepts import ids
@@ -49,6 +50,7 @@ import { WordResolver, NON_CONJUGATING_POS } from '../src/lib/wordResolver.js';
 import { resolveContent } from '../src/lib/contentResolver.js';
 import { listContentEntries, loadResolvedContent } from '../src/lib/storyLoader.js';
 import { ImportStore } from '../src/lib/importStore.js';
+import { PythonContextModel } from '../src/lib/contextModel.js';
 import { ensureJmnedictPrepared } from '../src/lib/jmnedict-utils.js';
 import { splitSentences } from '../src/lib/sentenceSplitter.js';
 
@@ -131,6 +133,10 @@ async function main() {
     throw new Error('inspect-text needs the Sudachi WASM tokenizer (TOKENIZER unset or sudachi-wasm)');
   }
 
+  // The translation context step (npm run setup-context), same as
+  // resolve-content uses; --no-context shows the dictionary-only result.
+  const context = flag('--no-context') || flag('--stored') ? null : await PythonContextModel.start();
+  if (!context && !flag('--no-context') && !flag('--stored')) console.error('[inspect-text] translation context not set up (npm run setup-context): dictionary-only output');
   const totals: Record<string, number> = {};
   for (const input of inputs) {
     console.log = (...a: any[]) => console.error(...a);
@@ -142,7 +148,7 @@ async function main() {
       resolved = importStore.get(input.id)?.resolved ?? loadResolvedContent(input.id);
       if (!resolved) throw new Error(`No saved resolution for "${input.id}" (run npm run resolve-content)`);
     } else {
-      resolved = await resolveContent(input.text, tokenizer, resolver, new Map());
+      resolved = await resolveContent(input.text, tokenizer, resolver, new Map(), undefined, context ?? undefined);
     }
     console.log = log;
     const out = await inspect(input.text, resolved, tokenizer, dictionary, resolver);
@@ -160,6 +166,7 @@ async function main() {
     }
   }
   if (inputs.length > 1 || flag('--summary')) console.log(`TOTAL\t${JSON.stringify(totals)}`);
+  context?.close();
 }
 
 // The same hint WordResolver builds (reading only for non-conjugating POS).
@@ -252,6 +259,7 @@ async function inspect(
         }
       }
       if (word && /Unknown meaning/.test(word.meaning)) flags.push('UNKNOWN');
+      if (word?.contextSense) flags.push(`CTX(sense ${word.contextSense + 1} chosen from the translation)`);
 
       const row: any = {
         surface: t.surface,
@@ -291,7 +299,8 @@ async function inspect(
     const flagged = sentenceFlags.length > 0 || rows.some((r) => r.flags.length > 0);
     if (flag('--flagged') && !flagged) continue;
 
-    const entry: any = { n: s.n, start: s.start, text: s.text, flags: sentenceFlags, tokens: rows };
+    const translation = resolved.sentences?.find((x: any) => x.start === s.start)?.translation;
+    const entry: any = { n: s.n, start: s.start, text: s.text, ...(translation ? { translation } : {}), flags: sentenceFlags, tokens: rows };
     if (alone !== inContext) {
       entry.splitAlone = alone;
       entry.inText = inContext;
@@ -320,6 +329,7 @@ function print(out: any[]) {
   for (const e of out) {
     console.log(`\n── S${e.n} @${e.start} ${e.flags.join(' ')}`);
     console.log(e.text);
+    if (e.translation) console.log(`EN: ${e.translation}`);
     if (e.splitAlone) {
       console.log(`  in text : ${e.inText}`);
       console.log(`  alone   : ${e.splitAlone}`);

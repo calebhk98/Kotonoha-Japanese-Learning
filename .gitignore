@@ -29,3 +29,7 @@ JMnedict.xml.gz
 
 # User imports (one resolved JSON per imported text; personal data)
 data/imports/
+
+# Translation context step (npm run setup-context): venv + downloaded models
+.venv-context/
+.models/
