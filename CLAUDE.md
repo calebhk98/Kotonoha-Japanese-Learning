@@ -563,7 +563,7 @@ gaps: grade them with inspect-text, fix the PATTERN, re-grade.
   headwords (か|いい ≠ "itchy"); adjective+noun only when the headword is
   more than a literal noun (好い加減 yes, いい|顔 no); question word + も
   (何も, どこにも) but not modified noun + にも (山の中にも); no
-  もので/ものとして/のでは/と|する-after-verb/より|・から|・くらい| merges.
+  もので/ものとして/のでは merges, no と|する after a verb, and no spans opening with より/から/くらい.
   A token's own kana lemma must not replace Sudachi's kanji lemma
   (いいました → いう → 結う "do up hair" was the most frequent kana error).
 - **Traditional given names** (紋|作, 吉田|冠|蔵, 赤堀|水|右衛門): one
