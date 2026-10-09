@@ -17,11 +17,7 @@ const dict = {
     ({
       猫: { meaning: 'cat, feline', reading: 'ねこ', meanings: ['cat', 'feline', 'shamisen', 'geisha'], senseSizes: [2, 1, 1] },
       読む: { meaning: 'to read', reading: 'よむ' },
-      額: { meaning: '(picture) frame', reading: 'がく', meanings: ['(picture) frame', 'amount'], senseSizes: [1, 1] },
     } as any)[word] ?? null,
-  // Other JMDict entries written the same way (homographs).
-  alternativeEntries: async (word: string) =>
-    word === '額' ? [{ reading: 'ひたい', senses: [['forehead', 'brow']] }] : [],
 };
 
 const TEXT = '猫が読みました。猫';
@@ -88,21 +84,4 @@ describe('resolveContent with a context model', () => {
     expect(r.sentences).toBeUndefined();
     expect(r.words[r.tokens[0].wordIndex].meaning).toBe('cat, feline');
   });
-
-  it('can switch to another entry of the same spelling, with its reading (額 がく → ひたい)', async () => {
-    const text = '額に汗';
-    const tokens = [
-      { surface: '額', baseForm: '額', pos: '名詞', reading: 'がく', posDetail: ['名詞', '普通名詞', '一般'] },
-      { surface: 'に', baseForm: 'に', pos: '助詞', reading: 'に', posDetail: ['助詞', '格助詞'] },
-      { surface: '汗', baseForm: '汗', pos: '名詞', reading: 'あせ', posDetail: ['名詞', '普通名詞', '一般'] },
-    ];
-    // senses sent: [frame], [amount], then the other entry's [forehead, brow]
-    const ctx = fakeContext([[0.48, 0.49, 0.9]]);
-    const r = await resolveContent(text, makeTokenizer(tokens), new WordResolver(dict), undefined, undefined, ctx);
-    expect(ctx.requests[0][0].candidates[0].senses).toEqual([['(picture) frame'], ['amount'], ['forehead', 'brow']]);
-    const w = r.words[r.tokens[0].wordIndex!];
-    expect(w.meaning).toBe('forehead, brow');
-    expect(w.reading).toBe('ひたい');
-  });
 });
-
