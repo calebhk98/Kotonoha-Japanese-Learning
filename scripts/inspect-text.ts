@@ -260,6 +260,7 @@ async function inspect(
       }
       if (word && /Unknown meaning/.test(word.meaning)) flags.push('UNKNOWN');
       if (word?.contextSense) flags.push(`CTX(sense ${word.contextSense + 1} chosen from the translation)`);
+      if (word?.contextEntry) flags.push(`CTX(entry read ${word.contextEntry} chosen from the translation)`);
 
       const row: any = {
         surface: t.surface,

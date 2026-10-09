@@ -407,9 +407,18 @@ export async function resolveContent(
     };
     const CONTENT_POS = new Set(['名詞', '動詞', '形容詞', '形状詞']);
     const tokenWord = (idx: number) => argumentOverride.get(idx) ?? wordIndexByKey.get(keyOf(tokens[idx]));
-    const asked: { idx: number; groups: string[][] }[][] = [];
-    const request: ContextSentenceIn[] = spans.map((s) => {
-      const mine: { idx: number; groups: string[][] }[] = [];
+    type Asked = { idx: number; groups: string[][]; alts: { reading: string; senses: string[][] }[] };
+    const asked: Asked[][] = [];
+    const altCache = new Map<string, Promise<{ reading: string; senses: string[][] }[]>>();
+    const alternatives = (word: string, pos: string | undefined, exclude: string) => {
+      const k = `${word}|${pos}|${exclude}`;
+      if (!altCache.has(k)) altCache.set(k, wordResolver.alternativeEntries(word, pos, exclude));
+      return altCache.get(k)!;
+    };
+    const request: ContextSentenceIn[] = [];
+    for (const s of spans) {
+      const mine: Asked[] = [];
+      const picked: { idx: number; groups: string[][] }[] = [];
       tokens.forEach((t, idx) => {
         if (t.startIndex < s.start || t.startIndex >= s.end || !t.isVocabWord || t.isMorpheme || t.fixed || t.idiom) return;
         // Sudachi POS only: merged expressions (no POS), pronouns and
@@ -417,37 +426,59 @@ export async function resolveContent(
         if (!CONTENT_POS.has(t.posDetail?.[0] ?? '') || t.posDetail?.[1] === '固有名詞') return;
         const wi = tokenWord(idx);
         const groups = wi === undefined ? null : senseGroups(words[wi]);
-        if (groups) mine.push({ idx, groups });
+        if (groups) picked.push({ idx, groups });
       });
+      // The other entries of the same spelling compete too (額 がく vs ひたい).
+      for (const { idx, groups } of picked) {
+        mine.push({ idx, groups, alts: await alternatives(tokens[idx].baseForm, tokens[idx].pos, groups[0][0]) });
+      }
       asked.push(mine);
-      return {
+      request.push({
         text: text.slice(s.start, s.end),
-        candidates: mine.map(({ idx, groups }) => ({
+        candidates: mine.map(({ idx, groups, alts }) => ({
           start: tokens[idx].startIndex - s.start,
           end: tokens[idx].endIndex - s.start,
-          senses: groups,
+          senses: [...groups, ...alts.flatMap((a) => a.senses)],
         })),
-      };
-    });
+      });
+    }
     const answers = await context.enrich(request);
     sentences = spans.map((s, i) => ({ start: s.start, end: s.end, translation: answers[i]?.translation ?? null }));
     const switched = new Map<string, number>(); // `${wordIndex}:${sense}` → new word index
     asked.forEach((mine, si) => {
-      mine.forEach(({ idx, groups }, ci) => {
+      mine.forEach(({ idx, groups, alts }, ci) => {
         const sense = chooseSense(answers[si]?.candidates[ci]?.sims ?? []);
-        if (sense === 0 || sense >= groups.length) return;
+        if (sense === 0) return;
         const base = tokenWord(idx)!;
         const key = `${base}:${sense}`;
         if (!switched.has(key)) {
           const w = words[base];
-          const order = [groups[sense], ...groups.filter((_, k) => k !== sense)];
-          words.push({
-            ...w,
-            meaning: `${groups[sense].slice(0, 2).join(', ')} (also: ${groups[0][0]})`,
-            meanings: order.flat(),
-            senseSizes: order.map((g) => g.length),
-            contextSense: sense,
-          });
+          if (sense < groups.length) {
+            // Another sense of the same entry.
+            const order = [groups[sense], ...groups.filter((_, k) => k !== sense)];
+            words.push({
+              ...w,
+              meaning: `${groups[sense].slice(0, 2).join(', ')} (also: ${groups[0][0]})`,
+              meanings: order.flat(),
+              senseSizes: order.map((g) => g.length),
+              contextSense: sense,
+            });
+          } else {
+            // A sense of another entry: that entry's meaning and reading.
+            let k = sense - groups.length;
+            const alt = alts.find((a) => (k -= a.senses.length) < 0);
+            if (!alt) return;
+            const kInAlt = sense - groups.length - alts.slice(0, alts.indexOf(alt)).reduce((n, a) => n + a.senses.length, 0);
+            const order = [alt.senses[kInAlt], ...alt.senses.filter((_, j) => j !== kInAlt)];
+            words.push({
+              ...w,
+              reading: alt.reading,
+              meaning: order[0].slice(0, 2).join(', '),
+              meanings: order.flat(),
+              senseSizes: order.map((g) => g.length),
+              contextEntry: alt.reading,
+            });
+          }
           switched.set(key, words.length - 1);
         }
         argumentOverride.set(idx, switched.get(key)!);

@@ -47,6 +47,8 @@ interface DictionaryLike {
   isConjunctionOnly?(text: string): Promise<boolean>;
   /** JMDict-only exact-match entries (DictionaryManager.candidates). */
   candidates?(word: string, hint?: any): Promise<{ entry: any; score: number; picked: boolean }[]>;
+  /** Other entries of the same spelling (DictionaryManager.alternativeEntries). */
+  alternativeEntries?(word: string, pos?: string, exclude?: string): Promise<{ reading: string; senses: string[][] }[]>;
 }
 
 /**
@@ -182,6 +184,11 @@ export class WordResolver {
   /** See DictionaryManager.isConjunctionOnly. */
   isConjunctionOnly(text: string): Promise<boolean> {
     return this.dictionary?.isConjunctionOnly ? this.dictionary.isConjunctionOnly(text) : Promise.resolve(false);
+  }
+
+  /** Homograph entries for the translation context step; [] without JMDict. */
+  alternativeEntries(word: string, pos?: string, exclude?: string): Promise<{ reading: string; senses: string[][] }[]> {
+    return this.dictionary?.alternativeEntries ? this.dictionary.alternativeEntries(word, pos, exclude) : Promise.resolve([]);
   }
 
   /** Union of JMDict parts of speech over entries written exactly `text`. */
