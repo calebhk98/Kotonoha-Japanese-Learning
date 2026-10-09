@@ -374,6 +374,42 @@ export async function mergeDictionaryWords(
   const out: PositionedToken[] = [];
   let i = 0;
   while (i < tokens.length) {
+    // Traditional given names: one kanji + a name suffix (紋|作, 冠|蔵,
+    // 水|右衛門), optionally after a surname (吉田|冠|蔵). Sudachi tags the
+    // suffix 接尾辞 and the head as a common noun ("crest", "cap").
+    const head = tokens[i];
+    const suf = tokens[i + 1];
+    if (head && suf && head.endIndex === suf.startIndex && head.surface.length === 1 && KANJI.test(head.surface) && pos1(head) !== '数詞') {
+      const strong = /^(蔵|衛門|右衛門|左衛門|兵衛|之助|之丞|太郎|次郎|三郎|四郎|五郎|郎|吉|助)$/.test(suf.surface);
+      const weak = /^(作|七|八|平|次|松|造|治)$/.test(suf.surface);
+      const given = head.surface + suf.surface;
+      const prev = out[out.length - 1];
+      const surname = prev && prev.endIndex === head.startIndex && prev.posDetail?.[3] === '姓' ? prev : undefined;
+      const repeated = text.split(given).length > 2;
+      // 朝七|時 is "7 a.m.": a counter after the suffix means a number.
+      const counterNext = tokens[i + 2]?.posDetail?.some((p) => p.startsWith('助数詞'));
+      if ((strong || (weak && (surname || repeated))) && !counterNext && !(await hasForm(given))) {
+        const parts = surname ? [surname, head, suf] : [head, suf];
+        if (surname) out.pop();
+        const name = parts.map((t) => t.surface).join('');
+        // 七 in a name is しち (半七 はんしち), not なな.
+        const readings = parts.map((t) => (t === suf && t.surface === '七' ? 'しち' : t.reading));
+        out.push({
+          surface: name,
+          baseForm: name,
+          pos: '名詞',
+          posDetail: ['名詞', '固有名詞', '人名', '名'],
+          reading: readings.every((r) => r) ? readings.join('') : undefined,
+          dictionaryForm: name,
+          lemmaSurface: name,
+          startIndex: parts[0].startIndex,
+          endIndex: suf.endIndex,
+          fixed: { meaning: `(personal name: ${name})` },
+        });
+        i += 2;
+        continue;
+      }
+    }
     let merged: PositionedToken | null = null;
     let used = 0;
     for (let n = Math.min(5, tokens.length - i); n >= 2 && !merged; n--) {

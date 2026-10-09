@@ -546,6 +546,30 @@ gaps: grade them with inspect-text, fix the PATTERN, re-grade.
   between rounds: what remains is long-tail (names, literary compounds
   missing from JMDict, sense choice that needs world knowledge). A local
   embedding-model sense chooser was prototyped and rejected (net loss).
+  Round 3 (test3): 4.9% (news 1.6%, wiki 6.8%, Aozora 5.5%); round 4
+  (test4): news 2.5%, wiki 4.4%, Aozora 10.1% on an Edo-era detective
+  story. Variance between texts is larger than between rounds, so judge a
+  change by the corpus BETTER/WORSE diff review, not one test set.
+  Remaining buckets, largest first: names split into common words (Chinese
+  names, katakana names Sudachi fragments), archaic inflections Sudachi
+  can't analyse (ながるる, 閉ねた), and sense choice needing world knowledge.
+- Also rejected after measuring: Tatoeba/Tanaka sense-tagged examples as a
+  sense prior (most-frequent-sense + collocations: 15 fixes vs 14 breaks
+  on 117 graded cases; textbook domain, sparse tags). NEologd (2020 seed)
+  lacks most single-name tokens the graders flagged (原, 島田, 内子).
+- **Merge guards added in round 3** (`mergeDictionaryWords`, each from a
+  graded WORSE): conjugated tails only into conjugating headwords
+  (と|か|きました ≠ とかく); particle-opened kana spans only into grammatical
+  headwords (か|いい ≠ "itchy"); adjective+noun only when the headword is
+  more than a literal noun (好い加減 yes, いい|顔 no); question word + も
+  (何も, どこにも) but not modified noun + にも (山の中にも); no
+  もので/ものとして/のでは/と|する-after-verb/より|・から|・くらい| merges.
+  A token's own kana lemma must not replace Sudachi's kanji lemma
+  (いいました → いう → 結う "do up hair" was the most frequent kana error).
+- **Traditional given names** (紋|作, 吉田|冠|蔵, 赤堀|水|右衛門): one
+  kanji + name suffix, merged as a name when the pair isn't a JMDict word
+  (strong suffixes 蔵/衛門/郎/助/吉; weak ones 作/七/平 need a surname
+  before or a repeat in the text, and never before a counter: 朝七時).
 
 Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
 after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
