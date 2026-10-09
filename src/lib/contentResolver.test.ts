@@ -111,4 +111,39 @@ describe('buildStoryResponse / buildWordsResponse', () => {
     const story = buildStoryResponse(resolved);
     expect(story[1].wordInfo.meaning).toBe('Kana particle / expression');
   });
+  // The vocab summary lists every meaning the text actually uses: 方 read
+  // かた "person" in one sentence and ほう "direction" in another are two
+  // rows, but the same meaning in several contexts is one row, and each
+  // row counts the occurrences of that meaning.
+  const doc = (words: any[], tokenWords: number[]) => ({
+    formatVersion: 1,
+    words,
+    tokens: tokenWords.map((wordIndex, i) => ({ surface: words[wordIndex].word, startIndex: i, endIndex: i + 1, isVocabWord: true, isMorpheme: false, wordIndex })),
+  });
+
+  it('words response keeps one row per (word, meaning)', () => {
+    const resolved = doc(
+      [
+        { word: '方', reading: 'かた', meaning: 'person' },
+        { word: '方', reading: 'ほう', meaning: 'direction' },
+        { word: '方', reading: 'かた', meaning: 'person' }, // same meaning, other context
+      ],
+      [0, 1, 2, 1]
+    );
+    const vocab = buildWordsResponse(resolved as any);
+    expect(vocab.map((w: any) => `${w.word}:${w.meaning}`)).toEqual(['方:person', '方:direction']);
+  });
+
+  it('words response counts occurrences per meaning', () => {
+    const resolved = doc(
+      [
+        { word: '方', reading: 'かた', meaning: 'person' },
+        { word: '方', reading: 'ほう', meaning: 'direction' },
+        { word: '方', reading: 'かた', meaning: 'person' },
+      ],
+      [0, 1, 2, 1, 1]
+    );
+    const vocab = buildWordsResponse(resolved as any);
+    expect(vocab.map((w: any) => w.frequencyInContent)).toEqual([2, 3]);
+  });
 });
