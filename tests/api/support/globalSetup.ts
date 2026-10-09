@@ -64,7 +64,8 @@ export default async function setup() {
 
   const child: ChildProcess = spawn(tsxBin, ['server.ts'], {
     cwd: REPO_ROOT,
-    env: { ...process.env, PORT: String(TEST_API_PORT) },
+    // Imports go to a throwaway folder so tests never touch real user data.
+    env: { ...process.env, PORT: String(TEST_API_PORT), IMPORTS_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'kotonoha-test-imports-')) },
     // detached so we own the whole process group at teardown — tsx/esbuild
     // can spawn helper processes, and the server itself ignores SIGTERM
     // handling nuance is irrelevant here since we always SIGKILL.

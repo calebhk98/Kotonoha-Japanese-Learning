@@ -29,6 +29,16 @@ export async function apiPost<T = any>(pathName: string, payload: unknown): Prom
   return { status: res.status, ok: res.ok, body };
 }
 
+export async function apiSend<T = any>(method: 'PUT' | 'DELETE', pathName: string, payload?: unknown): Promise<ApiResponse<T>> {
+  const res = await fetch(`${BASE_URL}${pathName}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: payload === undefined ? undefined : JSON.stringify(payload),
+  });
+  const body = (await res.json().catch(() => null)) as T;
+  return { status: res.status, ok: res.ok, body };
+}
+
 /** A WordInfo-shaped entry as returned by /api/extract and /api/process-story. */
 export interface WordInfoLike {
   word: string;
