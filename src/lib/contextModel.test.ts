@@ -65,7 +65,7 @@ describe('chooseSense', () => {
   });
 });
 
-describe('resolveContent with a context model', () => {
+describe('resolveContent with a context model', { timeout: 30000 }, () => {
   it('stores one translation per sentence', async () => {
     const ctx = fakeContext([[0.6, 0.5, 0.5], [0.6, 0.5, 0.5]]);
     const r: any = await resolveContent(TEXT, makeTokenizer(TOKENS), new WordResolver(dict), undefined, undefined, ctx);

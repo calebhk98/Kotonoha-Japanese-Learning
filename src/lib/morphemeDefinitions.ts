@@ -1,4 +1,8 @@
 export const morphemeDefinitions: Record<string, string> = {
+  // Colloquial / classical endings graded wrong on folk tales and fiction.
+  'かい': 'question particle (familiar: 行くかい "are you going?")',
+  'わい': 'sentence-final emphasis (old-fashioned, masculine: 違うわい)',
+  'ず': 'not (classical negative = ない; 〜ずに "without doing")',
   // Past tense marker
   た: "Past tense marker",
   だ: "Copula / To be",

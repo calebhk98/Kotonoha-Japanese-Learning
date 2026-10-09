@@ -138,6 +138,14 @@ export async function resolveContent(
       const r = counterReading(numberValue(prev.surface), surface);
       if (r) t = { ...t, reading: r, counterReading: r };
     }
+    // NにVなれる: the potential of なる "can become", not 慣れる.
+    if (/^なれ/.test(surface) && /^(慣れる|なれる|成れる)$/.test(t.baseForm) && prev && prev.endIndex === t.startIndex && /^[にと]$/.test(prev.surface)) {
+      t = { ...t, baseForm: '成る', fixed: { meaning: 'can become (potential of なる)', reading: surface } };
+    }
+    // 何 before を/が/も is なに (何をしている), which UniDic reads なん.
+    if (surface === '何' && t.reading === 'なん' && /^[をがも]/.test(text.slice(t.endIndex, t.endIndex + 1))) {
+      t = { ...t, reading: 'なに' };
+    }
     // AといったB "B such as A": kana いった is 言う, not 結う "do up hair".
     if (surface === 'いった' && prev?.surface === 'と' && prev.endIndex === t.startIndex && merged[i + 1]?.posDetail?.[0] === '名詞') {
       t = { ...t, baseForm: '言う', fixed: { meaning: 'such as, like (AといったB "B such as A")', reading: 'いった' } };
@@ -151,6 +159,11 @@ export async function resolveContent(
     // POS-aware label first (な after 好き is the copula, not the
     // sentence-final particle); null = a content word here (もの "thing").
     let contextual = getContextualGrammarLabel(surface, t.posDetail, t.baseForm);
+    // Name + め: the derogatory suffix (彦一め "that rascal Hikoichi"),
+    // not -ish (早め).
+    if (surface === 'め' && t.posDetail?.[0] === '接尾辞' && (prev?.posDetail?.[2] === '人名' || prev?.posDetail?.[0] === '代名詞')) {
+      contextual = 'derogatory suffix after a name or pronoun (彦一め "that rascal Hikoichi")';
+    }
     // Volitional + と + する: "try to" (しようとする, 救おうとした).
     if (surface === 'と' && (/^(う|よう)$/.test(prev?.surface ?? '') || prev?.posDetail?.some((p) => p.startsWith('意志推量形'))) && merged[i + 1]?.baseForm === '為る') {
       contextual = 'trying to / about to (〜ようとする "try to do")';

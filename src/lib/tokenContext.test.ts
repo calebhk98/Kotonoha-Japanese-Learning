@@ -13,8 +13,8 @@ function lay(text: string, parts: [string, string[]][]): PositionedToken[] {
 const N = ['名詞', '普通名詞', '一般'];
 const NAME = ['名詞', '固有名詞', '人名', '一般'];
 const FIN = ['助詞', '終助詞'];
-const none = async () => false;
-const merge = (toks: PositionedToken[], text: string, hasForm = none, pos = async () => new Set<string>()) =>
+const none = async (_s?: string) => false;
+const merge = (toks: PositionedToken[], text: string, hasForm = none, pos = async (_s: string) => new Set<string>()) =>
   mergeDictionaryWords(toks, text, hasForm, none, () => false, none, pos);
 
 describe('colloquial endings (graded on folk tales)', () => {

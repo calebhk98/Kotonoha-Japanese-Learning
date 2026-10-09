@@ -116,6 +116,8 @@ interface MergeRule {
   pos: string;
   /** Dictionary lookup key for the merged surface, when it differs. */
   key?: (surface: string) => string;
+  /** Meaning decided here (colloquial forms JMDict files elsewhere). */
+  fixed?: string;
 }
 
 /**
@@ -134,6 +136,26 @@ const pos0 = (t: PositionedToken) => t.posDetail?.[0] ?? t.pos;
 const pos1 = (t: PositionedToken) => t.posDetail?.[1];
 
 const MERGE_RULES: MergeRule[] = [
+  // 〜ておくれ "please do (for me)": Sudachi reads お as the 御 prefix.
+  {
+    length: 2,
+    match: ([a, b], text) => a.surface === 'お' && pos0(a) === '接頭辞' && /^くれ/.test(b.surface) && /[てで]$/.test(text.slice(0, a.startIndex)),
+    pos: '動詞',
+    fixed: 'please (do for me): familiar request (〜ておくれ)',
+  },
+  // Sentence-final か|い, わ|い: one particle (行くかい, 違うわい).
+  {
+    length: 2,
+    match: ([a, b]) => /^[かわ]$/.test(a.surface) && pos1(a) === '終助詞' && b.surface === 'い' && pos1(b) === '終助詞',
+    pos: '助詞',
+  },
+  // Clause-initial いい|や: the interjection "no" (いいや、違う).
+  {
+    length: 2,
+    match: ([a, b], text) => a.surface === 'いい' && b.surface === 'や' && pos1(b) === '終助詞' && atClauseStart(text, a.startIndex),
+    pos: '感動詞',
+    fixed: 'no (emphatic denial)',
+  },
   // ので "because": UniDic splits it into nominalizer の + copula で.
   {
     length: 2,
@@ -291,6 +313,7 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
       const span = tokens.slice(i, i + rule.length);
       if (span.length === rule.length && adjacent(span) && rule.match(span, text)) {
         const joined = join(span, rule.pos);
+        if (rule.fixed) joined.fixed = { meaning: rule.fixed };
         if (rule.key) {
           joined.baseForm = rule.key(joined.surface);
           // Month reading computed, so 一月 is いちがつ "January" (the
@@ -410,6 +433,29 @@ export async function mergeDictionaryWords(
         continue;
       }
     }
+    // A katakana run Sudachi fragmented (アデリー|ナ, ナナ|ナナ|ナント|スン|ベ):
+    // a short (≤2) or name piece means the pieces are not real words here.
+    // The run becomes one token; unless it is itself a headword, it is
+    // labelled honestly instead of each piece getting a confident meaning.
+    // Two ordinary loanwords (コーヒー|カップ) stay separate.
+    {
+      const KATA = /^[ァ-ヴー]+$/;
+      let j = i;
+      while (j < tokens.length && KATA.test(tokens[j].surface) && (j === i || tokens[j - 1].endIndex === tokens[j].startIndex)) j++;
+      const run = tokens.slice(i, j);
+      if (run.length >= 2 && run.some((t) => t.surface.length <= 2 || pos1(t) === '固有名詞')) {
+        const surface = run.map((t) => t.surface).join('');
+        const known = await hasForm(surface);
+        out.push({
+          ...join(run, '名詞'),
+          reading: run.every((t) => t.reading) ? run.map((t) => t.reading).join('') : undefined,
+          posDetail: ['名詞', '普通名詞', '一般'],
+          ...(known ? {} : { fixed: { meaning: '(katakana word not in the dictionary: a name, loanword or sound)' } }),
+        });
+        i = j;
+        continue;
+      }
+    }
     let merged: PositionedToken | null = null;
     let used = 0;
     for (let n = Math.min(5, tokens.length - i); n >= 2 && !merged; n--) {
@@ -430,7 +476,9 @@ export async function mergeDictionaryWords(
       // Numbers + counters are handled by the date/month merges; 80万|人
       // must not become 万人 "everybody", nor 4|人目 "public notice".
       const before = tokens[i - 1];
-      if (pos1(span[0]) === '数詞' || (before && pos1(before) === '数詞' && before.endIndex === span[0].startIndex && span[0].posDetail?.some((p) => p.startsWith('助数詞')))) continue;
+      // (…except a number-initial adverb: 二度と "never again", 一度に.)
+      if (pos1(span[0]) === '数詞' && !(await headwordPos(span.map((t) => t.surface).join(''))).has('adv')) continue;
+      if (before && pos1(before) === '数詞' && before.endIndex === span[0].startIndex && span[0].posDetail?.some((p) => p.startsWith('助数詞'))) continue;
       const surface = span.map((t) => t.surface).join('');
       if (surface.length < 3 && !KANJI.test(surface)) continue;
       // A span opening with を/が/へ/は/も is a phrase boundary (を|して is
@@ -465,6 +513,13 @@ export async function mergeDictionaryWords(
       // …で before は is the copula of では (ものではない "is not a thing
       // that"; のでは "isn't it that"), not もので / ので "because".
       if (span[span.length - 1].surface === 'で' && touchesAfter && after.surface === 'は') continue;
+      // 止める|間|も|なく after a verb is "without time to stop", not
+      // 間もなく "soon".
+      if (span[0].surface === '間' && before && before.endIndex === span[0].startIndex && ['動詞', '助動詞'].includes(pos0(before) ?? '')) continue;
+      // ものなら "if I could" follows a volitional or できる (行こうものなら);
+      // after an ordinary verb it is もの + なら (借りた物なら "if it is the
+      // thing I borrowed").
+      if (/^(もの|物)なら$/.test(joined) && !(before && (before.posDetail?.some((p) => p.startsWith('意志推量形')) || /^(出来る|できる)$/.test(before.baseForm)))) continue;
       // Formal noun もの + で / として: "a thing that ..." (接近するものとしては
       // "as one that approaches"; 決めたもので "it is that they decided").
       if (/^もの(で|とし|とす)/.test(joined)) continue;
