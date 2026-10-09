@@ -50,6 +50,19 @@ describe('chooseSense', () => {
     expect(chooseSense([0.2, 0.1, 0.9])).toBe(2);
     expect(chooseSense([])).toBe(0);
   });
+
+  it('never jumps past the 4th sense (deep senses were wrong 4 times in 5 on graded text)', () => {
+    expect(chooseSense([0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.9])).toBe(0);
+    expect(chooseSense([0.3, 0.3, 0.3, 0.9, 0.3, 0.95])).toBe(3);
+  });
+
+  it('keeps sense 0 when an aligned English word already appears in its glosses', () => {
+    // 星 aligned to "stars": sense 1 "star" already fits, so the closer
+    // embedding of "star (actor, player, etc.)" must not win.
+    const senses = [['star', 'any light-emitting celestial body'], ['spot'], ['star (actor, player, etc.)']];
+    expect(chooseSense([0.6, 0.2, 0.9], ['stars', 'shining'], senses)).toBe(0);
+    expect(chooseSense([0.6, 0.2, 0.9], ['actor', 'famous'], senses)).toBe(2);
+  });
 });
 
 describe('resolveContent with a context model', () => {
