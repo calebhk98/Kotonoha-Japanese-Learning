@@ -19,6 +19,7 @@ import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk, loadResolve
 import { resolveContent, buildStoryResponse, buildWordsResponse } from "./src/lib/contentResolver.js";
 import { initDatabase, WordsCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
 import { ImportStore, isValidImportId } from "./src/lib/importStore.js";
+import { PythonContextModel } from "./src/lib/contextModel.js";
 import { isPunctuation, isSingleKana, looksLikePartialStem, getGrammarDefinition } from "./src/lib/extraction-helpers.js";
 import { glossLangPriority } from "./src/lib/i18n.js";
 import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
@@ -33,6 +34,21 @@ let contentWordsStore: ContentWordsStore;
 // document so it is processed once. IMPORTS_DIR lets tests use a temp dir.
 const importStore = new ImportStore(process.env.IMPORTS_DIR || path.join(__dirname, "data", "imports"));
 /** The saved resolution for any content id: a user import/edit wins over the disk artifact. */
+// Translation context for imports (optional: npm run setup-context). Started
+// on first use, stopped after 10 idle minutes (the models take ~1 GB).
+let contextModel: Promise<PythonContextModel | null> | null = null;
+let contextIdle: NodeJS.Timeout | null = null;
+async function getContextModel(): Promise<PythonContextModel | null> {
+  if (!contextModel) contextModel = PythonContextModel.start(__dirname).catch(() => null);
+  const model = await contextModel;
+  if (contextIdle) clearTimeout(contextIdle);
+  contextIdle = setTimeout(() => {
+    model?.close();
+    contextModel = null;
+  }, 10 * 60 * 1000);
+  contextIdle.unref();
+  return model;
+}
 function resolvedFor(contentId: string): any | null {
   return importStore.get(contentId)?.resolved ?? loadResolvedContent(contentId);
 }
@@ -620,7 +636,8 @@ async function startServer() {
   async function resolveAndSave(content: any) {
     await tokenizerReady;
     await dictionaryReady;
-    const resolved = await resolveContent(content.text, tokenizer!, wordResolver!);
+    const context = await getContextModel();
+    const resolved = await resolveContent(content.text, tokenizer!, wordResolver!, undefined, undefined, context ?? undefined);
     importStore.save(content, resolved);
     return content;
   }
