@@ -159,6 +159,11 @@ export async function resolveContent(
     // POS-aware label first (な after 好き is the copula, not the
     // sentence-final particle); null = a content word here (もの "thing").
     let contextual = getContextualGrammarLabel(surface, t.posDetail, t.baseForm);
+    // Sudachi tags の before a space or line break as sentence-final (れんの
+    // てを in spaced kids' text); only a real sentence end makes it one.
+    if (surface === 'の' && t.posDetail?.[1] === '終助詞' && !/^[。！？!?」』…〜～]?$/.test(text.slice(t.endIndex, t.endIndex + 1))) {
+      contextual = getContextualGrammarLabel(surface, ['助詞', '格助詞'], t.baseForm);
+    }
     // Name + め: the derogatory suffix (彦一め "that rascal Hikoichi"),
     // not -ish (早め).
     if (surface === 'め' && t.posDetail?.[0] === '接尾辞' && (prev?.posDetail?.[2] === '人名' || prev?.posDetail?.[0] === '代名詞')) {

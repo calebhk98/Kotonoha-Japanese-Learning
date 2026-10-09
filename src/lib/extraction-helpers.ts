@@ -143,7 +143,7 @@ export function getContextualGrammarLabel(
     case 'の':
       // Sudachi also tags some possessive の (衣の色) as 準体助詞.
       if (p1 === '準体助詞') return 'nominalizer: "the one / the fact that"; explanatory (〜のです); also possessive "\'s"';
-      if (p1 === '終助詞') return 'sentence-final の: soft question or explanation (来たの? "did you come?")';
+      if (p1 === '終助詞') return 'sentence-final の: soft question or explanation (来たの? "did you come?"); after an adjective also "the ... one" (大きいの)';
       break;
     case 'か':
       if (p1 === '副助詞') return 'question marker; "or"; some- (何か "something", いつか "someday")';

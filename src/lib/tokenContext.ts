@@ -443,7 +443,12 @@ export async function mergeDictionaryWords(
       let j = i;
       while (j < tokens.length && KATA.test(tokens[j].surface) && (j === i || tokens[j - 1].endIndex === tokens[j].startIndex)) j++;
       const run = tokens.slice(i, j);
-      if (run.length >= 2 && run.some((t) => t.surface.length <= 2 || pos1(t) === '固有名詞')) {
+      // A one-character piece (not a trailing ツ/ッ/ー stylization: ギャー|ツ)
+      // or a name piece marks fragmentation; two real words (チョコレート|バー)
+      // and a repeated sound (グー|グー|グー, left to reduplication) do not.
+      const fragment = run.some((t, k) => (t.surface.length === 1 && !(k === run.length - 1 && /^[ツッー]$/.test(t.surface))) || pos1(t) === '固有名詞');
+      const repeated = run.every((t) => t.surface === run[0].surface);
+      if (run.length >= 2 && fragment && !repeated) {
         const surface = run.map((t) => t.surface).join('');
         const known = await hasForm(surface);
         out.push({
@@ -476,8 +481,9 @@ export async function mergeDictionaryWords(
       // Numbers + counters are handled by the date/month merges; 80万|人
       // must not become 万人 "everybody", nor 4|人目 "public notice".
       const before = tokens[i - 1];
-      // (…except a number-initial adverb: 二度と "never again", 一度に.)
-      if (pos1(span[0]) === '数詞' && !(await headwordPos(span.map((t) => t.surface).join(''))).has('adv')) continue;
+      // (…except a number-initial adverb: 二度と "never again", 一度に, but
+      // never a bare number + counter: 十|分 is "ten minutes", 二|時 "2 o'clock".)
+      if (pos1(span[0]) === '数詞' && (span.length === 2 || !(await headwordPos(span.map((t) => t.surface).join(''))).has('adv'))) continue;
       if (before && pos1(before) === '数詞' && before.endIndex === span[0].startIndex && span[0].posDetail?.some((p) => p.startsWith('助数詞'))) continue;
       const surface = span.map((t) => t.surface).join('');
       if (surface.length < 3 && !KANJI.test(surface)) continue;
