@@ -203,6 +203,9 @@ Source of truth: `server.ts`. Endpoints found:
 | GET    | `/api/content/:contentId/story`     | Reader tokens for one item — serves committed `resolved.json` when present (`precomputed: true`), else live-resolves |
 | GET    | `/api/content/:contentId/words`     | Words for one content item (prefers `resolved.json`)          |
 | GET    | `/api/word/:word`                   | Single-word reading + meaning + score                        |
+| GET    | `/api/imports`                      | Saved user imports (content metadata + text)                 |
+| POST   | `/api/imports`                      | Create/replace an import (or an edit of a disk item, under its id): resolved ONCE and saved |
+| PUT / DELETE | `/api/imports/:id`            | Edit (re-resolves only if the text changed) / delete         |
 | POST   | `/api/wanikani/validate`            | Validate WaniKani API token                                  |
 | POST   | `/api/wanikani/sync`                | Pull WaniKani SRS data                                       |
 
@@ -303,6 +306,24 @@ Consequences worth knowing:
 
 After adding content, `STORIES_LIST.md` is hand-maintained; update it if
 relevant. There is no automatic regeneration.
+
+### User imports: saved once, one document for every view
+
+Imported texts (and in-app edits of disk content) are resolved ONCE by the
+server and saved with their resolved document in `data/imports/<id>.json`
+(`src/lib/importStore.ts`; gitignored; `IMPORTS_DIR` overrides the folder,
+the API tests use a temp dir). `resolvedFor(id)` in server.ts makes a saved
+import win over a disk `resolved.json`, and the reader (`/story`), the vocab
+list (`/words`, `/content/words`) and `inspect-text --id <id> --stored` all
+read that one document. Before this, an import's reader tokens came from
+`resolveContent` but its vocab list from the older `processText` path (no
+merges, no context rules), so hover and vocab list could disagree, and the
+text was re-processed on every visit. The client uploads any import still
+only in localStorage (`customContent`) once on load; localStorage is now a
+first-paint cache, and its `contentVocab` cache write is allowed to fail
+(600+ items exceed the ~5 MB quota, which used to blank the app after an
+import). `loadVocabForContent` reads the server document even on a forced
+reload; `/api/extract` is only the fallback for text the server has none for.
 
 ---
 
@@ -477,7 +498,13 @@ agents. Outcome-based flags (each fires only when the result actually differs):
 - `UNKNOWN`: no definition.
 
 Startup is ~1 min (dictionary load) and it holds the `jmdict-db` lock, so
-stop the dev server first and run one instance at a time. Batch work with
+stop the dev server first and run one instance at a time. A second process
+does NOT fail by itself: its lookups silently degrade to kanji-data and
+print confident nonsense (キツネ "to rule a country requires many great
+men"). `DictionaryManager.usingJmdict()` probes a real lookup, and
+inspect-text and resolve-content now refuse to run when it fails. Watch
+out for `diff <(cmd) <(cmd)`: it runs both at once. `--stored --id <id>`
+prints the saved document the app serves instead of re-resolving. Batch work with
 `--id a,b,c` / `--id all` instead of parallel processes.
 
 ### Sentence context in resolution (what fixed the "wrong words")

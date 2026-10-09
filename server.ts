@@ -18,6 +18,7 @@ import { ensureJmnedictPrepared } from "./src/lib/jmnedict-utils.js";
 import { loadStoriesFromDisk, loadMusicFromDisk, loadVideosFromDisk, loadResolvedContent, listContentEntries } from "./src/lib/storyLoader.js";
 import { resolveContent, buildStoryResponse, buildWordsResponse } from "./src/lib/contentResolver.js";
 import { initDatabase, WordsCache, ContentWordsStore, saveDatabase } from "./src/lib/database.js";
+import { ImportStore, isValidImportId } from "./src/lib/importStore.js";
 import { isPunctuation, isSingleKana, looksLikePartialStem, getGrammarDefinition } from "./src/lib/extraction-helpers.js";
 import { glossLangPriority } from "./src/lib/i18n.js";
 import type { WorkerInitData, WorkerOutMessage } from "./src/lib/extraction-worker.js";
@@ -28,6 +29,13 @@ const __dirname = path.dirname(__filename);
 
 let wordsCache: WordsCache;
 let contentWordsStore: ContentWordsStore;
+// User imports (and edits of disk content), each saved with its resolved
+// document so it is processed once. IMPORTS_DIR lets tests use a temp dir.
+const importStore = new ImportStore(process.env.IMPORTS_DIR || path.join(__dirname, "data", "imports"));
+/** The saved resolution for any content id: a user import/edit wins over the disk artifact. */
+function resolvedFor(contentId: string): any | null {
+  return importStore.get(contentId)?.resolved ?? loadResolvedContent(contentId);
+}
 
 // Extract jmdict if needed
 async function ensureJmdictExtracted() {
@@ -596,6 +604,78 @@ async function startServer() {
     }
   });
 
+  // ---- user imports: resolved once, saved, then served like disk content.
+  const IMPORT_TYPES = new Set(["story", "music", "video"]);
+  function importError(body: any, requireText: boolean): string | null {
+    const { id, title, type, text } = body ?? {};
+    if (id !== undefined && !isValidImportId(id)) return "Invalid id";
+    if (title !== undefined && typeof title !== "string") return "title must be a string";
+    if (type !== undefined && !IMPORT_TYPES.has(type)) return "type must be story, music or video";
+    if (text === undefined && !requireText) return null;
+    if (typeof text !== "string" || !text.trim()) return "No text provided";
+    if (text.length > MAX_TEXT_LENGTH) return `Text exceeds the ${MAX_TEXT_LENGTH} character limit`;
+    if (!containsTargetText(text)) return "Text must contain Japanese characters";
+    return null;
+  }
+  async function resolveAndSave(content: any) {
+    await tokenizerReady;
+    await dictionaryReady;
+    const resolved = await resolveContent(content.text, tokenizer!, wordResolver!);
+    importStore.save(content, resolved);
+    return content;
+  }
+
+  app.get("/api/imports", (_req, res) => {
+    res.json(importStore.list());
+  });
+
+  app.post("/api/imports", async (req, res) => {
+    try {
+      const err = importError(req.body, true);
+      if (err) return res.status(400).json({ error: err });
+      const { id, title, type, text, description, mediaUrl, imageUrl } = req.body;
+      const content = {
+        id: id ?? `custom-${Date.now()}`,
+        title: title || "Untitled",
+        type: type ?? "story",
+        description: description ?? "Imported custom content.",
+        text: text.trim(),
+        ...(mediaUrl ? { mediaUrl } : {}),
+        ...(imageUrl ? { imageUrl } : {}),
+      };
+      res.json(await resolveAndSave(content));
+    } catch (e: any) {
+      console.error("[API] POST /api/imports failed:", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put("/api/imports/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const err = importError({ ...req.body, id }, false);
+      if (err) return res.status(400).json({ error: err });
+      const existing = importStore.get(id);
+      if (!existing) return res.status(404).json({ error: `Unknown import id: ${id}` });
+      const content = { ...existing.content, ...req.body, id };
+      if (typeof req.body.text === "string") content.text = req.body.text.trim();
+      if (content.text !== existing.content.text || !existing.resolved) {
+        await resolveAndSave(content);
+      } else {
+        importStore.save(content, existing.resolved);
+      }
+      res.json(content);
+    } catch (e: any) {
+      console.error("[API] PUT /api/imports failed:", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/imports/:id", (req, res) => {
+    const removed = importStore.remove(req.params.id);
+    res.status(removed ? 200 : 404).json({ removed });
+  });
+
   app.post("/api/process-story", async (req, res) => {
     const start = Date.now();
     try {
@@ -690,6 +770,12 @@ async function startServer() {
         const resolved = loadResolvedContent(entry.id);
         if (resolved) allWords[entry.id] = buildWordsResponse(resolved) as any;
       }
+      // Saved imports (and edits of disk items) always win: they are what
+      // the reader shows for that id.
+      for (const c of importStore.list()) {
+        const resolved = importStore.get(c.id)?.resolved;
+        if (resolved) allWords[c.id] = buildWordsResponse(resolved) as any;
+      }
       res.json(allWords);
 
       // Schedule background refresh for content IDs with unknown-meaning words,
@@ -714,7 +800,7 @@ async function startServer() {
   app.get("/api/content/:contentId/story", async (req, res) => {
     try {
       const { contentId } = req.params;
-      const resolved = loadResolvedContent(contentId);
+      const resolved = resolvedFor(contentId);
       if (resolved) {
         res.json({ tokens: buildStoryResponse(resolved), precomputed: true });
         return;
@@ -742,7 +828,7 @@ async function startServer() {
       const { contentId } = req.params;
       // Precomputed resolution (issue #252) wins: it was produced by the same
       // pipeline at build time and needs no cache warmup or refresh passes.
-      const resolved = loadResolvedContent(contentId);
+      const resolved = resolvedFor(contentId);
       if (resolved) {
         res.json(buildWordsResponse(resolved));
         return;

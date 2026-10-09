@@ -929,6 +929,22 @@ export class DictionaryManager {
   private fallback1: Dictionary | null = null;
   private fallback2: Dictionary | null = null;
 
+  /**
+   * False when JMDict could not be opened (most often: another process holds
+   * the jmdict-db LevelDB lock) and lookups silently degraded to kanji-data,
+   * which produces confident nonsense (狐 "to rule a country requires many
+   * great men"). Batch tools must refuse to run in that state.
+   */
+  async usingJmdict(): Promise<boolean> {
+    // A locked LevelDB still reports initialized; only a real read tells.
+    if (!(this.primary instanceof JmdictDictionary)) return false;
+    try {
+      return await this.primary.hasForm('猫');
+    } catch {
+      return false;
+    }
+  }
+
   async initialize(
     usePrimary: "jmdict" | "kanjidata" = "kanjidata",
     jmdictPath?: string,

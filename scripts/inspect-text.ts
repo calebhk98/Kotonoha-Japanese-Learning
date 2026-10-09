@@ -22,6 +22,9 @@
  *   --sentences a-b  only sentence numbers a..b (1-based)
  *   --flagged        only sentences with at least one flag
  *   --json           machine-readable output (one object per sentence)
+ *   --stored         with --id: print the SAVED document the app serves (resolved.json,
+ *                    or a saved import from data/imports/) instead of re-resolving;
+ *                    --id also accepts import ids
  *   --summary        only per-item flag counts (use with --id a,b,c or --id all)
  *
  * Flags printed per token:
@@ -44,7 +47,8 @@ import { createTokenizer, type RawMorpheme } from '../src/lib/tokenizers.js';
 import { DictionaryManager } from '../src/lib/dictionary.js';
 import { WordResolver, NON_CONJUGATING_POS } from '../src/lib/wordResolver.js';
 import { resolveContent } from '../src/lib/contentResolver.js';
-import { listContentEntries } from '../src/lib/storyLoader.js';
+import { listContentEntries, loadResolvedContent } from '../src/lib/storyLoader.js';
+import { ImportStore } from '../src/lib/importStore.js';
 import { ensureJmnedictPrepared } from '../src/lib/jmnedict-utils.js';
 import { splitSentences } from '../src/lib/sentenceSplitter.js';
 
@@ -55,7 +59,10 @@ const opt = (name: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 
-function readInputs(): { label: string; text: string }[] {
+// User imports (and saved edits of disk content) — same folder the server uses.
+const importStore = new ImportStore(process.env.IMPORTS_DIR || path.join(process.cwd(), 'data', 'imports'));
+
+function readInputs(): { label: string; text: string; id?: string }[] {
   const text = opt('--text');
   if (text) return [{ label: 'text', text }];
   const file = opt('--file');
@@ -65,10 +72,12 @@ function readInputs(): { label: string; text: string }[] {
     const entries = listContentEntries();
     const wanted = ids === 'all' ? entries.map((e) => e.id) : ids.split(',');
     return wanted.map((id) => {
+      const saved = importStore.get(id);
+      if (saved) return { label: id, id, text: saved.content.text.trim() };
       const entry = entries.find((e) => e.id === id);
-      if (!entry) throw new Error(`No content folder with id "${id}"`);
+      if (!entry) throw new Error(`No content folder or saved import with id "${id}"`);
       const name = entry.type === 'story' ? 'content.md' : 'transcript.md';
-      return { label: id, text: fs.readFileSync(path.join(entry.dir, name), 'utf8').trim() };
+      return { label: id, id, text: fs.readFileSync(path.join(entry.dir, name), 'utf8').trim() };
     });
   }
   if (!process.stdin.isTTY) return [{ label: 'stdin', text: fs.readFileSync(0, 'utf8').trim() }];
@@ -115,6 +124,9 @@ async function main() {
   );
   const resolver = new WordResolver(dictionary);
   console.log = log;
+  if (!(await dictionary.usingJmdict())) {
+    throw new Error('JMDict did not open (is the dev server or another script holding the jmdict-db lock?). Refusing to print degraded output.');
+  }
   if (typeof tokenizer.rawMorphemes !== 'function') {
     throw new Error('inspect-text needs the Sudachi WASM tokenizer (TOKENIZER unset or sudachi-wasm)');
   }
@@ -122,7 +134,16 @@ async function main() {
   const totals: Record<string, number> = {};
   for (const input of inputs) {
     console.log = (...a: any[]) => console.error(...a);
-    const resolved = await resolveContent(input.text, tokenizer, resolver, new Map());
+    // --stored: print the saved document the app serves (resolved.json or a
+    // saved import) instead of re-resolving with the current code.
+    let resolved: any;
+    if (flag('--stored')) {
+      if (!input.id) throw new Error('--stored needs --id');
+      resolved = importStore.get(input.id)?.resolved ?? loadResolvedContent(input.id);
+      if (!resolved) throw new Error(`No saved resolution for "${input.id}" (run npm run resolve-content)`);
+    } else {
+      resolved = await resolveContent(input.text, tokenizer, resolver, new Map());
+    }
     console.log = log;
     const out = await inspect(input.text, resolved, tokenizer, dictionary, resolver);
     const counts: Record<string, number> = { sentences: out.length };

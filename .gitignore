@@ -26,3 +26,6 @@ JMnedict.xml.gz
 
 # Claude Code internal files
 .claude/
+
+# User imports (one resolved JSON per imported text; personal data)
+data/imports/

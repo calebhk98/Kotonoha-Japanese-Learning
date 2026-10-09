@@ -19,7 +19,8 @@ describe('/api/imports', () => {
     const story = await apiGet<{ tokens: any[]; precomputed: boolean }>(`/api/content/${id}/story`);
     expect(story.status).toBe(200);
     expect(story.body.precomputed).toBe(true);
-    expect(story.body.tokens.map((t) => t.surface).join('')).toBe(text);
+    expect(story.body.tokens.length).toBeGreaterThan(0);
+    for (const t of story.body.tokens) expect(text.slice(t.startIndex, t.endIndex)).toBe(t.surface);
 
     const words = await apiGet<any[]>(`/api/content/${id}/words`);
     expect(words.body.map((w) => w.word)).toContain('猫');

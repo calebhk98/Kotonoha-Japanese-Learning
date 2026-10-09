@@ -55,6 +55,13 @@ async function main() {
     (jmnedictFile as string) ?? undefined
   );
 
+  // Never write artifacts from a degraded dictionary (jmdict-db locked by the
+  // dev server or another script): every resolved.json would be garbage.
+  if (!(await dictionary.usingJmdict())) {
+    console.error('[resolve-content] JMDict did not open (is the dev server or another script holding the jmdict-db lock?). Aborting.');
+    process.exit(1);
+  }
+
   const resolver = new WordResolver(dictionary);
   const lookupCache = new Map<string, any>();
 
