@@ -63,4 +63,28 @@ describe('number-initial adverbs', () => {
     const out = await merge(toks, text, async (s) => s === '二度と', async (s) => new Set(s === '二度と' ? ['adv'] : []));
     expect(out[0].surface).toBe('二度と');
   });
+  it('a bare number + counter never becomes an adverb headword (十|分 "ten minutes", not 十分 "enough")', async () => {
+    const text = '十分待った';
+    const toks = lay(text, [['十', ['名詞', '数詞']], ['分', ['名詞', '普通名詞', '助数詞可能']], ['待った', ['動詞']]]);
+    const out = await merge(toks, text, async (s) => s === '十分', async (s) => new Set(s === '十分' ? ['adv', 'adj-na'] : []));
+    expect(out.map((t) => t.surface)).toEqual(['十', '分', '待った']);
+  });
+});
+
+describe('repeated sound words', () => {
+  it('a run of one repeated katakana unit is left to the reduplication rule (グー|グー|グー)', async () => {
+    const text = 'グーグーグー';
+    const out = await merge(lay(text, [['グー', N], ['グー', N], ['グー', N]]), text);
+    expect(out.map((t) => t.surface)).toEqual(['グー', 'グー', 'グー']);
+  });
+  it('a known word + a 2-char loanword stays split (チョコレート|バー composes)', async () => {
+    const text = 'チョコレートバー';
+    const out = await merge(lay(text, [['チョコレート', N], ['バー', N]]), text);
+    expect(out.map((t) => t.surface)).toEqual(['チョコレート', 'バー']);
+  });
+  it('a trailing small-tsu stylization stays with its interjection (ギャー|ツ)', async () => {
+    const text = 'ギャーツ';
+    const out = await merge(lay(text, [['ギャー', ['感動詞']], ['ツ', N]]), text);
+    expect(out.map((t) => t.surface)).toEqual(['ギャー', 'ツ']);
+  });
 });
