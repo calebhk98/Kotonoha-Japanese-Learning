@@ -434,7 +434,8 @@ export async function resolveContent(
     const switched = new Map<string, number>(); // `${wordIndex}:${sense}` → new word index
     asked.forEach((mine, si) => {
       mine.forEach(({ idx, groups }, ci) => {
-        const sense = chooseSense(answers[si]?.candidates[ci]?.sims ?? []);
+        const answer = answers[si]?.candidates[ci];
+        const sense = chooseSense(answer?.sims ?? [], answer?.aligned ?? [], groups);
         if (sense === 0 || sense >= groups.length) return;
         const base = tokenWord(idx)!;
         const key = `${base}:${sense}`;

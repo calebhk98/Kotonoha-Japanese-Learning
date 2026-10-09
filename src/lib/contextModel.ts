@@ -39,13 +39,40 @@ export interface ContextModel {
 }
 
 export const SENSE_MARGIN = 0.12;
+/**
+ * Only the first MAX_SENSES senses compete. Graded on genre text (stories,
+ * lyrics, poems, web fiction), switches to sense 5+ were wrong 4 times in 5
+ * (金 "Friday", 行く "to stream", もの "cause of", 出る "to assume an
+ * attitude"); switching to another ENTRY of the same spelling went 0 for 4
+ * and was removed.
+ */
+export const MAX_SENSES = 4;
 
-/** Index of the sense to show: sense 0 unless another beats it by the margin. */
-export function chooseSense(sims: number[]): number {
-  if (sims.length < 2) return 0;
+const STOP = new Set('a an the of to be is are was were it in on at by for with from as and or but not no that this he she they i you'.split(' '));
+const stem = (w: string) => {
+  const x = w.toLowerCase();
+  return x.length > 4 ? x.replace(/(ing|ed|es|s)$/, '') : x;
+};
+const contentWords = (texts: string[]) =>
+  new Set(texts.flatMap((t) => t.toLowerCase().match(/[a-z]+/g) ?? []).filter((w) => !STOP.has(w)).map(stem));
+
+/**
+ * Index of the sense to show: sense 0 unless another of the first
+ * MAX_SENSES beats it by the margin, and never when an aligned English word
+ * already appears in sense 0's glosses (星 aligned to "stars" stays "star"
+ * even if "star (actor, player)" embeds closer).
+ */
+export function chooseSense(sims: number[], aligned: string[] = [], senses: string[][] = []): number {
+  const n = Math.min(sims.length, MAX_SENSES);
+  if (n < 2) return 0;
   let best = 0;
-  for (let k = 1; k < sims.length; k++) if (sims[k] > sims[best]) best = k;
-  return best !== 0 && sims[best] - sims[0] > SENSE_MARGIN ? best : 0;
+  for (let k = 1; k < n; k++) if (sims[k] > sims[best]) best = k;
+  if (best === 0 || sims[best] - sims[0] <= SENSE_MARGIN) return 0;
+  if (senses[0] && aligned.length > 0) {
+    const first = contentWords(senses[0]);
+    if (aligned.some((w) => first.has(stem(w)))) return 0;
+  }
+  return best;
 }
 
 /**
