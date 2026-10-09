@@ -1025,25 +1025,6 @@ export class DictionaryManager {
     return this.primary instanceof JmdictDictionary ? this.primary.candidates(word, hint) : [];
   }
 
-  /**
-   * Other JMDict entries written `word` whose POS fits (homographs: 額 がく
-   * "frame" vs ひたい "forehead"), best-scored first, as reading + English
-   * senses. `exclude` is the shown entry's first gloss. Used by the
-   * translation context step, which may switch entries when the translation
-   * clearly favours one.
-   */
-  async alternativeEntries(word: string, pos?: string, exclude?: string, limit = 3): Promise<{ reading: string; senses: string[][] }[]> {
-    const out: { reading: string; senses: string[][] }[] = [];
-    for (const { entry } of await this.candidates(word, pos ? { pos } : undefined)) {
-      if (pos && !entryMatchesPos(entry, pos)) continue;
-      const senses = (entry.sense ?? []).map((s: any) => getGlosses(s, ['eng'])).filter((g: string[]) => g.length > 0);
-      if (senses.length === 0 || senses[0][0] === exclude) continue;
-      out.push({ reading: entry.kana?.[0]?.text ?? word, senses });
-      if (out.length >= limit) break;
-    }
-    return out;
-  }
-
   async lookup(word: string, hint?: LookupHint): Promise<WordLookupResult | null> {
     if (!this.primary) return null;
 
