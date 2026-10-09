@@ -182,6 +182,18 @@ export class WordResolver {
     return this.dictionary?.isConjunctionOnly ? this.dictionary.isConjunctionOnly(text) : Promise.resolve(false);
   }
 
+  /** Union of JMDict parts of speech over entries written exactly `text`. */
+  async headwordPos(text: string): Promise<Set<string>> {
+    const cands = this.dictionary?.candidates ? await this.dictionary.candidates(text) : [];
+    const out = new Set<string>();
+    for (const { entry } of cands) {
+      const written = [...(entry.kanji ?? []), ...(entry.kana ?? [])].some((f: any) => f.text === text);
+      if (!written) continue;
+      for (const sn of entry.sense ?? []) for (const p of sn.partOfSpeech ?? []) out.add(p);
+    }
+    return out;
+  }
+
   /** See DictionaryManager.isKanaHeadword. */
   isKanaHeadword(text: string): Promise<boolean> {
     return this.dictionary?.isKanaHeadword ? this.dictionary.isKanaHeadword(text) : Promise.resolve(false);
@@ -460,7 +472,9 @@ export class WordResolver {
     // (3.6) A long place token the dictionaries don't hold as one word
     // (東京都千代田区丸の内): name its administrative parts.
     if (meaning === 'Unknown meaning' && ctx?.placeName && this.dictionary) {
-      const parts = wordStr.match(/.+?(?:都|道|府|県|市|区|町|村|郡|$)/g)?.filter(Boolean) ?? [];
+      let parts = wordStr.match(/.+?(?:都|道|府|県|州|省|市|区|町|村|郡|$)/g)?.filter(Boolean) ?? [];
+      // One name + its unit (カリフォルニア州 "California + state").
+      if (parts.length === 1 && wordStr.length > 2 && /[都道府県州省市区町村郡]$/.test(wordStr)) parts = [wordStr.slice(0, -1), wordStr.slice(-1)];
       if (parts.length > 1) {
         const named = await Promise.all(
           parts.map(async (p) => {
@@ -482,8 +496,18 @@ export class WordResolver {
       const morphemeFallback = getMorphemeDefinition(wordStr);
       if (morphemeFallback) meaning = morphemeFallback;
     }
+    // A katakana plural of a known loanword (パートナーズ "Partners", as in
+    // company names).
+    if (meaning === 'Unknown meaning' && /^[ァ-ヴー]{3,}[ズス]$/.test(wordStr) && this.dictionary) {
+      const r = await this.dictionary.lookup(wordStr.slice(0, -1));
+      if (r && r.meaning && r.meaning !== 'Unknown') meaning = `${shortGloss(r.meaning)} (+ English plural -s)`;
+    }
     if (meaning === 'Unknown meaning' && /^[ぁ-ゟ゠-ヿー〜]+$/.test(wordStr)) {
-      if (pos === '副詞' || pos === '感動詞') {
+      // Katakana with a long-vowel mark inside (ユニツリー) is a loanword or
+      // name, not a drawn-out sound.
+      if (/^[ァ-ヴ]+ー[ァ-ヴー]*[ァ-ヴ]$/.test(wordStr) && !/ーー/.test(wordStr) && pos !== '感動詞') {
+        meaning = ctx?.properNoun ? 'katakana name (person, product or organisation)' : 'katakana loanword (not in the dictionary)';
+      } else if (pos === '副詞' || pos === '感動詞') {
         meaning = 'onomatopoeia / sound effect';
       } else if (/[ー〜]/.test(wordStr)) {
         meaning = 'stretched vocalization / sound (no lexical meaning)';

@@ -23,6 +23,8 @@ export interface PositionedToken extends TokenInfo {
   endIndex: number;
   /** Meaning decided here (dates, readings in parentheses); skips lookup. */
   fixed?: { meaning: string; reading?: string };
+  /** Sound-changed counter reading (20分 → ぷん), kept over the resolver's. */
+  counterReading?: string;
 }
 
 const KANJI_DIGIT: Record<string, number> = { 〇: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
@@ -60,6 +62,26 @@ const DAY_SPECIAL: Record<number, string> = {
 };
 
 /** Reading of N日: the irregular day forms, else <number>にち (17 じゅうしちにち, 19 じゅうくにち). */
+/**
+ * Counter reading after a number (20分 にじゅっぷん, 3本 さんぼん): the
+ * counter's first kana changes with the number's last digit.
+ */
+export function counterReading(n: number, counter: string): string | undefined {
+  const forms: Record<string, [string, string, string]> = {
+    // [after 1/6/8/10 (っ+p), after 3 (voiced), otherwise]
+    分: ['ぷん', 'ぷん', 'ふん'],
+    本: ['ぽん', 'ぼん', 'ほん'],
+    匹: ['ぴき', 'びき', 'ひき'],
+    杯: ['ぱい', 'ばい', 'はい'],
+  };
+  const f = forms[counter];
+  if (!f || !Number.isInteger(n) || n <= 0) return undefined;
+  if (n % 1000 === 0) return f[1];
+  const d = n % 10;
+  if (counter === '分' && d === 4) return f[0];
+  return d === 1 || d === 6 || d === 8 || d === 0 ? f[0] : d === 3 ? f[1] : f[2];
+}
+
 export function dayReading(n: number): string | undefined {
   if (!(n >= 1 && n <= 31)) return undefined;
   if (DAY_SPECIAL[n]) return DAY_SPECIAL[n];
@@ -76,7 +98,7 @@ export type GrammaticalContext = 'te' | 'masu' | 'adj-stem' | 'verb-plain' | 've
 const QUESTION_WORDS = new Set(['いつ', 'どう', '何', 'なに', 'なん', '誰', 'だれ', 'どこ', 'どれ', 'どちら']);
 
 /** Sentence start, or right after a comma / opening bracket. */
-function atClauseStart(text: string, index: number): boolean {
+export function atClauseStart(text: string, index: number): boolean {
   return atSentenceStart(text, index) || /[、，,]\s*$/.test(text.slice(0, index));
 }
 
@@ -117,7 +139,8 @@ const MERGE_RULES: MergeRule[] = [
     length: 2,
     // …but のである / のであった is "it is (was) that …", not "because".
     match: ([a, b], text) =>
-      a.surface === 'の' && pos1(a) === '準体助詞' && b.surface === 'で' && pos0(b) === '助動詞' && !/^\s*あ/.test(text.slice(b.endIndex)),
+      // …and の|では is "isn't it that" (行くのではない).
+      a.surface === 'の' && pos1(a) === '準体助詞' && b.surface === 'で' && pos0(b) === '助動詞' && !/^\s*[あは]/.test(text.slice(b.endIndex)),
     pos: '助詞',
   },
   // しょうがない / しようがない "it can't be helped"
@@ -345,7 +368,8 @@ export async function mergeDictionaryWords(
   hasForm: (s: string) => Promise<boolean>,
   isKanaHeadword: (s: string) => Promise<boolean>,
   isGrammar: (s: string) => boolean,
-  isConjunctionOnly: (s: string) => Promise<boolean> = async () => false
+  isConjunctionOnly: (s: string) => Promise<boolean> = async () => false,
+  headwordPos: (s: string) => Promise<Set<string>> = async () => new Set()
 ): Promise<PositionedToken[]> {
   const out: PositionedToken[] = [];
   let i = 0;
@@ -360,11 +384,17 @@ export async function mergeDictionaryWords(
       // a set phrase: いる|か is "is ... ?", not いるか "dolphin"; し|たり,
       // 知ら|ない, ない|と. (Conjugated headwords are matched through the
       // grouped token's lemma instead.)
-      if (['動詞', '形容詞', '助動詞'].includes(pos0(span[0]) ?? '')) continue;
+      // Two exceptions keep whole headwords: an attributive adjective + noun
+      // (好い|加減 → 好い加減 "moderate; irresponsible") and a compound verb,
+      // stem + verb (云い|含める → 云い含める "to instruct").
+      const conj = (t: PositionedToken, form: string) => t.posDetail?.some((p) => p.startsWith(form));
+      const adjNoun = n === 2 && pos0(span[0]) === '形容詞' && conj(span[0], '連体形') && pos0(span[1]) === '名詞';
+      const compoundVerb = n === 2 && pos0(span[0]) === '動詞' && conj(span[0], '連用形') && pos0(span[1]) === '動詞' && KANJI.test(span[1].surface);
+      if (['動詞', '形容詞', '助動詞'].includes(pos0(span[0]) ?? '') && !adjNoun && !compoundVerb) continue;
       // Numbers + counters are handled by the date/month merges; 80万|人
       // must not become 万人 "everybody", nor 4|人目 "public notice".
       const before = tokens[i - 1];
-      if (pos1(span[0]) === '数詞' || (before && pos1(before) === '数詞' && before.endIndex === span[0].startIndex)) continue;
+      if (pos1(span[0]) === '数詞' || (before && pos1(before) === '数詞' && before.endIndex === span[0].startIndex && span[0].posDetail?.some((p) => p.startsWith('助数詞')))) continue;
       const surface = span.map((t) => t.surface).join('');
       if (surface.length < 3 && !KANJI.test(surface)) continue;
       // A span opening with を/が/へ/は/も is a phrase boundary (を|して is
@@ -375,13 +405,43 @@ export async function mergeDictionaryWords(
       // …and one CLOSING with them is noun + particle (今日|は is "today"
       // + topic, not the greeting 今日は "hello") — except the coordinating
       // conjunctions 又は / もしくは "or".
-      if (/^[をがへはも]$/.test(span[span.length - 1].surface) && !coordinator) continue;
+      // 何も "(not) at all" and 如何にも "indeed" are adverbs, not noun + も.
+      if (/^[をがへはも]$/.test(span[span.length - 1].surface) && !coordinator &&
+        !(span[span.length - 1].surface === 'も' && await (async () => {
+          const hp = await headwordPos(joined);
+          // …but not interjection headwords: どう|も in narrative is "somehow",
+          // and the merged どうも shows "thank you".
+          // Noun + に + も is "even in" (山の中にも), not the expression 中にも
+          // "especially" (adverbs like 今にも "at any moment" still merge).
+          // (どこにも / なんにも "nowhere / nothing" also still merge: only a
+          // modified noun, の中にも, is literal.)
+          const niMo = span.length >= 3 && span[span.length - 2].surface === 'に' && !!before &&
+            before.endIndex === span[0].startIndex && (before.surface === 'の' || ['動詞', '形容詞', '助動詞', '連体詞'].includes(pos0(before) ?? ''));
+          return !hp.has('int') && !niMo && (hp.has('adv') || (hp.has('exp') && ['代名詞', '副詞'].includes(pos0(span[0]) ?? '')));
+        })())) continue;
       // Noun + から is "from <noun>" (側から), not an idiom like 側から "as soon as".
       if (span[span.length - 1].surface === 'から' && pos0(span[0]) === '名詞') continue;
       // …の right before a noun is the genitive: 以上のもの|の|ボイラー is
       // "the boiler of …", not ものの "although".
       const after = tokens[i + span.length];
-      if (span[span.length - 1].surface === 'の' && after && pos0(after) === '名詞' && after.startIndex === span[span.length - 1].endIndex) continue;
+      const touchesAfter = after && after.startIndex === span[span.length - 1].endIndex;
+      if (span[span.length - 1].surface === 'の' && touchesAfter && (pos0(after) === '名詞' || /^よう/.test(after.surface))) continue;
+      // …で before は is the copula of では (ものではない "is not a thing
+      // that"; のでは "isn't it that"), not もので / ので "because".
+      if (span[span.length - 1].surface === 'で' && touchesAfter && after.surface === 'は') continue;
+      // Formal noun もの + で / として: "a thing that ..." (接近するものとしては
+      // "as one that approaches"; 決めたもので "it is that they decided").
+      if (/^もの(で|とし|とす)/.test(joined)) continue;
+      // …に before a compound particle verb belongs to it: それ|によって is
+      // "by that", not それに "besides".
+      if (span[span.length - 1].surface === 'に' && touchesAfter && /^(よっ|よる|より|よれ|つい|対し|対す|とっ|関し|関す|おい|おけ|沿っ|伴っ|基づ|向け|つれ|従っ|際し|応じ|加え|比べ|渡っ|わたっ)/.test(after.surface)) continue;
+      // と|する after a verb is "try to / suppose" (しようとする, あるとする),
+      // not the noun pattern "to take as" (AをBとする).
+      // (After an adverb it is adverbial と: ゆっくりとした "slow".)
+      if (span[0].surface === 'と' && before && before.endIndex === span[0].startIndex && ['動詞', '助動詞', '形容詞', '副詞'].includes(pos0(before) ?? '')) continue;
+      // Sentence-final にしろ / にせよ is "make it ..." (好い加減にしろ), not
+      // "even if".
+      if (/^に(しろ|せよ)$/.test(joined) && /^[。！!」』）)\n]/.test(text.slice(span[span.length - 1].endIndex, span[span.length - 1].endIndex + 1))) continue;
       if (isGrammar(surface)) continue;
       const last = span[n - 1];
       if (n === 2 && last.surface === 'に' && pos0(span[0]) === '名詞') {
@@ -391,10 +451,42 @@ export async function mergeDictionaryWords(
       const lemmaForm = span.slice(0, -1).map((t) => t.surface).join('') + (last.lemmaSurface ?? last.surface);
       let key = (await hasForm(surface)) ? surface : lemmaForm !== surface && (await hasForm(lemmaForm)) ? lemmaForm : null;
       // All-kana: only headwords really written in kana (see isKanaHeadword).
-      if (key && !KANJI.test(key) && !(await isKanaHeadword(key))) key = null;
+      // …except a long kana noun compound, which beginner texts write in
+      // kana (じこ|しょうかい is 自己紹介 "self-introduction", not 事故 +
+      // 紹介): five or more kana are rarely an accidental homophone.
+      const kanaCompound = key === surface && !KANJI.test(key) && surface.length >= 5 &&
+        span.every((t) => pos0(t) === '名詞' && /^[ぁ-ゖー]+$/.test(t.surface));
+      if (key && !KANJI.test(key) && !kanaCompound && !(await isKanaHeadword(key))) key = null;
       // A conjunction (そこで "so", それで "and then") only opens a clause;
       // mid-sentence the same kana is the pieces (そこで = "there" + で).
       if (key && !coordinator && !atClauseStart(text, span[0].startIndex) && (await isConjunctionOnly(key))) key = null;
+      // Comparison / extent particles open phrases, not headwords: より|よかっ
+      // ("better than"), から|にしろ, くらい|の|たか(さ); しか|ない after a
+      // noun is "only", not "have no choice but to".
+      if (key && /^(より|から|くらい|ぐらい|まで|だけ|ほど)$/.test(span[0].surface)) key = null;
+      if (key && span[0].surface === 'しか' && before && pos0(before) === '名詞') key = null;
+      // 「…」といいました is "said", not という "called, named".
+      if (key && /^と(いう|言う|云う)$/.test(key) && key !== surface && /[」』]$/.test(text.slice(0, span[0].startIndex).trimEnd())) key = null;
+      // A kana span opening with a particle only joins into a grammatical
+      // headword (つつある, にすぎない): と|かいう is "so-called", not かいう "calla".
+      if (key && pos0(span[0]) === '助詞' && !KANJI.test(key)) {
+        const hp = await headwordPos(key);
+        if (![...hp].some((p) => ['exp', 'prt', 'conj', 'adv', 'aux', 'aux-v', 'aux-adj'].includes(p) || /^v[15kzr]/.test(p))) key = null;
+      }
+      // Matched through the last token's dictionary form, the headword must
+      // conjugate: と|か|きました is "wrote that", not とかく "anyhow".
+      if (key && key !== surface) {
+        const hp = await headwordPos(key);
+        // ('vs' = takes する after it, so the tail can't be part of the word.)
+        if (hp.size > 0 && ![...hp].some((p) => /^(v[15kzr]|vs-|adj-i|aux|exp)/.test(p))) key = null;
+      }
+      // An everyday adjective + noun is literal unless the headword is more
+      // than a noun: いい|顔 "a good face" (not "big shot"), but 好い加減
+      // (adj-na "half-hearted").
+      if (key && adjNoun) {
+        const hp = await headwordPos(key);
+        if (![...hp].some((p) => !/^(n($|-)|exp$|adj-f$)/.test(p))) key = null;
+      }
       if (!key) continue;
       const readings = span.map((t) => t.reading);
       merged = {
@@ -406,7 +498,8 @@ export async function mergeDictionaryWords(
         // (exp) has no Sudachi equivalent, and a guessed one would filter
         // the right senses out.
         pos: undefined,
-        reading: key === surface ? undefined : readings.every((r) => r) ? readings.join('') : undefined,
+        // A kana surface is its own reading (いいてんき, not よいてんき).
+        reading: !KANJI.test(surface) ? surface : key === surface ? undefined : readings.every((r) => r) ? readings.join('') : undefined,
         posDetail: undefined,
         dictionaryForm: key,
         tail: last.tail,
@@ -424,7 +517,9 @@ export async function mergeDictionaryWords(
     // A single grouped token whose lemma is a dictionary expression
     // (付いて来た → 付いて来る "to follow").
     const t = tokens[i];
-    if (t.lemmaSurface && t.lemmaSurface !== t.baseForm && t.lemmaSurface !== t.surface && t.surface.length > 2 && (await hasForm(t.lemmaSurface))) {
+    // (Not the word's own kana lemma: いいました → いう would drop Sudachi's
+    // 言う and pick the kana homograph 結う "to do up hair".)
+    if (t.lemmaSurface && t.lemmaSurface !== t.baseForm && t.lemmaSurface !== t.surface && !(t.lemmaSurface === t.dictionaryForm && !KANJI.test(t.lemmaSurface)) && t.surface.length > 2 && (await hasForm(t.lemmaSurface))) {
       out.push({ ...t, baseForm: t.lemmaSurface, pos: undefined, posDetail: undefined });
     } else {
       out.push(t);
@@ -443,8 +538,9 @@ export async function mergeDictionaryWords(
 export function markParenthesizedReadings(tokens: PositionedToken[], text: string): PositionedToken[] {
   const spans: { start: number; end: number; reading: string; of: string }[] = [];
   // The reading may keep katakana parts (ボイラー・タービンしゅにん…) but
-  // must contain hiragana, or it is just a katakana gloss.
-  const re = /([一-鿿々ヶ〆0-9０-９A-Za-zＡ-Ｚａ-ｚァ-ヴー・]+)[（(]([ぁ-ゖァ-ヴー・　 、]*[ぁ-ゖ][ぁ-ゖァ-ヴー・　 、]*)[）)]/g;
+  // must contain hiragana, or it is just a katakana gloss. Encyclopedic
+  // leads continue after a comma: （こうしゅう…こうし、中国名：…）.
+  const re = /([一-鿿々ヶ〆0-9０-９A-Za-zＡ-Ｚａ-ｚァ-ヴー・]+)[（(]([ぁ-ゖァ-ヴー・　 、]*[ぁ-ゖ][ぁ-ゖァ-ヴー・　 、]*)(?=[）)]|、[^ぁ-ゖ]{2})/g;
   for (let m; (m = re.exec(text)); ) {
     const start = m.index + m[1].length + 1;
     spans.push({ start, end: start + m[2].length, reading: m[2].replace(/[\s　、・]/g, ''), of: m[1] });

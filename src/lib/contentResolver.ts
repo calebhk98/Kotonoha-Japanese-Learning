@@ -23,7 +23,7 @@ import type { WordResolver } from './wordResolver.js';
 import { getGrammarDefinition, getContextualGrammarLabel } from './extraction-helpers.js';
 import { getMorphemeDefinition } from './morphemeDefinitions.js';
 import { getWordScoreBreakdown } from './scoring.js';
-import { mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, markGlossaryTerms, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
+import { atClauseStart, counterReading, numberValue, mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, markGlossaryTerms, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
 import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 
@@ -87,7 +87,8 @@ export async function resolveContent(
     (s) => wordResolver.hasForm(s),
     (s) => wordResolver.isKanaHeadword(s),
     (s) => getMorphemeDefinition(s) !== undefined,
-    (s) => wordResolver.isConjunctionOnly(s)
+    (s) => wordResolver.isConjunctionOnly(s),
+    (s) => wordResolver.headwordPos(s)
   );
 
   interface WorkToken extends ResolvedToken {
@@ -99,6 +100,8 @@ export async function resolveContent(
     dictionaryForm?: string;
     idiom?: { expression: string; gloss: string };
     posDetail?: string[];
+    /** Sound-changed counter reading (20分 → ぷん), kept over the resolver's. */
+    counterReading?: string;
   }
   const tokens: WorkToken[] = [];
 
@@ -119,9 +122,34 @@ export async function resolveContent(
     const interjection = interjectionPos(text, t);
     if (interjection) t = { ...t, pos: interjection, baseForm: surface };
     const isJapanese = surface.trim() !== '' && !profile.script.isPunctuation(surface);
+    // Sudachi tags で/が after a Latin-script name or a parenthesised reading
+    // (DJIで, NHKが, 影法師（かげぼうし）が) as the sentence-opening
+    // conjunction; mid-clause it is the particle.
+    if ((surface === 'で' || surface === 'が') && t.posDetail?.[0] === '接続詞' && !atClauseStart(text, t.startIndex)) {
+      t = { ...t, pos: '助詞', posDetail: ['助詞', '格助詞'] };
+    }
+    // Counter reading after a number: 20分 じゅっぷん, 3本 さんぼん.
+    if (prev && prev.posDetail?.[1] === '数詞' && prev.endIndex === t.startIndex) {
+      const r = counterReading(numberValue(prev.surface), surface);
+      if (r) t = { ...t, reading: r, counterReading: r };
+    }
+    // AといったB "B such as A": kana いった is 言う, not 結う "do up hair".
+    if (surface === 'いった' && prev?.surface === 'と' && prev.endIndex === t.startIndex && merged[i + 1]?.posDetail?.[0] === '名詞') {
+      t = { ...t, baseForm: '言う', fixed: { meaning: 'such as, like (AといったB "B such as A")', reading: 'いった' } };
+    }
+    // もの right after an amount is emphatic も + の: 88.5㎜もの大雨
+    // "as much as 88.5 mm of rain".
+    if (surface === 'もの' && prev && prev.endIndex === t.startIndex &&
+      (prev.posDetail?.[1] === '数詞' || prev.posDetail?.includes('助数詞') || /[0-9０-９㎜㎝㎞㎏㎡℃%％]$/.test(prev.surface))) {
+      t = { ...t, fixed: { meaning: 'as many as, as much as (emphasis after an amount: 10人もの "as many as ten people")' } };
+    }
     // POS-aware label first (な after 好き is the copula, not the
     // sentence-final particle); null = a content word here (もの "thing").
-    const contextual = getContextualGrammarLabel(surface, t.posDetail, t.baseForm);
+    let contextual = getContextualGrammarLabel(surface, t.posDetail, t.baseForm);
+    // Volitional + と + する: "try to" (しようとする, 救おうとした).
+    if (surface === 'と' && (/^(う|よう)$/.test(prev?.surface ?? '') || prev?.posDetail?.some((p) => p.startsWith('意志推量形'))) && merged[i + 1]?.baseForm === '為る') {
+      contextual = 'trying to / about to (〜ようとする "try to do")';
+    }
     // UniDic reads standalone 他 as た; ほか is the everyday reading except
     // in その他 (そのた).
     if (surface === '他' && t.reading === 'た' && merged[i - 1]?.surface !== 'その') {
@@ -186,6 +214,7 @@ export async function resolveContent(
       dictionaryForm: t.dictionaryForm,
       posDetail: t.posDetail,
       fixed: t.fixed,
+      counterReading: t.counterReading,
     });
   });
 
@@ -293,7 +322,7 @@ export async function resolveContent(
               placeName: token.posDetail?.[1] === '固有名詞' && token.posDetail?.[2] === '地名',
               nameType: token.posDetail?.[1] === '固有名詞' && ['人名', '地名', '組織'].includes(token.posDetail?.[2] ?? ''),
             });
-          const info: any = { word: token.surface, reading, meaning, jlpt, joyo, score, breakdown };
+          const info: any = { word: token.surface, reading: token.counterReading ?? reading, meaning, jlpt, joyo, score, breakdown };
           if (meanings) info.meanings = meanings;
           if (token.pos) info.pos = token.pos;
           words[i] = info;

@@ -110,6 +110,9 @@ export function getContextualGrammarLabel(
   if (p0 === '動詞' && baseForm === '為る') return 'form of する "to do" (された "was done", しない "doesn\'t")';
   // い of ていない, あっ of あった: the verb いる/ある, not the kana-table
   // fragment labels ("Adjective ending").
+  if (p0 === '動詞' && baseForm === '有る' && posDetail.some((p) => p.startsWith('仮定形'))) {
+    return 'conditional of ある: "if there is" (あれば)';
+  }
   if (p0 === '動詞' && (baseForm === '居る' || baseForm === '有る')) {
     return getMorphemeDefinition(baseForm === '居る' ? 'いる' : 'ある');
   }
@@ -131,10 +134,11 @@ export function getContextualGrammarLabel(
     case 'と':
       if (p1 === '接続助詞') return 'conditional: "when / whenever / if" (〜と)';
       if (p1 === '並立助詞') return 'and (complete list: AとB)';
-      if (p1 === '格助詞') return 'quotation marker ("..." と言う) / with / and';
+      if (p1 === '格助詞') return 'quotation marker ("..." と言う) / with / and; as, into (〜とする "treat as", 〜となる "become")';
       break;
     case 'が':
       if (p1 === '接続助詞') return 'but / and (joins two clauses)';
+      if (p0 === '接続詞') return 'but, however (が at the start of a sentence)';
       break;
     case 'の':
       // Sudachi also tags some possessive の (衣の色) as 準体助詞.
