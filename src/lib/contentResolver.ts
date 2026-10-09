@@ -420,13 +420,28 @@ export function buildStoryResponse(resolved: ResolvedContent): any[] {
  * as the extraction paths which never emitted those).
  */
 export function buildWordsResponse(resolved: ResolvedContent): any[] {
-  // One vocab entry per surface (first context wins); the per-context
-  // variants only matter to the reader's token popups.
-  const seen = new Set<string>();
-  return resolved.words.filter((w) => {
-    if (w.isMorpheme && w.meaning === 'Kana particle / expression') return false;
-    if (seen.has(w.word)) return false;
-    seen.add(w.word);
-    return true;
+  // One vocab row per (word, meaning) the text actually uses: 方 "person"
+  // and 方 "direction" are two rows, while one meaning resolved in several
+  // contexts is one row. Each row counts the tokens showing that meaning.
+  const tokensPerWord = new Map<number, number>();
+  for (const t of resolved.tokens) {
+    if (t.wordIndex !== undefined) tokensPerWord.set(t.wordIndex, (tokensPerWord.get(t.wordIndex) ?? 0) + 1);
+  }
+  const rows = new Map<string, any>();
+  resolved.words.forEach((w, i) => {
+    if (w.isMorpheme && w.meaning === 'Kana particle / expression') return;
+    // Grammar morphemes are one row (their label variants describe one
+    // particle, not separate words to study); content words compare on the
+    // headline gloss, ignoring the "(also: …)" / "— or: …" tails.
+    const headline = String(w.meaning ?? '').split(/ \(also: | — or: /)[0];
+    const key = w.isMorpheme ? w.word : `${w.word}\u0000${headline}`;
+    const n = tokensPerWord.get(i) ?? 0;
+    // An entry no token shows (its token was re-resolved by the argument
+    // pass) is not a meaning the text uses.
+    if (n === 0 && tokensPerWord.size > 0) return;
+    const row = rows.get(key);
+    if (row) row.frequencyInContent += n;
+    else rows.set(key, { ...w, frequencyInContent: n || (w.frequencyInContent ?? 1) });
   });
+  return [...rows.values()];
 }

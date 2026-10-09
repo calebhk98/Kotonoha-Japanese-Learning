@@ -519,7 +519,12 @@ gaps: grade them with inspect-text, fix the PATTERN, re-grade.
 
 - **Per-context word entries** (`contentResolver.ts`): words are keyed by
   surface + base + POS + reading + context, so 方 (かた) and 方 (ほう) get
-  separate entries. `buildWordsResponse` still collapses to one per surface.
+  separate entries. `buildWordsResponse` (the vocab summary) keeps one row
+  per (word, headline gloss) that some token actually shows, with
+  `frequencyInContent` counted per meaning; grammar morphemes stay one row
+  per word. Across the corpus that is +1.4% rows (人 person / counter,
+  そう thus / seeming, また again / and). `knownWords` is still keyed by
+  surface, so marking one meaning known marks both.
 - **Sense selection** (`selectSenses` in dictionary.ts): JMDict senses are
   filtered by `appliesToKanji/Kana`, the contextual reading and POS, then
   ordered by grammatical context: senses whose `info` note says "after the
