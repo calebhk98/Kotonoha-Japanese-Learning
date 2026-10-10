@@ -36,6 +36,8 @@ export interface ContextSentenceOut {
 }
 export interface ContextModel {
   enrich(sentences: ContextSentenceIn[]): Promise<ContextSentenceOut[]>;
+  /** Translations alone (cached by the helper, so enrich reuses them). */
+  translate?(sentences: string[]): Promise<(string | null)[]>;
 }
 
 export const SENSE_MARGIN = 0.12;

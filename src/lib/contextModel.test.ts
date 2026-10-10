@@ -97,4 +97,19 @@ describe('resolveContent with a context model', { timeout: 30000 }, () => {
     expect(r.sentences).toBeUndefined();
     expect(r.words[r.tokens[0].wordIndex].meaning).toBe('cat, feline');
   });
+  it('recognises a split katakana name from the translations (ゾル|タン → Zoltan)', async () => {
+    const text = 'ゾルタンに来た。';
+    const tokens = [
+      { surface: 'ゾル', baseForm: 'ゾル', pos: '名詞', reading: 'ぞる', posDetail: ['名詞', '普通名詞', '一般'] },
+      { surface: 'タン', baseForm: 'タン', pos: '名詞', reading: 'たん', posDetail: ['名詞', '普通名詞', '一般'] },
+      { surface: 'に', baseForm: 'に', pos: '助詞', reading: 'に', posDetail: ['助詞', '格助詞'] },
+      { surface: '来た', baseForm: '来る', pos: '動詞', reading: 'きた', posDetail: ['動詞', '一般'] },
+      { surface: '。', baseForm: '。' },
+    ];
+    const ctx = { ...fakeContext([[]]), translate: async (texts: string[]) => texts.map(() => 'We came to Zoltan.') };
+    const r = await resolveContent(text, makeTokenizer(tokens), new WordResolver(dict), undefined, undefined, ctx);
+    expect(r.tokens[0].surface).toBe('ゾルタン');
+    expect(r.words[r.tokens[0].wordIndex!].meaning).toBe('Zoltan (name)');
+  });
 });
+
