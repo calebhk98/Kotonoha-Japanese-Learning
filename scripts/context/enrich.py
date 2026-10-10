@@ -80,6 +80,9 @@ class Enricher:
         # Trained sense scorer (sense_scorer.py); optional: without its
         # model files the helper answers exactly as before (no "probs").
         try:
+            # The helper runs under `python -I`, which leaves this script's
+            # own folder off sys.path; add it for the sibling module only.
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
             from sense_scorer import SenseScorer
             self.scorer = SenseScorer()
         except Exception as e:  # missing weights / e5 model

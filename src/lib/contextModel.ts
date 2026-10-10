@@ -117,7 +117,16 @@ export class PythonContextModel implements ContextModel {
     const script = path.join(root, 'scripts', 'context', 'enrich.py');
     if (process.env.KOTONOHA_CONTEXT === 'off' || !fs.existsSync(python) || !fs.existsSync(script)) return null;
     const proc = spawn(python, ['-I', script], { stdio: ['pipe', 'pipe', 'pipe'] });
-    proc.stderr.on('data', () => {}); // model-loading chatter
+    // Model-loading chatter is dropped, but the helper's own warnings
+    // (e.g. the trained sense scorer failing to load) are shown once.
+    let warned = false;
+    proc.stderr.on('data', (d: Buffer) => {
+      const m = /\{"warning": "([^"]*)"\}/.exec(d.toString());
+      if (m && !warned) {
+        warned = true;
+        console.warn(`[context] ${m[1]}`);
+      }
+    });
     const lines = readline.createInterface({ input: proc.stdout })[Symbol.asyncIterator]();
     const first = await lines.next();
     if (first.done || !JSON.parse(first.value).ready) {
