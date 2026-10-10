@@ -192,3 +192,18 @@ describe('sentence-level kana patterns (100-item review)', () => {
     expect(mergeFixedExpressions(lay(t4, [['たべ', ['動詞']], ['て', P('接続助詞')], ['を', P('格助詞')]]), t4)[1].fixed).toBeUndefined();
   });
 });
+
+describe('merged headword must fit the pieces\' readings (100-item review)', () => {
+  it('外|に read そと+に is "outside", not the headword 外に (ほかに "else")', async () => {
+    const text = '外に出た';
+    const toks = lay(text, [['外', N], ['に', ['助詞', '格助詞']], ['出た', ['動詞']]]);
+    toks[0].reading = 'そと';
+    const has = async (s: string) => s === '外に';
+    const readings = async (s: string) => new Set(s === '外に' ? ['ほかに'] : []);
+    const out = await mergeDictionaryWords(toks, text, has, none, () => false, none, async () => new Set(['adv']), async () => new Set(), readings);
+    expect(out.map((t) => t.surface)).toEqual(['外', 'に', '出た']);
+    toks[0].reading = 'ほか';
+    const out2 = await mergeDictionaryWords(toks, text, has, none, () => false, none, async () => new Set(['adv']), async () => new Set(), readings);
+    expect(out2[0].surface).toBe('外に');
+  });
+});
