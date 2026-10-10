@@ -58,6 +58,38 @@ const EMPTY_BREAKDOWN = {
 };
 
 /**
+ * Furigana in parentheses after kanji (行（い）きました, 猫（ねこ）が): the text
+ * without it, and for each stripped index its index in the original (one
+ * extra entry for the end). Null when there is none. A parenthesised kana
+ * run counts as furigana when it could be a reading of the kanji before it
+ * (at most 5 kana per kanji).
+ */
+export function stripFurigana(text: string): { stripped: string; map: number[] } | null {
+  const re = /([一-鿿々ヶ〆]+)[（(]([ぁ-ゖ]+)[）)]/g;
+  const cuts: [number, number][] = [];
+  for (let m; (m = re.exec(text)); ) {
+    if (m[2].length > m[1].length * 5) continue;
+    const open = m.index + m[1].length;
+    cuts.push([open, open + m[2].length + 2]);
+  }
+  if (cuts.length === 0) return null;
+  let stripped = '';
+  const map: number[] = [];
+  let k = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (k < cuts.length && i === cuts[k][0]) {
+      i = cuts[k][1] - 1;
+      k++;
+      continue;
+    }
+    stripped += text[i];
+    map.push(i);
+  }
+  map.push(text.length);
+  return { stripped, map };
+}
+
+/**
  * Resolve a content item's full text into reader tokens + vocab words.
  * Mirrors the classification rules used by the extraction paths:
  *   - grammar morphemes (incl. conjugated aux surfaces via base form) get
@@ -73,6 +105,25 @@ export async function resolveContent(
   profile: LanguageDisplayProfile = getDisplayProfile(),
   context?: ContextModel
 ): Promise<ResolvedContent> {
+  // Furigana written into the text (行（い）きました, 猫（ねこ）が): resolve the
+  // text without it, then map positions back. Graded on 100 random corpus
+  // items, 70 of which carry furigana: 行 alone read as the name "Kō" and
+  // きました as "came".
+  const ruby = stripFurigana(text);
+  if (ruby) {
+    const r = await resolveContent(ruby.stripped, tokenizer, wordResolver, lookupCache, profile, context);
+    const start = (i: number) => ruby.map[i];
+    const end = (i: number) => (i > 0 ? ruby.map[i - 1] + 1 : 0);
+    return {
+      ...r,
+      ...(r.sentences ? { sentences: r.sentences.map((x) => ({ ...x, start: start(x.start), end: end(x.end) })) } : {}),
+      tokens: r.tokens.map((t) => {
+        const startIndex = start(t.startIndex);
+        const endIndex = end(t.endIndex);
+        return { ...t, startIndex, endIndex, surface: text.slice(startIndex, endIndex) };
+      }),
+    };
+  }
   const tokenInfos = await tokenizer.segment(text);
 
   // ---- position mapping

@@ -47,7 +47,7 @@ import path from 'path';
 import { createTokenizer, type RawMorpheme } from '../src/lib/tokenizers.js';
 import { DictionaryManager } from '../src/lib/dictionary.js';
 import { WordResolver, NON_CONJUGATING_POS } from '../src/lib/wordResolver.js';
-import { resolveContent } from '../src/lib/contentResolver.js';
+import { resolveContent, stripFurigana } from '../src/lib/contentResolver.js';
 import { listContentEntries, loadResolvedContent } from '../src/lib/storyLoader.js';
 import { ImportStore } from '../src/lib/importStore.js';
 import { PythonContextModel } from '../src/lib/contextModel.js';
@@ -191,14 +191,20 @@ async function inspect(
   resolver: WordResolver
 ): Promise<any[]> {
   const cache = new Map<string, any>();
-  const raw = morphemeSpans(text, tokenizer.rawMorphemes(text, 'C'));
+  // Furigana in the text is stripped before tokenizing (as resolveContent
+  // does); positions are mapped back onto the original text.
+  const ruby = stripFurigana(text);
+  const base = ruby?.stripped ?? text;
+  const toOrig = (i: number) => (ruby && i >= 0 ? ruby.map[i] : i);
+  const raw = morphemeSpans(base, tokenizer.rawMorphemes(base, 'C')).map((m) => ({ ...m, start: toOrig(m.start) }));
   // Grouped tokenizer output for the whole text, positioned (before
   // contentResolver's merges), to compare with tokenizing a sentence alone.
   let pos = 0;
-  const wholeSeg = (await tokenizer.segment(text)).map((t: any) => {
-    const start = text.indexOf(t.surface, pos);
+  const wholeSeg = (await tokenizer.segment(base)).map((t: any) => {
+    const start = base.indexOf(t.surface, pos);
     if (start >= 0) pos = start + t.surface.length;
-    return { surface: t.surface, start };
+    const end = start >= 0 ? start + t.surface.length : -1;
+    return { surface: ruby && start >= 0 ? text.slice(toOrig(start), ruby.map[end - 1] + 1) : t.surface, bare: t.surface, start: toOrig(start) };
   });
   const rawAt = new Map(raw.map((m) => [m.start, m]));
 
@@ -226,10 +232,10 @@ async function inspect(
     const crossing = tokens.filter((t) => t.endIndex > s.end).map((t) => t.surface);
 
     // Same sentence tokenized on its own.
-    const alone = (await tokenizer.segment(s.text)).map((t: any) => t.surface).join('|');
+    const alone = (await tokenizer.segment(stripFurigana(s.text)?.stripped ?? s.text)).map((t: any) => t.surface).join('|');
     const inContext = wholeSeg
       .filter((t: any) => t.start >= s.start && t.start < s.end)
-      .map((t: any) => t.surface)
+      .map((t: any) => t.bare)
       .join('|');
 
     const rows = [];
