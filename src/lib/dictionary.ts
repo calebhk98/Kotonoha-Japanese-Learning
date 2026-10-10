@@ -579,20 +579,26 @@ function buildHeadline(sorted: { sense: any; commonness: number }[], langs: stri
   const usable = sorted.filter(({ sense }) => getGlosses(sense, langs).length > 0);
   if (usable.length === 0) return undefined;
   const first = getGlosses(usable[0].sense, langs).slice(0, 2).join(', ');
-  const second = usable[1];
-  // A second sense is only worth showing when it is everyday Japanese: not
+  // An extra sense is only worth showing when it is everyday Japanese: not
   // historical/rare/slang/abbreviation and not a specialist field (大学's
   // "former imperial university (ritsuryō system)" is noise).
   const niche = (sn: any) =>
     (sn.field ?? []).length > 0 ||
     (sn.misc ?? []).some((m: string) => ['hist', 'arch', 'obs', 'rare', 'sl', 'vulg', 'derog', 'abbr', 'dated', 'poet', 'X'].includes(m));
-  if (!second || second.commonness < 0 || niche(second.sense) || isContextBoundSense(second.sense) || first.length >= 40) return first;
-  const extra = getGlosses(second.sense, langs)[0];
-  if (!extra || first.includes(extra)) return first;
-  // Marked as secondary: graded on 120 corpus tokens, the extra sense was
-  // the right one 8 times where the first was wrong, and odd-but-harmless
-  // noise 19 times; "(also: …)" keeps the first sense visibly primary.
-  return `${first} (also: ${extra})`;
+  // Up to two more everyday senses as "(also: …; …)". Graded on the genre
+  // set, the right sense was sense 2 or 3 for ~43% of wrong-sense errors;
+  // an earlier one-extra version measured 8 rescued vs 19 odd-but-harmless
+  // on 120 tokens. "(also: …)" keeps the first sense visibly primary.
+  if (first.length >= 40) return first;
+  const extras: string[] = [];
+  for (const cand of usable.slice(1, 3)) {
+    if (cand.commonness < 0 || niche(cand.sense) || isContextBoundSense(cand.sense)) break;
+    const extra = getGlosses(cand.sense, langs)[0];
+    if (!extra || first.includes(extra) || extras.includes(extra)) continue;
+    if (first.length + extras.join('; ').length + extra.length > 70) break;
+    extras.push(extra);
+  }
+  return extras.length ? `${first} (also: ${extras.join('; ')})` : first;
 }
 
 // ==================== JMDict Wrapper Dictionary ====================
