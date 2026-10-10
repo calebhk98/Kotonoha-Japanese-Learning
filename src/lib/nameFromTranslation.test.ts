@@ -36,5 +36,7 @@ describe('names from translations', () => {
     expect(matchName('エラ', n)).toBe('Ella');
     expect(matchName('ロンドン', n)).toBe('London');
     expect(matchName('ドア', n)).toBeUndefined();
+    // Same consonants, different first vowel: ギルド "guild" is not "Guard".
+    expect(matchName('ギルド', ['Guard'])).toBeUndefined();
   });
 });

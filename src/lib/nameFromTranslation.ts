@@ -94,10 +94,50 @@ export function matchName(katakana: string, names: string[]): string | undefined
   const rs = skeleton(r);
   for (const name of names) {
     const ns = skeleton(name);
-    if (ns !== rs || loose(name)[0] !== loose(r)[0]) continue;
+    // The opening consonant + vowel must agree too: ギルド (gi-) is not
+    // "Guard" (gu-) even though g-r-d lines up.
+    const open = (s: string) => loose(s).match(/^[^aeiou]*[aeiou]/)?.[0];
+    if (ns !== rs || open(name) !== open(r)) continue;
     // Two or more consonants must line up; a one-consonant name (Ella)
     // needs the whole loose spelling to match.
     if (rs.length >= 2 || loose(name) === loose(r)) return name;
   }
   return undefined;
+}
+
+/**
+ * Joins adjacent katakana tokens (up to 4, longest first) that spell one of
+ * the translated names into a single proper-noun token glossed as that name.
+ * A single katakana token can match too (レッド "Red", エラ "Ella").
+ */
+export function nameKatakanaRuns<T extends { surface: string; startIndex: number; endIndex: number }>(tokens: T[], names: string[]): T[] {
+  const KATA = /^[ァ-ヴー]+$/;
+  const out: T[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    let done = false;
+    for (let n = 4; n >= 1 && !done; n--) {
+      const run = tokens.slice(i, i + n);
+      if (run.length < n || !run.every((t, k) => KATA.test(t.surface) && (k === 0 || run[k - 1].endIndex === t.startIndex))) continue;
+      const surface = run.map((t) => t.surface).join('');
+      const name = matchName(surface, names);
+      if (!name) continue;
+      const reading = surface.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+      out.push({
+        ...run[0],
+        surface,
+        baseForm: surface,
+        dictionaryForm: surface,
+        lemmaSurface: surface,
+        pos: '名詞',
+        posDetail: ['名詞', '固有名詞', '人名', '一般'],
+        reading,
+        endIndex: run[run.length - 1].endIndex,
+        fixed: { meaning: `${name} (name)`, reading },
+      } as T);
+      i += n - 1;
+      done = true;
+    }
+    if (!done) out.push(tokens[i]);
+  }
+  return out;
 }

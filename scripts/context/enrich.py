@@ -73,8 +73,19 @@ class Enricher:
         self.tok = AutoTokenizer.from_pretrained(MT_MODEL)
         self.mt = AutoModelForSeq2SeqLM.from_pretrained(MT_MODEL, attn_implementation="eager").eval()
         self.embed = SentenceTransformer(EMBED_MODEL)
+        self.cache = {}
 
     def translate(self, text):
+        # Cached: a text is translated once even when asked twice (the
+        # pipeline asks for translations first, then for sense evidence).
+        if text in self.cache:
+            return self.cache[text]
+        if len(self.cache) > 20000:
+            self.cache.clear()
+        self.cache[text] = self._translate(text)
+        return self.cache[text]
+
+    def _translate(self, text):
         enc = self.tok(text, return_tensors="pt", truncation=True, max_length=256)
         with torch.no_grad():
             out = self.mt.generate(**enc, num_beams=1, do_sample=False, max_new_tokens=200)
@@ -111,10 +122,10 @@ class Enricher:
         out = []
         for s in request.get("sentences", []):
             cands = s.get("candidates", [])
-            if not cands:
-                out.append({"translation": None, "candidates": []})
-                continue
             tr = self.translate(s["text"])
+            if not cands:
+                out.append({"translation": tr["text"], "candidates": []})
+                continue
             aligned = [self.aligned(tr, s["text"], c["start"], c["end"]) for c in cands]
             queries = self.embed.encode([" ".join(a) or tr["text"] for a in aligned], normalize_embeddings=True)
             glosses = [", ".join(g[:4]) for c in cands for g in c["senses"]]

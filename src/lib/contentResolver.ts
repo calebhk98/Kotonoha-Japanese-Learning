@@ -28,6 +28,7 @@ import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 import { chooseSense, type ContextModel, type ContextSentenceIn } from './contextModel.js';
 import { splitSentences } from './sentenceSplitter.js';
+import { namesInTranslations, nameKatakanaRuns } from './nameFromTranslation.js';
 
 export const RESOLVED_FORMAT_VERSION = 1;
 
@@ -86,7 +87,7 @@ export async function resolveContent(
 
   // ---- sentence context: re-join split expressions, then classify each
   // token with what its neighbour says about it (see tokenContext.ts).
-  const merged = await mergeDictionaryWords(
+  let merged = await mergeDictionaryWords(
     mergeFixedExpressions(markGlossaryTerms(markParenthesizedReadings(positioned, text), text), text),
     text,
     (s) => wordResolver.hasForm(s),
@@ -95,6 +96,14 @@ export async function resolveContent(
     (s) => wordResolver.isConjunctionOnly(s),
     (s) => wordResolver.headwordPos(s)
   );
+
+  // Katakana names the translation spells as English names (ゾル|タン →
+  // "Zoltan", レッド "Red" not "red"): one proper-noun token each.
+  if (context?.translate) {
+    const spans = splitSentences(text);
+    const names = namesInTranslations(await context.translate(spans.map((s) => text.slice(s.start, s.end))));
+    if (names.length > 0) merged = nameKatakanaRuns(merged, names);
+  }
 
   interface WorkToken extends ResolvedToken {
     baseForm: string;
@@ -137,6 +146,16 @@ export async function resolveContent(
     if (prev && prev.posDetail?.[1] === '数詞' && prev.endIndex === t.startIndex) {
       const r = counterReading(numberValue(prev.surface), surface);
       if (r) t = { ...t, reading: r, counterReading: r };
+    }
+    // Noun + 共: the plural suffix ども (猿共 "the monkeys", 狼共), which
+    // UniDic reads とも "together with".
+    if (surface === '共' && prev && prev.endIndex === t.startIndex && prev.posDetail?.[0] === '名詞' && prev.posDetail?.[1] !== '数詞') {
+      t = { ...t, reading: 'ども', fixed: { meaning: 'plural suffix (often humble or scornful: 猿共 "the monkeys")', reading: 'ども' } };
+    }
+    // 都 on its own is みやこ "the capital" (都へ上る); UniDic reads と as
+    // in 東京都, which only applies right after a place name.
+    if (surface === '都' && t.reading === 'と' && !(prev && prev.endIndex === t.startIndex && prev.posDetail?.[2] === '地名')) {
+      t = { ...t, reading: 'みやこ' };
     }
     // NにVなれる: the potential of なる "can become", not 慣れる.
     if (/^なれ/.test(surface) && /^(慣れる|なれる|成れる)$/.test(t.baseForm) && prev && prev.endIndex === t.startIndex && /^[にと]$/.test(prev.surface)) {

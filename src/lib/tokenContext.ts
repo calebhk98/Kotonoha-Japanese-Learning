@@ -136,6 +136,16 @@ const pos0 = (t: PositionedToken) => t.posDetail?.[0] ?? t.pos;
 const pos1 = (t: PositionedToken) => t.posDetail?.[1];
 
 const MERGE_RULES: MergeRule[] = [
+  // Clause-initial ところ|が、 "however" and で|も、 "but": conjunctions, not
+  // noun + subject marker / particle + also. (家でも、 stays two particles:
+  // not at a clause start.)
+  {
+    length: 2,
+    match: ([a, b], text) =>
+      ((a.surface === 'ところ' && b.surface === 'が') || (a.surface === 'で' && b.surface === 'も')) &&
+      atClauseStart(text, a.startIndex) && /^[、，,]/.test(text.slice(b.endIndex)),
+    pos: '接続詞',
+  },
   // 〜ておくれ "please do (for me)": Sudachi reads お as the 御 prefix.
   {
     length: 2,
@@ -267,6 +277,20 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
     } else {
       tokens.push(t);
     }
+  }
+  // Two adjacent rising digits are an approximate range, not one number:
+  // 七八ツ "seven or eight", 十二三人 "twelve or thirteen people".
+  for (const [k, t] of tokens.entries()) {
+    const m = /^(十)?([一二三四五六七八九])([一二三四五六七八九])$/.exec(t.surface);
+    if (!m || pos1(t) !== '数詞') continue;
+    const [d1, d2] = [KANJI_DIGIT[m[2]], KANJI_DIGIT[m[3]]];
+    if (d2 !== d1 + 1) continue;
+    const base = m[1] ? 10 : 0;
+    tokens[k] = {
+      ...t,
+      reading: (m[1] ? 'じゅう' : '') + numberReading(d1) + numberReading(d2),
+      fixed: { meaning: `${base + d1} or ${base + d2} (approximate number)` },
+    };
   }
   const out: PositionedToken[] = [];
   let i = 0;
@@ -519,6 +543,9 @@ export async function mergeDictionaryWords(
       // …で before は is the copula of では (ものではない "is not a thing
       // that"; のでは "isn't it that"), not もので / ので "because".
       if (span[span.length - 1].surface === 'で' && touchesAfter && after.surface === 'は') continue;
+      // Noun + 共 is the plural suffix ども (猿共 "the monkeys"); 猿|共|に is
+      // "to the monkeys", not 共に "together".
+      if (span[0].surface === '共' && before && before.endIndex === span[0].startIndex && pos0(before) === '名詞') continue;
       // 止める|間|も|なく after a verb is "without time to stop", not
       // 間もなく "soon".
       if (span[0].surface === '間' && before && before.endIndex === span[0].startIndex && ['動詞', '助動詞'].includes(pos0(before) ?? '')) continue;

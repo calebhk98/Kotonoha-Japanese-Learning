@@ -120,6 +120,10 @@ export class PythonContextModel implements ContextModel {
     return run;
   }
 
+  translate(sentences: string[]): Promise<(string | null)[]> {
+    return this.enrich(sentences.map((text) => ({ text, candidates: [] }))).then((r) => r.map((s) => s.translation));
+  }
+
   close(): void {
     this.proc.stdin.end();
     this.proc.kill();
