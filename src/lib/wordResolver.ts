@@ -196,17 +196,44 @@ export class WordResolver {
     return out;
   }
 
+  /**
+   * Parts of speech of the common words normally written in kanji whose
+   * common kana reading is exactly `text` (じてんしゃ → 自転車 {n}); empty
+   * when there are none. For re-joining kana pieces Sudachi fragmented.
+   */
+  async commonKanaWord(text: string): Promise<Set<string>> {
+    const cands = this.dictionary?.candidates ? await this.dictionary.candidates(text) : [];
+    const out = new Set<string>();
+    for (const { entry } of cands) {
+      if (!(entry.kana ?? []).some((k: any) => k.text === text && k.common)) continue;
+      if (!(entry.kanji ?? []).some((k: any) => k.common)) continue;
+      for (const sn of entry.sense ?? []) for (const p of sn.partOfSpeech ?? []) out.add(p);
+    }
+    return out;
+  }
+
   /** See DictionaryManager.isKanaHeadword. */
   isKanaHeadword(text: string): Promise<boolean> {
     return this.dictionary?.isKanaHeadword ? this.dictionary.isKanaHeadword(text) : Promise.resolve(false);
   }
 
-  async expression(text: string, after?: string): Promise<{ reading: string; gloss: string } | null> {
+  async expression(text: string, after?: string, utterance?: boolean): Promise<{ reading: string; gloss: string } | null> {
     if (!this.dictionary?.candidates) return null;
     const cands = await this.dictionary.candidates(text);
+    const english = (s: any) => (s.gloss ?? []).some((g: any) => g.lang === 'eng');
+    // Said on its own, a word's interjection sense is the one meant
+    // (「ただいま！」 "I'm home", ごめんね "sorry"), wherever JMDict lists it.
+    if (utterance && !after) {
+      for (const c of cands) {
+        const sense = (c.entry.sense ?? []).find((s: any) => english(s) && (s.partOfSpeech ?? []).includes('int'));
+        if (sense && (c.entry.kana ?? []).some((k: any) => k.text === text)) {
+          const glosses = sense.gloss.filter((g: any) => g.lang === 'eng').map((g: any) => g.text);
+          return { reading: text, gloss: glosses.slice(0, 2).join(', ') };
+        }
+      }
+    }
     const hit = cands.find((c) => (c.entry.sense ?? []).some((s: any) => (s.partOfSpeech ?? []).includes('exp')));
     if (!hit) return null;
-    const english = (s: any) => (s.gloss ?? []).some((g: any) => g.lang === 'eng');
     // With a grammatical context, only a sense noted for it will do
     // (ください after a te-form: "please (do for me)").
     const sense = after
@@ -246,6 +273,8 @@ export class WordResolver {
       /** Proper noun of a name subtype (人名/地名/組織). */
       nameType?: boolean;
       placeName?: boolean;
+      /** The token is a whole utterance (「ただいま！」, ごめんね。). */
+      utterance?: boolean;
     }
   ): Promise<WordResolution> {
     // Curated corrections for UniDic's known-bad standalone readings (米→べい).
@@ -327,8 +356,12 @@ export class WordResolver {
     // (〜てください = "please (do for me)").
     // With a context, kanji surfaces qualify too (贈って下さい): only a sense
     // noted for that context is accepted, so this can't over-match.
-    if (this.dictionary && wordStr !== baseForm && (/^[ぁ-んー]+$/.test(wordStr) || ctx?.after)) {
-      const phrase = await this.expression(wordStr, ctx?.after);
+    // A noun only reads as its set phrase when it is the whole utterance:
+    // ほう in えきの ほうへ is 方 "direction", not the interjection "oh";
+    // 「ただいま！」 is "I'm home", ただいま mid-sentence "right now".
+    const phraseOk = pos !== '名詞' || !!ctx?.utterance;
+    if (this.dictionary && (wordStr !== baseForm || ctx?.utterance) && phraseOk && (/^[ぁ-んー]+$/.test(wordStr) || ctx?.after)) {
+      const phrase = await this.expression(wordStr, ctx?.after, ctx?.utterance);
       if (phrase) {
         const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, null);
         return { reading: tokenReading ?? phrase.reading, meaning: phrase.gloss, meanings: undefined, variant: null, entry: null, jlpt, joyo, score, breakdown };

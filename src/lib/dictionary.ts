@@ -1,4 +1,5 @@
 import { createRequire } from 'module';
+import kanjiData from 'kanji-data';
 
 export interface WordLookupResult {
   meaning: string;
@@ -426,6 +427,14 @@ export function getSenseCommonness(sense: any): number {
  * heavily weighting the common flag, those obscure entries win on kanji count
  * alone and the canonical meaning ("good") is lost.
  */
+function firstEnglishGloss(entry: any): string {
+  for (const sn of entry.sense ?? []) {
+    const g = (sn.gloss ?? []).find((x: any) => x.lang === 'eng' || x.lang === undefined);
+    if (g) return g.text ?? '';
+  }
+  return '';
+}
+
 export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint): number {
   const hasKanji = entry.kanji && entry.kanji.length > 0;
   const hasCommonKanji = hasKanji && entry.kanji.some((k: any) => k.common === true);
@@ -461,6 +470,10 @@ export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint)
   }
 
   if (entry.sense && entry.sense.length > 1) score += 2;
+
+  // Sudachi says proper noun: an entry whose first English gloss is a name
+  // (ふじ → 富士 "Mount Fuji", not 藤 "wisteria") is the one meant.
+  if (hint?.properNoun && /^[A-Z]/.test(firstEnglishGloss(entry))) score += 15;
 
   // Grammatical compatibility with the token: Sudachi knows おく in
   // おいていきなさい is a VERB, which rules out 奥 "inner part" and 億
@@ -519,11 +532,23 @@ export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint)
  * list of entries whose kanji or kana exactly match `word`.
  */
 export function pickBestEntry(exactMatches: any[], word: string, hint?: LookupHint): any {
+  const kana = /^[ぁ-んー]+$/.test(word);
   return exactMatches.reduce((best: any, current: any) => {
     const bestScore = getEntryCommonness(best, word, hint);
     const currentScore = getEntryCommonness(current, word, hint);
+    // An exact tie on a kana word (えき: 液 / 駅 / 益 all common nouns) went
+    // to index order. Text written in kana is beginner text, so the entry
+    // with easier kanji is the likelier one (駅, 越える over 肥える).
+    if (kana && currentScore === bestScore) return kanjiEase(current) > kanjiEase(best) ? current : best;
     return currentScore > bestScore ? current : best;
   });
+}
+
+/** Old JLPT level (4 = easiest) of the hardest kanji in the entry's first written form; 0 if none/unknown. */
+function kanjiEase(entry: any): number {
+  const text: string = entry.kanji?.[0]?.text ?? '';
+  const levels = [...text].filter((c) => /[一-鿿々]/.test(c)).map((c) => (kanjiData as any).get(c)?.jlpt ?? 0);
+  return levels.length ? Math.min(...levels) : 0;
 }
 
 /**

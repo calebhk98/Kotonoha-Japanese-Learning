@@ -416,11 +416,23 @@ export async function mergeDictionaryWords(
   isKanaHeadword: (s: string) => Promise<boolean>,
   isGrammar: (s: string) => boolean,
   isConjunctionOnly: (s: string) => Promise<boolean> = async () => false,
-  headwordPos: (s: string) => Promise<Set<string>> = async () => new Set()
+  headwordPos: (s: string) => Promise<Set<string>> = async () => new Set(),
+  commonKanaWord: (s: string) => Promise<Set<string>> = async () => new Set()
 ): Promise<PositionedToken[]> {
   const out: PositionedToken[] = [];
   let i = 0;
   while (i < tokens.length) {
+    // Kana words UniDic lacks in kana come out as pieces (じてん|しゃ,
+    // かいさ|つ, はっ|けん, お|かし; ある|こう for 歩こう). Graded on 100
+    // random corpus items: beginner texts write these words in kana.
+    {
+      const kana = await joinKanaFragment(tokens, i, commonKanaWord);
+      if (kana) {
+        out.push(kana.token);
+        i += kana.used;
+        continue;
+      }
+    }
     // Traditional given names: one kanji + a name suffix (紋|作, 冠|蔵,
     // 水|右衛門), optionally after a surname (吉田|冠|蔵). Sudachi tags the
     // suffix 接尾辞 and the head as a common noun ("crest", "cap").
@@ -651,6 +663,64 @@ export async function mergeDictionaryWords(
     i++;
   }
   return out;
+}
+
+const HIRAGANA = /^[ぁ-ゖー]+$/;
+/** Single kana that are particles/endings, never a stray word fragment. */
+const PARTICLE_KANA = new Set(['は', 'が', 'を', 'に', 'へ', 'と', 'で', 'も', 'の', 'や', 'か', 'ね', 'よ', 'な', 'わ', 'ぞ', 'さ', 'て', 'た', 'だ', 'し', 'ば', 'え', 'ん']);
+/** Volitional ending → dictionary ending of a godan verb (あるこう → あるく). */
+const VOLITIONAL: Record<string, [string, string]> = {
+  こう: ['く', 'v5k'], ごう: ['ぐ', 'v5g'], そう: ['す', 'v5s'], とう: ['つ', 'v5t'], のう: ['ぬ', 'v5n'],
+  ぼう: ['ぶ', 'v5b'], もう: ['む', 'v5m'], ろう: ['る', 'v5r'], おう: ['う', 'v5u'],
+};
+
+/**
+ * A run of 2-3 hiragana pieces that spells a common word normally written
+ * in kanji, where at least one piece is evidence of fragmentation: a
+ * suffix/prefix, a kana numeral, a "name", or a stray single kana that is
+ * not a particle. Two ordinary words side by side (or anything with a
+ * particle) are left alone, so と|なり never becomes 隣.
+ * Also re-joins a godan volitional split as 連体詞/副詞 (ある|こう → 歩こう).
+ */
+async function joinKanaFragment(
+  tokens: PositionedToken[],
+  i: number,
+  commonKanaWord: (s: string) => Promise<Set<string>>
+): Promise<{ token: PositionedToken; used: number } | null> {
+  for (let n = 3; n >= 2; n--) {
+    const span = tokens.slice(i, i + n);
+    if (span.length < n || !adjacent(span) || !span.every((t) => HIRAGANA.test(t.surface))) continue;
+    const surface = span.map((t) => t.surface).join('');
+    if (surface.length < 3) continue;
+    const base = {
+      surface,
+      reading: surface,
+      startIndex: span[0].startIndex,
+      endIndex: span[n - 1].endIndex,
+    };
+    // ある|こう: a volitional the pieces spell.
+    const vol = n === 2 ? VOLITIONAL[span[1].surface] : undefined;
+    if (vol && ['連体詞', '副詞', '名詞'].includes(pos0(span[0]) ?? '')) {
+      const dict = span[0].surface + vol[0];
+      if ((await commonKanaWord(dict)).has(vol[1])) {
+        return {
+          token: { ...base, baseForm: dict, pos: '動詞', posDetail: ['動詞', '一般', '五段', '意志推量形'], dictionaryForm: dict, lemmaSurface: dict },
+          used: 2,
+        };
+      }
+    }
+    const stray = (t: PositionedToken) => t.surface.length === 1 && !PARTICLE_KANA.has(t.surface);
+    const piece = (t: PositionedToken) => ['名詞', '接尾辞', '接頭辞'].includes(pos0(t) ?? '') || stray(t);
+    const evidence = (t: PositionedToken) => ['接尾辞', '接頭辞'].includes(pos0(t) ?? '') || ['数詞', '固有名詞'].includes(pos1(t) ?? '') || stray(t);
+    if (!span.every(piece) || !span.some(evidence)) continue;
+    const hp = await commonKanaWord(surface);
+    if (![...hp].some((p) => /^(n|adj-na|adj-no|adv)/.test(p))) continue;
+    return {
+      token: { ...base, baseForm: surface, pos: '名詞', posDetail: ['名詞', '普通名詞', '一般'], dictionaryForm: surface, lemmaSurface: surface },
+      used: n,
+    };
+  }
+  return null;
 }
 
 /**

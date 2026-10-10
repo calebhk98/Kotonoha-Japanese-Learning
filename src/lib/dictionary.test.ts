@@ -624,9 +624,9 @@ describe('homograph entry selection – kana searches prefer usually-kana entrie
     expect(pickBestEntry([counter, head], '頭', { pos: '名詞' }).id).toBe('1582310');
   });
 
-  it('kanji-primary entries still win kana searches when nothing marks the competitor', () => {
-    // あめ: 飴 vs 雨 — neither is uk, both common; selection stays stable
-    // (first in index order) rather than flipping on the new signals.
+  it('an exact kana tie (あめ: 飴 vs 雨, neither uk) goes to the easier kanji', () => {
+    // Both common, neither uk: once index order; now the easier kanji (雨,
+    // old JLPT 4) wins and the other stays visible as the "or:" alternative.
     const candy = {
       id: '1153520',
       kanji: [{ text: '飴', common: true }],
@@ -639,7 +639,7 @@ describe('homograph entry selection – kana searches prefer usually-kana entrie
       kana: [{ text: 'あめ', common: true }],
       sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
     };
-    expect(pickBestEntry([candy, rain], 'あめ', { pos: '名詞' }).id).toBe('1153520');
+    expect(pickBestEntry([candy, rain], 'あめ', { pos: '名詞' }).id).toBe('1171900');
   });
 });
 

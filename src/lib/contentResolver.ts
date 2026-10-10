@@ -94,7 +94,8 @@ export async function resolveContent(
     (s) => wordResolver.isKanaHeadword(s),
     (s) => getMorphemeDefinition(s) !== undefined,
     (s) => wordResolver.isConjunctionOnly(s),
-    (s) => wordResolver.headwordPos(s)
+    (s) => wordResolver.headwordPos(s),
+    (s) => wordResolver.commonKanaWord(s)
   );
 
   // Katakana names the translation spells as English names (ゾル|タン →
@@ -116,6 +117,8 @@ export async function resolveContent(
     posDetail?: string[];
     /** Sound-changed counter reading (20分 → ぷん), kept over the resolver's. */
     counterReading?: string;
+    /** The token is a whole utterance (「ただいま！」): set phrases apply. */
+    utterance?: boolean;
   }
   const tokens: WorkToken[] = [];
 
@@ -257,6 +260,17 @@ export async function resolveContent(
       posDetail: t.posDetail,
       fixed: t.fixed,
       counterReading: t.counterReading,
+      utterance: (() => {
+        // Only a kana noun reads differently on its own (ただいま, ごめん);
+        // other tokens keep one word entry wherever they stand.
+        if (t.posDetail?.[0] !== '名詞' || !/^[ぁ-んー]+$/.test(surface) || !atClauseStart(text, t.startIndex)) return false;
+        // Sentence-final particles may follow (ごめんね。).
+        let j = i + 1;
+        let end = t.endIndex;
+        while (merged[j] && merged[j].startIndex === end && merged[j].posDetail?.[1] === '終助詞') end = merged[j++].endIndex;
+        return /^[ 　]*([。！？!?」』\n～〜ー…]|$)/.test(text.slice(end));
+
+      })(),
     });
   });
 
@@ -306,7 +320,7 @@ export async function resolveContent(
   // inheriting the first one's resolution. buildWordsResponse still collapses
   // the vocab list to one entry per surface.
   const keyOf = (t: WorkToken) =>
-    [t.surface, t.baseForm, t.pos, t.reading, t.grammarLabel, t.context, t.dictionaryForm, t.idiom?.expression, t.fixed?.meaning].join('\u0000');
+    [t.surface, t.baseForm, t.pos, t.reading, t.grammarLabel, t.context, t.dictionaryForm, t.idiom?.expression, t.fixed?.meaning, t.utterance ? 'U' : ''].join('\u0000');
   const wordIndexByKey = new Map<string, number>();
   const argumentOverride = new Map<number, number>(); // token index → word index
   const frequency = new Map<string, number>();
@@ -363,6 +377,7 @@ export async function resolveContent(
               properNoun: token.posDetail?.[1] === '固有名詞',
               placeName: token.posDetail?.[1] === '固有名詞' && token.posDetail?.[2] === '地名',
               nameType: token.posDetail?.[1] === '固有名詞' && ['人名', '地名', '組織'].includes(token.posDetail?.[2] ?? ''),
+              utterance: token.utterance,
             });
           const info: any = { word: token.surface, reading: token.counterReading ?? reading, meaning, jlpt, joyo, score, breakdown };
           if (meanings) info.meanings = meanings;
@@ -510,7 +525,7 @@ export async function resolveContent(
     ...(sentences ? { sentences } : {}),
     words,
     tokens: tokens.map((t, idx) => {
-      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, fixed, ...rest } = t;
+      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, fixed, utterance, ...rest } = t;
       return {
         ...rest,
         // For the client, isVocabWord doubles as "hoverable": every Japanese
