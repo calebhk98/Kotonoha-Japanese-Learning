@@ -163,3 +163,32 @@ describe('kana words Sudachi fragments (100-item review)', () => {
     expect(out[0].pos).toBe('動詞');
   });
 });
+
+describe('sentence-level kana patterns (100-item review)', () => {
+  const P = (p1: string) => ['助詞', p1];
+  it('sentence-initial で|も is the conjunction "but", comma or not', () => {
+    const text = '「でも赤ぐみが強い」';
+    const out = mergeFixedExpressions(lay(text, [['で', P('格助詞')], ['も', P('係助詞')], ['赤', N]]), text);
+    expect(out[0].surface).toBe('でも');
+    expect(out[0].pos).toBe('接続詞');
+    const mid = '家でも本';
+    expect(mergeFixedExpressions(lay(mid, [['家', N], ['で', P('格助詞')], ['も', P('係助詞')], ['本', N]]), mid).map((t) => t.surface)).toEqual(['家', 'で', 'も', '本']);
+  });
+  it('〜てはいけない is "must not"', () => {
+    const text = 'はしってはいけない';
+    const out = mergeFixedExpressions(lay(text, [['はしって', ['動詞']], ['は', P('係助詞')], ['いけ', ['動詞']], ['ない', ['助動詞']]]), text);
+    expect(out.map((t) => t.surface)).toEqual(['はしって', 'は', 'いけない']);
+    expect(out[2].fixed?.meaning).toMatch(/must not/);
+  });
+  it('one-kana nouns: てを is 手 "hand", ももの き is 木 "tree", すずめのこ is 子 "child"', () => {
+    const t1 = 'てを あらう';
+    expect(mergeFixedExpressions(lay(t1, [['て', P('副助詞')], ['を', P('格助詞')], ['あらう', ['動詞']]]), t1)[0].fixed?.meaning).toMatch(/hand/);
+    const t2 = 'ももの きが';
+    expect(mergeFixedExpressions(lay(t2, [['もも', N], ['の', P('格助詞')], ['き', ['動詞']], ['が', P('格助詞')]]), t2)[2].fixed?.meaning).toMatch(/tree/);
+    const t3 = 'すずめのこ。';
+    expect(mergeFixedExpressions(lay(t3, [['すずめ', N], ['の', P('格助詞')], ['こ', N]]), t3)[2].fixed?.meaning).toMatch(/child/);
+    // て after a verb stays the te-form.
+    const t4 = 'たべてを';
+    expect(mergeFixedExpressions(lay(t4, [['たべ', ['動詞']], ['て', P('接続助詞')], ['を', P('格助詞')]]), t4)[1].fixed).toBeUndefined();
+  });
+});
