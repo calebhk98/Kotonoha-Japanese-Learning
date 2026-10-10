@@ -72,7 +72,11 @@ async function main() {
   console.log(context ? '[resolve-content] Translation context: on' : '[resolve-content] Translation context: OFF (npm run setup-context, or --no-context given)');
 
   let entries = listContentEntries();
-  if (onlyId) entries = entries.filter((e) => e.id === onlyId);
+  // --id a,b,c resolves just those items.
+  if (onlyId) {
+    const ids = new Set(onlyId.split(','));
+    entries = entries.filter((e) => ids.has(e.id));
+  }
   if (onlyId && entries.length === 0) {
     console.error(`[resolve-content] No content folder found for id "${onlyId}"`);
     process.exit(1);
