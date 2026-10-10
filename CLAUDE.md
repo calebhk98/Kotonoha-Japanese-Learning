@@ -603,6 +603,46 @@ gaps: grade them with inspect-text, fix the PATTERN, re-grade.
   (strong suffixes 蔵/衛門/郎/助/吉; weak ones 作/七/平 need a surname
   before or a repeat in the text, and never before a counter: 朝七時).
 
+### Translation context step (npm run setup-context; optional)
+
+`scripts/context/enrich.py` (FuguMT ja→en, greedy — its beam search
+degenerates — plus bge-small-en embeddings; CPU, no LLM) translates every
+sentence; `src/lib/contextModel.ts` drives it. resolve-content and server
+imports use it when `.venv-context` exists (`--no-context` /
+`KOTONOHA_CONTEXT=off` to skip); resolved.json then carries
+`sentences[].translation`, shown by inspect-text as `EN:`. Uses:
+- **Sense switch** (`chooseSense`): another of the first 4 senses of the
+  SAME entry wins only by margin 0.12 over sense 1, and never when an
+  aligned English word already appears in sense 1's glosses (星 "stars").
+  Fresh genre set test6: 26 right / 11 wrong switches. Switching to
+  another ENTRY of the same spelling went 0/4 and was reverted.
+- **Katakana names** (`nameFromTranslation.ts`): a katakana run spelling a
+  capitalised mid-sentence word of the translations becomes that name
+  (ゾル|タン → Zoltan); opening syllable must agree (ギルド ≠ Guard).
+- Measured and rejected (don't retry): exact gloss-word overlap, WordNet
+  synonyms, averaging two MT models, dictionary-anchored POS-aware
+  one-to-one alignment (held-out +20/-18), corpus sense priors from 96k
+  human-translated Tatoeba/OpenSubtitles pairs (4 fixes / 70 breaks on
+  graded data: three aligned words can't separate near-synonym senses),
+  JPDB/BCCWJ frequency as an entry prior (breaks ~14% of correct picks;
+  only a kana-only ratio≥3 rule is safe and it fixes ~2-5 rows),
+  showing up to two extra senses in the headline (7 better / 61 worse:
+  JMDict's 2nd/3rd senses for everyday words are often odd, 言う "the
+  alarm went ping").
+
+### Measurement notes (Oct 2026)
+
+- **Grader noise**: two independent Sonnet graders on the same text
+  disagree on 0.8% (kids story) to 4.1% (web novel) of tokens. A single
+  text's error rate is only good to a few points; judge changes by the
+  corpus BETTER/WORSE diff review and multi-text sets.
+- Genre sets (stories, folk tales, web fiction, lyrics, poems; fetchers
+  in the session scratchpad, rules: random pick, first item meeting a
+  length rule): test5 6.3%, test6 5.7% (folk tale 3.8%, app story 4.4%,
+  lyrics 5.1%, web novel 5.3%, Aozora kids 6.4%, dialect poem 7.9%).
+  Remaining errors are long-tail: dialect/archaic forms, names, typos in
+  the source, sense choice needing world knowledge.
+
 Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
 after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
 of specialization"; only senses noted "usu. in compounds"/"after a name"
