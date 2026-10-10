@@ -118,6 +118,10 @@ export function nameKatakanaRuns<T extends { surface: string; startIndex: number
     for (let n = 4; n >= 1 && !done; n--) {
       const run = tokens.slice(i, i + n);
       if (run.length < n || !run.every((t, k) => KATA.test(t.surface) && (k === 0 || run[k - 1].endIndex === t.startIndex))) continue;
+      // A single token Sudachi knows as an ordinary word (カバン "bag",
+      // ナポリタン, カイゼン) needs Sudachi's own proper-noun tag; only runs
+      // it fragmented (ゾル|タン) are renamed on the translation alone.
+      if (n === 1 && (run[0] as any).posDetail?.[1] !== '固有名詞') continue;
       const surface = run.map((t) => t.surface).join('');
       const name = matchName(surface, names);
       if (!name) continue;

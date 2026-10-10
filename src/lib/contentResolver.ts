@@ -452,6 +452,11 @@ export async function resolveContent(
         // Sudachi POS only: merged expressions (no POS), pronouns and
         // proper nouns keep their dictionary sense.
         if (!CONTENT_POS.has(t.posDetail?.[0] ?? '') || t.posDetail?.[1] === '固有名詞') return;
+        // Graded on 100 random corpus items (91 better / 44 worse): kana-only
+        // spellings (かぜ "wind" → "cold", いい → "profitable"), dependent
+        // helper verbs (〜ておく, 〜きれる), numerals and counter-type nouns
+        // (一 "beginning", 日 in 土よう日) switched to wrong senses; keep them.
+        if (!/[一-鿿々]/.test(t.surface) || ['非自立可能', '数詞'].includes(t.posDetail?.[1] ?? '') || t.posDetail?.[2] === '助数詞可能') return;
         const wi = tokenWord(idx);
         const groups = wi === undefined ? null : senseGroups(words[wi]);
         if (groups) mine.push({ idx, groups });
