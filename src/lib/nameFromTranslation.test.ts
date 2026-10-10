@@ -40,3 +40,18 @@ describe('names from translations', () => {
     expect(matchName('ギルド', ['Guard'])).toBeUndefined();
   });
 });
+
+// Graded on 100 random corpus items: kana names (ゆき "snow", すずき "sea
+// bass") and kana words Sudachi tagged as names (げんき "Genki").
+describe('kana names confirmed by the translation', () => {
+  it('spells the name: ゆき → Yuki, すずき in "suzukisan"', async () => {
+    const { kanaNameIn } = await import('./nameFromTranslation.js');
+    expect(kanaNameIn('ゆき', 'Takuya is 25 and Yuki is 27 years old.')).toBe('Yuki');
+    expect(kanaNameIn('すずき', 'suzukisan came before noon.')).toBe('Suzuki');
+  });
+  it('does not confirm short or absent spellings', async () => {
+    const { kanaNameIn } = await import('./nameFromTranslation.js');
+    expect(kanaNameIn('げんき', "one way, another way, i'm a widow.")).toBeUndefined();
+    expect(kanaNameIn('めい', 'she said, "Mei is here."')).toBeUndefined(); // < 4 letters: too easy to hit by chance
+  });
+});
