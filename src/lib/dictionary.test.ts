@@ -760,3 +760,20 @@ describe('findCloseAlternatives – ambiguous homographs surface the runner-up',
     expect(alts).toEqual([]);
   });
 });
+
+// Graded on 100 random corpus items (kana beginner texts).
+describe('kana homographs: tie-breaks (100-item review)', () => {
+  const e = (id: string, kanji: string, kana: string, gloss: string) => ({
+    id, kanji: [{ text: kanji, common: true }], kana: [{ text: kana, common: true }],
+    sense: [{ partOfSpeech: ['n'], gloss: [{ lang: 'eng', text: gloss }] }],
+  });
+  it('an exact tie on kana えき goes to the entry with easier kanji (駅 over 液)', () => {
+    const best = pickBestEntry([e('1', '液', 'えき', 'liquid'), e('2', '益', 'えき', 'benefit'), e('3', '駅', 'えき', 'railway station')], 'えき', { pos: '名詞' });
+    expect(best.id).toBe('3');
+  });
+  it('a proper-noun token prefers the entry whose gloss is a name (ふじ → 富士 "Mount Fuji")', () => {
+    const fuji = { ...e('2', '富士', 'ふじ', 'Mount Fuji'), kanji: [{ text: '富士', common: false }] };
+    const best = pickBestEntry([e('1', '藤', 'ふじ', 'wisteria'), fuji], 'ふじ', { pos: '名詞', properNoun: true });
+    expect(best.id).toBe('2');
+  });
+});
