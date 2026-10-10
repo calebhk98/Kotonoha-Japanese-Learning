@@ -88,3 +88,37 @@ describe('repeated sound words', () => {
     expect(out.map((t) => t.surface)).toEqual(['ギャー', 'ツ']);
   });
 });
+
+describe('test6 patterns', () => {
+  const NUM = ['名詞', '数詞'];
+  it('adjacent rising digits are a range: 七|八 "7 or 8", 十|二|三 "12 or 13"', () => {
+    const t1 = '七八ツ';
+    const a = mergeFixedExpressions(lay(t1, [['七', NUM], ['八', NUM], ['ツ', ['接尾辞', '名詞的', '助数詞']]]), t1);
+    expect(a[0].surface).toBe('七八');
+    expect(a[0].fixed?.meaning).toMatch(/7 or 8/);
+    const t2 = '十二三人';
+    const b = mergeFixedExpressions(lay(t2, [['十', NUM], ['二', NUM], ['三', NUM], ['人', ['接尾辞', '名詞的', '一般']]]), t2);
+    expect(b[0].surface).toBe('十二三');
+    expect(b[0].fixed?.meaning).toMatch(/12 or 13/);
+    const t3 = '二十三';
+    const c = mergeFixedExpressions(lay(t3, [['二', NUM], ['十', NUM], ['三', NUM]]), t3);
+    expect(c[0].fixed?.meaning).toMatch(/^23\b/);
+  });
+  it('clause-initial ところ|が、 and で|も、 are the conjunctions', () => {
+    const t1 = 'ところが、雨';
+    const a = mergeFixedExpressions(lay(t1, [['ところ', N], ['が', ['助詞', '格助詞']], ['、', ['補助記号']], ['雨', N]]), t1);
+    expect(a[0]).toMatchObject({ surface: 'ところが', pos: '接続詞' });
+    const t2 = 'でも、行かない';
+    const b = mergeFixedExpressions(lay(t2, [['で', ['助詞', '格助詞']], ['も', ['助詞', '係助詞']], ['、', ['補助記号']], ['行かない', ['動詞']]]), t2);
+    expect(b[0]).toMatchObject({ surface: 'でも', pos: '接続詞' });
+    const t3 = '家でも、遊ぶ';
+    const c = mergeFixedExpressions(lay(t3, [['家', N], ['で', ['助詞', '格助詞']], ['も', ['助詞', '係助詞']], ['、', ['補助記号']], ['遊ぶ', ['動詞']]]), t3);
+    expect(c.map((t) => t.surface)).toContain('で');
+  });
+  it('noun + 共 never merges into 共に (猿共に is "to the monkeys")', async () => {
+    const text = '猿共に';
+    const out = await merge(lay(text, [['猿', N], ['共', N], ['に', ['助詞', '格助詞']]]), text, async (s) => s === '共に', async () => new Set(['adv']));
+    expect(out.map((t) => t.surface)).toEqual(['猿', '共', 'に']);
+  });
+});
+
