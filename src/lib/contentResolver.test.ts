@@ -147,3 +147,36 @@ describe('buildStoryResponse / buildWordsResponse', () => {
     expect(vocab.map((w: any) => w.frequencyInContent)).toEqual([2, 3]);
   });
 });
+
+// Graded on 100 random corpus items (70 of them carry furigana in the text):
+// 行（い）きました was tokenized as 行 "Kō" + きました "came".
+describe('furigana in parentheses', { timeout: 30000 }, () => {
+  it('tokenizes the text without the furigana and maps tokens back onto the original', async () => {
+    const text = '山へ行（い）きました。猫（ねこ）が';
+    const seen: string[] = [];
+    const tokenizer = {
+      name: 'fake',
+      ready: async () => {},
+      segment: async (t: string) => {
+        seen.push(t);
+        return [
+          { surface: '山', baseForm: '山', pos: '名詞', reading: 'やま' },
+          { surface: 'へ', baseForm: 'へ', pos: '助詞', reading: 'へ' },
+          { surface: '行きました', baseForm: '行く', pos: '動詞', reading: 'いきました' },
+          { surface: '。', baseForm: '。' },
+          { surface: '猫', baseForm: '猫', pos: '名詞', reading: 'ねこ' },
+          { surface: 'が', baseForm: 'が', pos: '助詞', reading: 'が' },
+        ];
+      },
+    } as any;
+    const resolved = await resolveContent(text, tokenizer, new WordResolver(dict));
+    expect(seen).toEqual(['山へ行きました。猫が']);
+    for (const t of resolved.tokens) expect(text.slice(t.startIndex, t.endIndex)).toBe(t.surface);
+    const verb = resolved.tokens.find((t) => t.surface.startsWith('行'))!;
+    expect(verb.surface).toBe('行（い）きました');
+    expect(resolved.words[verb.wordIndex!].word).toBe('行きました');
+    // Furigana between words stays plain text, outside any token.
+    expect(resolved.tokens.map((t) => t.surface)).toContain('猫');
+    expect(resolved.tokens.find((t) => t.surface === 'が')!.startIndex).toBe(text.indexOf('が'));
+  });
+});
