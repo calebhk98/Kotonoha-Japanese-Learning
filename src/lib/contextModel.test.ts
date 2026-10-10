@@ -139,3 +139,54 @@ describe('resolveContent with a context model', { timeout: 30000 }, () => {
   });
 });
 
+
+// Trained sense scorer (Japanese sentence + token + English translation ->
+// sense of the chosen entry). Fresh-sample review on 100 unseen corpus
+// items: confident (p >= 0.8) same-entry switches went 92 better / 29 worse.
+describe('trained sense scorer (probs from the helper)', { timeout: 30000 }, () => {
+  it('chooseSenseByModel switches only on a confident non-first sense', async () => {
+    const { chooseSenseByModel } = await import('./contextModel.js');
+    expect(chooseSenseByModel([0.1, 0.85, 0.05])).toBe(1);
+    expect(chooseSenseByModel([0.3, 0.6, 0.1])).toBe(0);
+    expect(chooseSenseByModel([0.9, 0.1])).toBe(0);
+  });
+
+  const info = (n: number) => Array.from({ length: n }, (_, k) => ({ index: k, misc: [], common: true, primary: true }));
+  const sDict = {
+    lookup: async (w: string) =>
+      ({
+        凄い: { meaning: 'terrible, dreadful', reading: 'すごい', meanings: ['terrible', 'dreadful', 'amazing', 'great'], senseSizes: [2, 2], senseInfo: info(2) },
+        仕舞う: { meaning: 'to finish', reading: 'しまう', meanings: ['to finish', 'to do completely'], senseSizes: [1, 1], senseInfo: info(2) },
+      } as any)[w] ?? null,
+  };
+  function probsContext(probs: number[]) {
+    const requests: ContextSentenceIn[][] = [];
+    return {
+      requests,
+      async enrich(sentences: ContextSentenceIn[]) {
+        requests.push(sentences);
+        return sentences.map((s) => ({ translation: 'EN', candidates: s.candidates.map(() => ({ aligned: [], sims: [0, 0], probs })) }));
+      },
+    } as ContextModel & { requests: ContextSentenceIn[][] };
+  }
+
+  it('sends kana words with their sense info and switches on the model\'s confident pick', async () => {
+    const text = 'すごい';
+    const tokens = [{ surface: 'すごい', baseForm: '凄い', pos: '形容詞', reading: 'すごい', posDetail: ['形容詞', '一般'] }];
+    const ctx = probsContext([0.05, 0.95]);
+    const r = await resolveContent(text, makeTokenizer(tokens), new WordResolver(sDict), undefined, undefined, ctx);
+    expect(ctx.requests[0][0].candidates[0].info).toEqual(info(2));
+    expect(r.words[r.tokens[0].wordIndex!].meaning).toBe('amazing, great (also: terrible)');
+  });
+
+  it('never sends helper verbs (〜てしまう "do completely" is not "to finish")', async () => {
+    const text = 'たべてしまう';
+    const tokens = [
+      { surface: 'たべて', baseForm: '食べる', pos: '動詞', reading: 'たべて', posDetail: ['動詞', '一般'] },
+      { surface: 'しまう', baseForm: '仕舞う', pos: '動詞', reading: 'しまう', posDetail: ['動詞', '非自立可能'] },
+    ];
+    const ctx = probsContext([0.05, 0.95]);
+    await resolveContent(text, makeTokenizer(tokens), new WordResolver(sDict), undefined, undefined, ctx);
+    expect(ctx.requests[0][0].candidates).toEqual([]);
+  });
+});
