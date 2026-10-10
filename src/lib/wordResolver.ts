@@ -79,6 +79,9 @@ const READING_CORRECTIONS: Record<string, { wrong: string; right: string }> = {
   // is "under (guidance, supervision...)". Every もと-read 下 in the corpus
   // is the physical "under/beneath" (15/15), which is 下/した.
   下: { wrong: 'もと', right: 'した' },
+  // UniDic reads 何時 as the literary なんどき ("at what moment"); in
+  // everyday text 何時まで / 何時に is "what time" (なんじ).
+  何時: { wrong: 'なんどき', right: 'なんじ' },
 };
 
 const katakanaToHiraganaStr = (s: string) =>
@@ -208,6 +211,28 @@ export class WordResolver {
       if (!(entry.kana ?? []).some((k: any) => k.text === text && k.common)) continue;
       if (!(entry.kanji ?? []).some((k: any) => k.common)) continue;
       for (const sn of entry.sense ?? []) for (const p of sn.partOfSpeech ?? []) out.add(p);
+    }
+    return out;
+  }
+
+  /**
+   * True when every JMDict entry written `text` is only the title of a work
+   * (上を向いて歩こう "Sukiyaki (1961 song)"): a sentence that happens to
+   * spell a title is still the sentence.
+   */
+  async isTitleOnly(text: string): Promise<boolean> {
+    const cands = this.dictionary?.candidates ? await this.dictionary.candidates(text) : [];
+    const written = cands.filter(({ entry }) => [...(entry.kanji ?? []), ...(entry.kana ?? [])].some((f: any) => f.text === text));
+    return written.length > 0 && written.every(({ entry }) => (entry.sense ?? []).every((sn: any) => (sn.misc ?? []).includes('work')));
+  }
+
+  /** Kana readings of the JMDict entries written exactly `text` (in kanji). */
+  async headwordReadings(text: string): Promise<Set<string>> {
+    const cands = this.dictionary?.candidates ? await this.dictionary.candidates(text) : [];
+    const out = new Set<string>();
+    for (const { entry } of cands) {
+      if (!(entry.kanji ?? []).some((k: any) => k.text === text)) continue;
+      for (const k of entry.kana ?? []) out.add(k.text);
     }
     return out;
   }
@@ -360,7 +385,7 @@ export class WordResolver {
     // ほう in えきの ほうへ is 方 "direction", not the interjection "oh";
     // 「ただいま！」 is "I'm home", ただいま mid-sentence "right now".
     const phraseOk = pos !== '名詞' || !!ctx?.utterance;
-    if (this.dictionary && (wordStr !== baseForm || ctx?.utterance) && phraseOk && (/^[ぁ-んー]+$/.test(wordStr) || ctx?.after)) {
+    if (this.dictionary && (wordStr !== baseForm || ctx?.utterance) && phraseOk && (/^[ぁ-んー]+$/.test(wordStr) || ctx?.after || ctx?.utterance)) {
       const phrase = await this.expression(wordStr, ctx?.after, ctx?.utterance);
       if (phrase) {
         const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, null);

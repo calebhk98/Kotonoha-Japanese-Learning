@@ -141,12 +141,13 @@ export async function resolveContent(
   let merged = await mergeDictionaryWords(
     mergeFixedExpressions(markGlossaryTerms(markParenthesizedReadings(positioned, text), text), text),
     text,
-    (s) => wordResolver.hasForm(s),
+    async (s) => (await wordResolver.hasForm(s)) && !(await wordResolver.isTitleOnly(s)),
     (s) => wordResolver.isKanaHeadword(s),
     (s) => getMorphemeDefinition(s) !== undefined,
     (s) => wordResolver.isConjunctionOnly(s),
     (s) => wordResolver.headwordPos(s),
-    (s) => wordResolver.commonKanaWord(s)
+    (s) => wordResolver.commonKanaWord(s),
+    (s) => wordResolver.headwordReadings(s)
   );
 
   // Katakana names the translation spells as English names (ゾル|タン →
@@ -345,7 +346,9 @@ export async function resolveContent(
       utterance: (() => {
         // Only a kana noun reads differently on its own (ただいま, ごめん);
         // other tokens keep one word entry wherever they stand.
-        if (t.posDetail?.[0] !== '名詞' || !/^[ぁ-んー]+$/.test(surface) || !atClauseStart(text, t.startIndex)) return false;
+        // (…and a verb said on its own: 行ってきます "I'm off".)
+        const kanaNoun = t.posDetail?.[0] === '名詞' && /^[ぁ-んー]+$/.test(surface);
+        if ((!kanaNoun && t.posDetail?.[0] !== '動詞') || !atClauseStart(text, t.startIndex)) return false;
         // Sentence-final particles may follow (ごめんね。).
         let j = i + 1;
         let end = t.endIndex;

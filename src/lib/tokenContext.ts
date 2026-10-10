@@ -141,11 +141,51 @@ const MERGE_RULES: MergeRule[] = [
   // not at a clause start.)
   {
     length: 2,
+    // (A sentence never opens with the particle で, so a sentence-initial
+    // で|も is "but" with or without the comma: でも赤ぐみが強い.)
     match: ([a, b], text) =>
       ((a.surface === 'ところ' && b.surface === 'が') || (a.surface === 'で' && b.surface === 'も')) &&
-      atClauseStart(text, a.startIndex) && /^[、，,]/.test(text.slice(b.endIndex)),
+      ((atClauseStart(text, a.startIndex) && /^[、，,]/.test(text.slice(b.endIndex))) || atSentenceStart(text, a.startIndex)),
     pos: '接続詞',
   },
+  // 〜てはいけない / 〜ちゃいけない "must not"; elsewhere いけない is "bad".
+  {
+    length: 2,
+    match: ([a, b], text) => a.surface === 'いけ' && /^(ない|ません|なかった|ませんでした)$/.test(b.surface) && /(は|ちゃ|じゃ)\s*$/.test(text.slice(0, a.startIndex)),
+    pos: '形容詞',
+    fixed: 'must not, not allowed (〜てはいけない)',
+  },
+  {
+    length: 2,
+    match: ([a, b]) => a.surface === 'いけ' && /^(ない|ません|なかった|ませんでした)$/.test(b.surface),
+    pos: '形容詞',
+    fixed: 'bad, wrong, no good (いけない)',
+  },
+  // 赤ぐみ / 白ぐみ "the red / white team": 組 (くみ) voiced after a noun,
+  // not 茱萸 "oleaster" (graded on Sports-Day).
+  {
+    length: 1,
+    match: ([a], text) => a.surface === 'ぐみ' && /[一-鿿々]$/.test(text.slice(0, a.startIndex)),
+    pos: '名詞',
+    fixed: 'group, team, class (組)',
+  },
+  // One-kana nouns Sudachi reads as particles or verb stems in kana text:
+  // てを あらう is 手 "hand"; ももの き is 木 "tree"; すずめのこ is 子 "child".
+  ...(Object.entries({
+    て: ['hand (手)', false], め: ['eye (目)', false], き: ['tree (木)', true], こ: ['child; young (animal) (子)', true],
+  }) as [string, [string, boolean]][]).map(([kana, [meaning, afterNoOnly]]): MergeRule => ({
+    length: 1,
+    match: ([a], text) => {
+      if (a.surface !== kana) return false;
+      const before = text.slice(0, a.startIndex);
+      const after = text.slice(a.endIndex);
+      const afterNo = /の\s*$/.test(before);
+      if (afterNoOnly) return afterNo && /^(\s*[がをはもにの。、！？!?」]|\s*$)/.test(after);
+      return (atClauseStart(text, a.startIndex) || /[\s　]$/.test(before) || afterNo) && /^[をがはもにで]/.test(after);
+    },
+    pos: '名詞',
+    fixed: meaning,
+  })),
   // 〜ておくれ "please do (for me)": Sudachi reads お as the 御 prefix.
   {
     length: 2,
@@ -386,6 +426,7 @@ export function grammaticalContext(
 }
 
 const KANJI = /[一-鿿々]/;
+const toHiragana = (s: string) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 /** Coordinating conjunctions that join nouns mid-sentence (A又はB "A or B"). */
 const COORDINATORS = new Set(['又は', 'または', '若しくは', 'もしくは', '及び', 'および', '並びに', 'ならびに', '或いは', 'あるいは', '且つ', 'かつ', 'ないし']);
@@ -417,7 +458,8 @@ export async function mergeDictionaryWords(
   isGrammar: (s: string) => boolean,
   isConjunctionOnly: (s: string) => Promise<boolean> = async () => false,
   headwordPos: (s: string) => Promise<Set<string>> = async () => new Set(),
-  commonKanaWord: (s: string) => Promise<Set<string>> = async () => new Set()
+  commonKanaWord: (s: string) => Promise<Set<string>> = async () => new Set(),
+  headwordReadings: (s: string) => Promise<Set<string>> = async () => new Set()
 ): Promise<PositionedToken[]> {
   const out: PositionedToken[] = [];
   let i = 0;
@@ -622,6 +664,15 @@ export async function mergeDictionaryWords(
       if (key && adjNoun) {
         const hp = await headwordPos(key);
         if (![...hp].some((p) => !/^(n($|-)|exp$|adj-f$)/.test(p))) key = null;
+      }
+      // The pieces' own readings must be a reading of the headword: 外|に
+      // read そと|に is "outside", not 外に (ほかに "else"); 何時|まで read
+      // なんじ is "until what time", not いつまで. (Numbers excluded: 一|杯
+      // reads いち|はい but the word is いっぱい.)
+      if (key && key === surface && KANJI.test(surface) && span.every((t) => t.reading) && !span.some((t) => pos1(t) === '数詞')) {
+        const hr = await headwordReadings(key);
+        const joinedReading = span.map((t) => toHiragana(t.reading!)).join('');
+        if (hr.size > 0 && !hr.has(joinedReading)) key = null;
       }
       if (!key) continue;
       const readings = span.map((t) => t.reading);
