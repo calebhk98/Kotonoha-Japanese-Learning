@@ -122,3 +122,44 @@ describe('test6 patterns', () => {
   });
 });
 
+
+// Graded on 100 random corpus items: beginner texts write everyday words in
+// kana and Sudachi fragments the ones UniDic lacks in kana.
+describe('kana words Sudachi fragments (100-item review)', () => {
+  const SUF = ['接尾辞', '名詞的', '一般'];
+  const NUM = ['名詞', '数詞'];
+  const words: Record<string, string[]> = {
+    じてんしゃ: ['n'], かいさつ: ['n', 'vs'], はっけん: ['n', 'vs'], あるく: ['v5k', 'vi'], かえる: ['v5r', 'vi'],
+  };
+  const common = async (s: string) => new Set(words[s] ?? []);
+  const mergeK = (toks: PositionedToken[], text: string) =>
+    mergeDictionaryWords(toks, text, none, none, () => false, none, async () => new Set(), common);
+
+  it('joins kana pieces into a common word written in kanji (じてん|しゃ → 自転車)', async () => {
+    const text = 'じてんしゃに のって';
+    const out = await mergeK(lay(text, [['じてん', N], ['しゃ', SUF], ['に', ['助詞', '格助詞']], ['のって', ['動詞']]]), text);
+    expect(out.map((t) => t.surface)).toEqual(['じてんしゃ', 'に', 'のって']);
+    expect(out[0].baseForm).toBe('じてんしゃ');
+  });
+  it('a stray single kana or kana numeral marks the fragment (かいさ|つ, はっ|けん)', async () => {
+    const t1 = 'かいさつの ほう';
+    expect((await mergeK(lay(t1, [['かいさ', NAME], ['つ', ['助詞', '副助詞']], ['の', ['助詞', '格助詞']], ['ほう', N]]), t1))[0].surface).toBe('かいさつ');
+    const t2 = 'はっけんの';
+    expect((await mergeK(lay(t2, [['はっ', NUM], ['けん', SUF], ['の', ['助詞', '格助詞']]]), t2))[0].surface).toBe('はっけん');
+  });
+  it('never joins across a particle or two ordinary words', async () => {
+    const t1 = 'あかい';
+    // (あ|か is not a candidate: か is a particle)
+    expect((await mergeK(lay(t1, [['あ', ['感動詞']], ['か', ['助詞', '終助詞']], ['い', ['動詞']]]), t1)).map((t) => t.surface)).toEqual(['あ', 'か', 'い']);
+    const t2 = 'じてんしゃ';
+    // Both pieces ordinary nouns: no fragment evidence.
+    expect((await mergeK(lay(t2, [['じてん', N], ['しゃ', N]]), t2)).map((t) => t.surface)).toEqual(['じてん', 'しゃ']);
+  });
+  it('re-joins a kana volitional Sudachi split (ある|こう → 歩こう)', async () => {
+    const text = 'あるこう あるこう';
+    const out = await mergeK(lay(text, [['ある', ['連体詞']], ['こう', ['副詞']], ['ある', ['連体詞']], ['こう', ['副詞']]]), text);
+    expect(out.map((t) => t.surface)).toEqual(['あるこう', 'あるこう']);
+    expect(out[0].baseForm).toBe('あるく');
+    expect(out[0].pos).toBe('動詞');
+  });
+});
