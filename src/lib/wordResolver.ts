@@ -1,4 +1,4 @@
-import { senseFitsContext } from './dictionary.js';
+import { senseFitsContext, type SenseInfo } from './dictionary.js';
 import {
   getCachedDictionaryEntries,
   findBestVariant,
@@ -16,6 +16,8 @@ export interface WordResolution {
   meanings: string[] | undefined;
   /** Glosses per sense in `meanings` order, when the meaning came from JMDict. */
   senseSizes?: number[];
+  /** Per-sense JMDict facts for the trained sense scorer (see dictionary.ts). */
+  senseInfo?: SenseInfo[];
   variant: DictionaryVariant | null;
   entry: DictionaryEntry | null;
   jlpt: number;
@@ -40,7 +42,7 @@ interface DictionaryLike {
   lookup(
     word: string,
     hint?: { pos?: string; reading?: string; lang?: string[] }
-  ): Promise<{ reading?: string; meaning?: string; meanings?: string[]; senseSizes?: number[]; glossLang?: string } | null | false>;
+  ): Promise<{ reading?: string; meaning?: string; meanings?: string[]; senseSizes?: number[]; senseInfo?: SenseInfo[]; glossLang?: string } | null | false>;
   /** True when JMDict has an entry written exactly `text`. */
   hasForm?(text: string): Promise<boolean>;
   isKanaHeadword?(text: string): Promise<boolean>;
@@ -431,6 +433,7 @@ export class WordResolver {
     let meaning = kanjiMeaning;
     let meanings = kanjiMeanings;
     let senseSizes: number[] | undefined;
+    let senseInfo: SenseInfo[] | undefined;
     // The language the served gloss is actually in (#260); undefined unless a
     // JMDict hit set it. Lets callers flag English fallback when the learner
     // asked for another language.
@@ -511,6 +514,7 @@ export class WordResolver {
           meaning = jmdictMeaning;
           meanings = dictResult.meanings;
           senseSizes = dictResult.senseSizes;
+          senseInfo = dictResult.senseInfo;
           if (dictResult.glossLang) servedGlossLang = dictResult.glossLang;
         }
       }
@@ -601,7 +605,7 @@ export class WordResolver {
     // (5) Score calculation — always uses the same variant selected above.
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
 
-    return { reading, meaning, meanings, senseSizes, variant, entry, jlpt, joyo, score, breakdown, glossLang: servedGlossLang };
+    return { reading, meaning, meanings, senseSizes, senseInfo, variant, entry, jlpt, joyo, score, breakdown, glossLang: servedGlossLang };
   }
 
   /** Dictionary lookup that only returns real glosses (never "Unknown"). */

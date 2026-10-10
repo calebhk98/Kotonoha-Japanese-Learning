@@ -26,7 +26,7 @@ import { getWordScoreBreakdown } from './scoring.js';
 import { atClauseStart, counterReading, numberValue, mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, markGlossaryTerms, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
 import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
-import { chooseSense, type ContextModel, type ContextSentenceIn } from './contextModel.js';
+import { chooseSense, chooseSenseByModel, type ContextModel, type ContextSentenceIn } from './contextModel.js';
 import { splitSentences } from './sentenceSplitter.js';
 import { namesInTranslations, nameKatakanaRuns, kanaNameIn, romanizeName } from './nameFromTranslation.js';
 
@@ -519,7 +519,7 @@ export async function resolveContent(
             isMorpheme: true,
           };
         } else if (token.isVocabWord) {
-          const { reading, meaning, meanings, senseSizes, jlpt, joyo, score, breakdown } =
+          const { reading, meaning, meanings, senseSizes, senseInfo, jlpt, joyo, score, breakdown } =
             await wordResolver.resolve(token.surface, token.baseForm, lookupCache, token.pos, token.reading, undefined, {
               after: token.context,
               dictionaryForm: token.dictionaryForm,
@@ -534,6 +534,7 @@ export async function resolveContent(
           const info: any = { word: token.surface, reading: token.counterReading ?? reading, meaning, jlpt, joyo, score, breakdown };
           if (meanings) info.meanings = meanings;
           if (meanings && senseSizes) info.senseSizes = senseSizes;
+          if (meanings && senseSizes && senseInfo) info.senseInfo = senseInfo;
           if (token.pos) info.pos = token.pos;
           words[i] = info;
         } else {
@@ -611,9 +612,9 @@ export async function resolveContent(
     };
     const CONTENT_POS = new Set(['名詞', '動詞', '形容詞', '形状詞']);
     const tokenWord = (idx: number) => argumentOverride.get(idx) ?? wordIndexByKey.get(keyOf(tokens[idx]));
-    const asked: { idx: number; groups: string[][] }[][] = [];
+    const asked: { idx: number; groups: string[][]; kana: boolean }[][] = [];
     const request: ContextSentenceIn[] = spans.map((s) => {
-      const mine: { idx: number; groups: string[][] }[] = [];
+      const mine: { idx: number; groups: string[][]; kana: boolean }[] = [];
       tokens.forEach((t, idx) => {
         if (t.startIndex < s.start || t.startIndex >= s.end || !t.isVocabWord || t.isMorpheme || t.fixed || t.idiom) return;
         // Sudachi POS only: merged expressions (no POS), pronouns and
@@ -623,28 +624,37 @@ export async function resolveContent(
         // spellings (かぜ "wind" → "cold", いい → "profitable"), dependent
         // helper verbs (〜ておく, 〜きれる), numerals and counter-type nouns
         // (一 "beginning", 日 in 土よう日) switched to wrong senses; keep them.
-        if (!/[一-鿿々]/.test(t.surface) || ['非自立可能', '数詞'].includes(t.posDetail?.[1] ?? '') || t.posDetail?.[2] === '助数詞可能') return;
+        // Kana spellings go only to the trained scorer (they need the
+        // senses' JMDict facts); the embedding-margin switch got them wrong.
+        if (['非自立可能', '数詞'].includes(t.posDetail?.[1] ?? '') || t.posDetail?.[2] === '助数詞可能') return;
         const wi = tokenWord(idx);
         const groups = wi === undefined ? null : senseGroups(words[wi]);
-        if (groups) mine.push({ idx, groups });
+        const kana = !/[一-鿿々]/.test(t.surface);
+        if (groups && (!kana || words[wi!]?.senseInfo)) mine.push({ idx, groups, kana });
       });
       asked.push(mine);
       return {
         text: text.slice(s.start, s.end),
-        candidates: mine.map(({ idx, groups }) => ({
-          start: tokens[idx].startIndex - s.start,
-          end: tokens[idx].endIndex - s.start,
-          senses: groups,
-        })),
+        candidates: mine.map(({ idx, groups }) => {
+          const info = words[tokenWord(idx)!]?.senseInfo;
+          return {
+            start: tokens[idx].startIndex - s.start,
+            end: tokens[idx].endIndex - s.start,
+            senses: groups,
+            ...(info ? { info } : {}),
+          };
+        }),
       };
     });
     const answers = await context.enrich(request);
     sentences = spans.map((s, i) => ({ start: s.start, end: s.end, translation: answers[i]?.translation ?? null }));
     const switched = new Map<string, number>(); // `${wordIndex}:${sense}` → new word index
     asked.forEach((mine, si) => {
-      mine.forEach(({ idx, groups }, ci) => {
+      mine.forEach(({ idx, groups, kana }, ci) => {
         const answer = answers[si]?.candidates[ci];
-        const sense = chooseSense(answer?.sims ?? [], answer?.aligned ?? [], groups);
+        const sense = answer?.probs
+          ? chooseSenseByModel(answer.probs)
+          : kana ? 0 : chooseSense(answer?.sims ?? [], answer?.aligned ?? [], groups);
         if (sense === 0 || sense >= groups.length) return;
         const base = tokenWord(idx)!;
         const key = `${base}:${sense}`;
@@ -671,6 +681,9 @@ export async function resolveContent(
       w.frequencyInContent = frequency.get(w.word) ?? 1;
     }
   }
+
+  // senseInfo is pipeline input only; the stored document stays as before.
+  for (const w of words) if (w) delete w.senseInfo;
 
   return {
     formatVersion: RESOLVED_FORMAT_VERSION,

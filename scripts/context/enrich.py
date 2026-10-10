@@ -9,7 +9,10 @@ embedder (bge-small-en-v1.5).
 Request:  {"sentences": [{"text": "...", "candidates": [{"start": 0, "end": 2,
            "senses": [["gloss", ...], ...]}]}]}
 Response: {"sentences": [{"translation": "...", "candidates": [{"aligned":
-           ["sign", "contract"], "sims": [0.61, 0.74, ...]}]}]}
+           ["sign", "contract"], "sims": [0.61, 0.74, ...], "probs": [...]}]}]}
+
+A candidate may carry "info" (per sense: JMDict index, misc tags, common,
+primary); then the trained sense scorer (sense_scorer.py) adds "probs".
 
 For each candidate (a token's character span within its sentence) the
 English words the model attended to most while translating that span are
@@ -74,6 +77,14 @@ class Enricher:
         self.mt = AutoModelForSeq2SeqLM.from_pretrained(MT_MODEL, attn_implementation="eager").eval()
         self.embed = SentenceTransformer(EMBED_MODEL)
         self.cache = {}
+        # Trained sense scorer (sense_scorer.py); optional: without its
+        # model files the helper answers exactly as before (no "probs").
+        try:
+            from sense_scorer import SenseScorer
+            self.scorer = SenseScorer()
+        except Exception as e:  # missing weights / e5 model
+            print(json.dumps({"warning": f"sense scorer unavailable: {e}"}), file=sys.stderr, flush=True)
+            self.scorer = None
 
     def translate(self, text):
         # Cached: a text is translated once even when asked twice (the
@@ -130,12 +141,16 @@ class Enricher:
             queries = self.embed.encode([" ".join(a) or tr["text"] for a in aligned], normalize_embeddings=True)
             glosses = [", ".join(g[:4]) for c in cands for g in c["senses"]]
             gemb = self.embed.encode(glosses, normalize_embeddings=True, batch_size=64) if glosses else []
+            S = self.scorer.sentence(s["text"], tr["text"]) if self.scorer and any(c.get("info") for c in cands) else None
             res, o = [], 0
             for c, a, q in zip(cands, aligned, queries):
                 n = len(c["senses"])
                 sims = [round(float(x), 4) for x in (gemb[o:o + n] @ q)] if n else []
                 o += n
-                res.append({"aligned": a, "sims": sims})
+                r = {"aligned": a, "sims": sims}
+                if S is not None and c.get("info") and len(c["info"]) == n:
+                    r["probs"] = self.scorer.probs(S, c["start"], c["end"], c["senses"], c["info"])
+                res.append(r)
             out.append({"translation": tr["text"], "candidates": res})
         return {"sentences": out}
 

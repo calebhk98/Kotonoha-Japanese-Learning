@@ -1,11 +1,24 @@
 import { createRequire } from 'module';
 import kanjiData from 'kanji-data';
 
+export interface SenseInfo {
+  index: number;
+  misc: string[];
+  common: boolean;
+  primary: boolean;
+}
+
 export interface WordLookupResult {
   meaning: string;
   meanings?: string[]; // All available meanings/senses
   /** Glosses per sense, in `meanings` order (JMDict only). */
   senseSizes?: number[];
+  /**
+   * Per sense, in `meanings` order: its position among the entry's English
+   * senses, its JMDict misc tags, and whether the entry is common / written
+   * primarily as the looked-up word (inputs to the trained sense scorer).
+   */
+  senseInfo?: SenseInfo[];
   reading?: string;
   // The language the returned gloss text is actually in (normalised 3-letter
   // tag, e.g. 'spa' | 'eng'), for the requested-vs-served comparison that lets
@@ -800,6 +813,10 @@ export class JmdictDictionary implements Dictionary {
         return diff !== 0 ? diff : a.order - b.order;
       });
 
+      const englishSenses = (bestMatch.sense ?? []).filter((sn: any) => getGlosses(sn, ['eng']).length > 0);
+      const entryCommon = [...(bestMatch.kanji ?? []), ...(bestMatch.kana ?? [])].some((f: any) => f.common === true);
+      const entryPrimary = ((bestMatch.kanji?.length ? bestMatch.kanji : bestMatch.kana) ?? [])[0]?.text === word;
+      const senseInfo: SenseInfo[] = [];
       for (const { sense } of sensesWithScores) {
         // Only the chosen language's senses contribute glosses; senses in other
         // languages yield [] and are skipped, so text never leaks in the wrong
@@ -808,6 +825,7 @@ export class JmdictDictionary implements Dictionary {
         if (glossTexts.length > 0) {
           meanings.push(...glossTexts);
           senseSizes.push(glossTexts.length);
+          senseInfo.push({ index: Math.max(0, englishSenses.indexOf(sense)), misc: sense.misc ?? [], common: entryCommon, primary: entryPrimary });
         }
       }
 
@@ -835,7 +853,7 @@ export class JmdictDictionary implements Dictionary {
       return {
         meaning,
         meanings: meanings.length > 1 ? meanings : undefined,
-        ...(senseSizes.length > 1 ? { senseSizes } : {}),
+        ...(senseSizes.length > 1 ? { senseSizes, senseInfo } : {}),
         reading: matchedKana || word,
         ...(primaryGlossLang ? { glossLang: primaryGlossLang } : {}),
       };

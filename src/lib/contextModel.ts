@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
+import type { SenseInfo } from './dictionary.js';
 
 /**
  * Sentence translation as context for sense choice (step 3 of the
@@ -24,6 +25,8 @@ export interface ContextCandidate {
   end: number;
   /** The token's JMDict senses (glosses per sense), in display order. */
   senses: string[][];
+  /** Per sense: JMDict position, misc tags, entry flags (trained scorer input). */
+  info?: SenseInfo[];
 }
 export interface ContextSentenceIn {
   text: string;
@@ -32,7 +35,7 @@ export interface ContextSentenceIn {
 export interface ContextSentenceOut {
   translation: string | null;
   /** Per candidate: English words aligned to it, and similarity to each sense. */
-  candidates: { aligned: string[]; sims: number[] }[];
+  candidates: { aligned: string[]; sims: number[]; probs?: number[] }[];
 }
 export interface ContextModel {
   enrich(sentences: ContextSentenceIn[]): Promise<ContextSentenceOut[]>;
@@ -41,6 +44,24 @@ export interface ContextModel {
 }
 
 export const SENSE_MARGIN = 0.12;
+
+/**
+ * Trained sense scorer (scripts/context/sense_scorer.py): multilingual-e5-small
+ * features of the token in its Japanese sentence and of the English
+ * translation, scored against each sense's glosses by a small network
+ * trained on half the Tanaka corpus. It only picks among the senses of the
+ * entry the pipeline already chose: switching ENTRIES was graded 3 better /
+ * 63 worse on kana words. On 100 unseen corpus items, switches at
+ * p >= MODEL_CONFIDENCE went 92 better / 29 worse / 29 same.
+ */
+export const MODEL_CONFIDENCE = 0.8;
+
+/** Index of the sense to show from the scorer's probabilities (0 = keep). */
+export function chooseSenseByModel(probs: number[], threshold = MODEL_CONFIDENCE): number {
+  let best = 0;
+  for (let k = 1; k < probs.length; k++) if (probs[k] > probs[best]) best = k;
+  return best !== 0 && probs[best] >= threshold ? best : 0;
+}
 /**
  * Only the first MAX_SENSES senses compete. Graded on genre text (stories,
  * lyrics, poems, web fiction), switches to sense 5+ were wrong 4 times in 5
