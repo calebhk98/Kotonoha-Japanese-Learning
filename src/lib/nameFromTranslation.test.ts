@@ -52,6 +52,9 @@ describe('kana names confirmed by the translation', () => {
   it('does not confirm short or absent spellings', async () => {
     const { kanaNameIn } = await import('./nameFromTranslation.js');
     expect(kanaNameIn('げんき', "one way, another way, i'm a widow.")).toBeUndefined();
-    expect(kanaNameIn('めい', 'she said, "Mei is here."')).toBeUndefined(); // < 4 letters: too easy to hit by chance
+    expect(kanaNameIn('めい', 'she said, "I\'ve been a geek."')).toBeUndefined();
+    // Three letters: only a capitalised mid-sentence spelling counts.
+    expect(kanaNameIn('めい', 'she said, "Mei is here."')).toBe('Mei');
+    expect(kanaNameIn('あお', 'the ao sky')).toBeUndefined();
   });
 });

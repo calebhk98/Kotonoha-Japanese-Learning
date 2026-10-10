@@ -152,25 +152,35 @@ const toKatakana = (s: string) => s.replace(/[ぁ-ゖ]/g, (c) => String.fromChar
  * The name a hiragana token spells in its sentence's translation, if any:
  * the translation keeps a name romanized (ゆき → "Yuki", すずきさん →
  * "suzukisan") where it would translate the word ("snow", "sea bass").
- * Four or more letters only: shorter spellings match English by chance.
+ * Three letters count only as a capitalised mid-sentence name (Mei);
+ * other matches need four or more, since shorter spellings hit English.
  * A capitalised spelling must not open its sentence, and a lowercase one
  * (an untranslated romanization) only counts for a token Sudachi already
  * tags as a name (`tagged`): らーめん → "ramen" is a word, not a name.
  */
-export function kanaNameIn(surface: string, translation: string | null | undefined, tagged = false): string | undefined {
+export function kanaNameIn(surface: string, translation: string | null | undefined, tagged = false, strict = false): string | undefined {
   if (!translation || !/^[ぁ-ゖー]+$/.test(surface)) return undefined;
   const r = romanizeKatakana(toKatakana(surface));
   const lr = loose(r);
-  if (lr.length < 4) return undefined;
+  if (lr.length < 3) return undefined;
   for (const sentence of translation.split(/(?<=[.!?])\s+/)) {
     const words = sentence.match(/[A-Za-z][A-Za-z'-]*/g) ?? [];
     for (let k = 0; k < words.length; k++) {
       const w = words[k].replace(/'s$/, '');
       const lw = loose(w);
       if (lw === lr && /^[A-Z]/.test(w) && k > 0) return w;
+      // Three-letter spellings (Mei, Aoi) only as a capitalised name; so is
+      // a common word (くまさん "kumasan" is "Mr. Bear", `strict`).
+      if (lr.length < 4 || strict) continue;
       if (lw.startsWith(lr) && /^(san|chan|kun|sama)$/.test(lw.slice(lr.length))) return r[0].toUpperCase() + r.slice(1);
       if (tagged && lw === lr) return r[0].toUpperCase() + r.slice(1);
     }
   }
   return undefined;
+}
+
+/** A hiragana name romanized for display (めい → "Mei"). */
+export function romanizeName(kana: string): string {
+  const r = romanizeKatakana(toKatakana(kana));
+  return r ? r[0].toUpperCase() + r.slice(1) : kana;
 }

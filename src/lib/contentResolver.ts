@@ -28,7 +28,7 @@ import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 import { chooseSense, type ContextModel, type ContextSentenceIn } from './contextModel.js';
 import { splitSentences } from './sentenceSplitter.js';
-import { namesInTranslations, nameKatakanaRuns, kanaNameIn } from './nameFromTranslation.js';
+import { namesInTranslations, nameKatakanaRuns, kanaNameIn, romanizeName } from './nameFromTranslation.js';
 
 export const RESOLVED_FORMAT_VERSION = 1;
 
@@ -56,6 +56,8 @@ const EMPTY_BREAKDOWN = {
   jlptScore: 0, joyoPenalty: 0, highestGrade: null,
   freqPenalty: 0, jlptValues: [], gradeValues: [], priorities: [],
 };
+
+const toHiragana = (s: string) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 /**
  * Furigana in parentheses after kanji (行（い）きました, 猫（ねこ）が): the text
@@ -150,8 +152,51 @@ export async function resolveContent(
     (s) => wordResolver.headwordReadings(s)
   );
 
+  // Kana words Sudachi normalizes into the wrong word, fixed before names
+  // are decided (graded on 100 random corpus items):
+  // そら → 其れ "look!" is 空 "sky" (or the name Sora) except as a
+  // clause-opening interjection (そら、見ろ); あおい before a noun is 青い
+  // "blue", not 葵 "mallow".
+  merged = merged.map((t, k) => {
+    if (t.surface === 'そら' && t.baseForm === '其れ' && !(atClauseStart(text, t.startIndex) && /^[、，！!]/.test(text.slice(t.endIndex)))) {
+      return { ...t, baseForm: '空', dictionaryForm: '空', lemmaSurface: '空', pos: '名詞', posDetail: ['名詞', '普通名詞', '一般'] };
+    }
+    const n = merged[k + 1];
+    if (t.surface === 'あおい' && t.posDetail?.[0] === '名詞') {
+      if (n && n.posDetail?.[0] === '名詞' && /^[ 　]*$/.test(text.slice(t.endIndex, n.startIndex))) {
+        return { ...t, baseForm: '青い', dictionaryForm: '青い', lemmaSurface: '青い', pos: '形容詞', posDetail: ['形容詞', '一般', '形容詞', '連体形-一般'] };
+      }
+      // Otherwise (あおいは言った) it is the name Aoi; 葵 "mallow" never
+      // came up in the graded texts.
+      return { ...t, posDetail: ['名詞', '固有名詞', '人名', '名'], fixed: { meaning: 'Aoi (name)', reading: 'あおい' } };
+    }
+    return t;
+  });
+
+  // Names. A hiragana word used with ちゃん/くん at least twice is a
+  // character's name (めいちゃん is not 姪 "niece"); with さん only when it
+  // is not a common word (くまさん is still "Mr. Bear").
+  const HONORIFIC = /^(さん|ちゃん|くん|君|様|さま)$/;
+  const confirmed = new Map<string, string>();
+  {
+    const count = new Map<string, number>();
+    merged.forEach((t, k) => {
+      const nx = merged[k + 1];
+      if (!nx || nx.startIndex !== t.endIndex || t.fixed || t.posDetail?.[0] !== '名詞' || !/^[ぁ-ゖー]+$/.test(t.surface)) return;
+      const key = /^(ちゃん|くん)$/.test(nx.surface) ? t.surface : nx.surface === 'さん' ? `さん:${t.surface}` : null;
+      if (key) count.set(key, (count.get(key) ?? 0) + 1);
+    });
+    for (const [key, n] of count) {
+      if (n < 2) continue;
+      const surface = key.replace(/^さん:/, '');
+      if (key !== surface && (await wordResolver.commonKanaWord(surface)).size > 0) continue;
+      confirmed.set(surface, romanizeName(surface));
+    }
+  }
+
   // Katakana names the translation spells as English names (ゾル|タン →
   // "Zoltan", レッド "Red" not "red"): one proper-noun token each.
+  let translationAt: ((t: PositionedToken) => string | null | undefined) | undefined;
   if (context?.translate) {
     const spans = splitSentences(text);
     const translations = await context.translate(spans.map((s) => text.slice(s.start, s.end)));
@@ -159,26 +204,34 @@ export async function resolveContent(
     if (names.length > 0) merged = nameKatakanaRuns(merged, names);
     // Hiragana names: the translation keeps a name romanized (ゆき → "Yuki")
     // where it translates the word ("snow"). One confirmed occurrence names
-    // every occurrence. A hiragana word Sudachi tagged as a name that the
-    // translation does NOT spell, and that is a common word, is the word
-    // (げんき "healthy", not "Genki").
-    const translationAt = (t: PositionedToken) => translations[spans.findIndex((s) => t.startIndex >= s.start && t.startIndex < s.end)];
-    const HONORIFIC = /^(さん|ちゃん|くん|君|様|さま)$/;
-    const confirmed = new Map<string, string>();
-    merged.forEach((t, k) => {
-      if (t.posDetail?.[0] !== '名詞' || t.fixed) return;
+    // every occurrence. Kanji nouns count too when the translation spells
+    // their reading as a capitalised name.
+    translationAt = (t: PositionedToken) => translations[spans.findIndex((s) => t.startIndex >= s.start && t.startIndex < s.end)];
+    for (let k = 0; k < merged.length; k++) {
+      const t = merged[k];
+      if (t.posDetail?.[0] !== '名詞' || t.fixed || confirmed.has(t.surface)) continue;
       const tagged = t.posDetail?.[1] === '固有名詞' || HONORIFIC.test(merged[k + 1]?.surface ?? '');
-      const name = kanaNameIn(t.surface, translationAt(t), tagged);
-      if (name && !confirmed.has(t.surface)) confirmed.set(t.surface, name);
-    });
+      const kana = /^[ぁ-ゖー]+$/.test(t.surface)
+        ? t.surface
+        : /[一-鿿々]/.test(t.surface) && !['数詞', '固有名詞'].includes(t.posDetail?.[1] ?? '') && t.reading ? toHiragana(t.reading) : null;
+      if (!kana) continue;
+      const common = kana === t.surface && t.posDetail?.[1] !== '固有名詞' && (await wordResolver.commonKanaWord(kana)).size > 0;
+      const name = kanaNameIn(kana, translationAt!(t), tagged && kana === t.surface, common);
+      if (name && (kana === t.surface || /^[A-Z]/.test(name))) confirmed.set(t.surface, name);
+    }
+  }
+  {
+    // A hiragana word Sudachi tagged as a name that the translation does
+    // NOT spell, and that is a common word, is the word (げんき "healthy",
+    // not "Genki").
     const renamed: PositionedToken[] = [];
     for (let k = 0; k < merged.length; k++) {
       const t = merged[k];
       const name = t.posDetail?.[0] === '名詞' && !t.fixed ? confirmed.get(t.surface) : undefined;
       if (name) {
-        renamed.push({ ...t, posDetail: ['名詞', '固有名詞', '人名', '一般'], fixed: { meaning: `${name} (name)`, reading: t.surface } });
+        renamed.push({ ...t, posDetail: ['名詞', '固有名詞', '人名', '一般'], fixed: { meaning: `${name} (name)`, reading: /[一-鿿々]/.test(t.surface) ? t.reading : t.surface } });
       } else if (
-        t.posDetail?.[1] === '固有名詞' && /^[ぁ-ゖー]+$/.test(t.surface) && translationAt(t) &&
+        translationAt && t.posDetail?.[1] === '固有名詞' && /^[ぁ-ゖー]+$/.test(t.surface) && translationAt(t) &&
         !HONORIFIC.test(merged[k + 1]?.surface ?? '') && (await wordResolver.commonKanaWord(t.surface)).size > 0
       ) {
         renamed.push({ ...t, posDetail: ['名詞', '普通名詞', '一般'] });

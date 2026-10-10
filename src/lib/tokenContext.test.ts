@@ -129,7 +129,7 @@ describe('kana words Sudachi fragments (100-item review)', () => {
   const SUF = ['接尾辞', '名詞的', '一般'];
   const NUM = ['名詞', '数詞'];
   const words: Record<string, string[]> = {
-    じてんしゃ: ['n'], かいさつ: ['n', 'vs'], はっけん: ['n', 'vs'], あるく: ['v5k', 'vi'], かえる: ['v5r', 'vi'],
+    じてんしゃ: ['n'], かいしゃ: ['n'], かいさつ: ['n', 'vs'], はっけん: ['n', 'vs'], あるく: ['v5k', 'vi'], かえる: ['v5r', 'vi'],
   };
   const common = async (s: string) => new Set(words[s] ?? []);
   const mergeK = (toks: PositionedToken[], text: string) =>
@@ -151,9 +151,9 @@ describe('kana words Sudachi fragments (100-item review)', () => {
     const t1 = 'あかい';
     // (あ|か is not a candidate: か is a particle)
     expect((await mergeK(lay(t1, [['あ', ['感動詞']], ['か', ['助詞', '終助詞']], ['い', ['動詞']]]), t1)).map((t) => t.surface)).toEqual(['あ', 'か', 'い']);
-    const t2 = 'じてんしゃ';
-    // Both pieces ordinary nouns: no fragment evidence.
-    expect((await mergeK(lay(t2, [['じてん', N], ['しゃ', N]]), t2)).map((t) => t.surface)).toEqual(['じてん', 'しゃ']);
+    const t2 = 'かいしゃ';
+    // Both pieces ordinary nouns, under five kana: no fragment evidence.
+    expect((await mergeK(lay(t2, [['かい', N], ['しゃ', N]]), t2)).map((t) => t.surface)).toEqual(['かい', 'しゃ']);
   });
   it('re-joins a kana volitional Sudachi split (ある|こう → 歩こう)', async () => {
     const text = 'あるこう あるこう';
@@ -161,6 +161,11 @@ describe('kana words Sudachi fragments (100-item review)', () => {
     expect(out.map((t) => t.surface)).toEqual(['あるこう', 'あるこう']);
     expect(out[0].baseForm).toBe('あるく');
     expect(out[0].pos).toBe('動詞');
+  });
+  it('five or more kana may be cut through an interjection/adverb (うん|どう|かい → 運動会)', async () => {
+    const text = 'うんどうかいは';
+    const out = await mergeDictionaryWords(lay(text, [['うん', ['感動詞']], ['どう', ['副詞']], ['かい', N], ['は', ['助詞', '係助詞']]]), text, none, none, () => false, none, async () => new Set(), async (s) => new Set(s === 'うんどうかい' ? ['n'] : []));
+    expect(out[0].surface).toBe('うんどうかい');
   });
 });
 

@@ -118,6 +118,8 @@ interface MergeRule {
   key?: (surface: string) => string;
   /** Meaning decided here (colloquial forms JMDict files elsewhere). */
   fixed?: string;
+  /** Reading decided here (何か is なにか, not UniDic's なん+か). */
+  reading?: string;
 }
 
 /**
@@ -221,6 +223,16 @@ const MERGE_RULES: MergeRule[] = [
     match: ([a, b, c]) =>
       (a.surface === 'しょう' || a.surface === 'しよう') && b.surface === 'が' && /^(ない|なかっ|なく)/.test(c.surface),
     pos: '形容詞',
+  },
+  // 何か is "something" (なにか): UniDic reads 何 before か as なん, and
+  // as an adverb the lookup picked なんか "somehow" (21 times in 100
+  // random corpus items, all of them "something").
+  {
+    length: 2,
+    match: ([a, b]) => (a.surface === '何' || a.surface === 'なに') && b.surface === 'か' && pos1(b) === '副助詞',
+    pos: '代名詞',
+    fixed: 'something, anything',
+    reading: 'なにか',
   },
   // Question word + か → indefinite (いつか someday, 何か something, どうか please/somehow)
   {
@@ -377,7 +389,8 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
       const span = tokens.slice(i, i + rule.length);
       if (span.length === rule.length && adjacent(span) && rule.match(span, text)) {
         const joined = join(span, rule.pos);
-        if (rule.fixed) joined.fixed = { meaning: rule.fixed };
+        if (rule.fixed) joined.fixed = { meaning: rule.fixed, ...(rule.reading ? { reading: rule.reading } : {}) };
+        if (rule.reading) joined.reading = rule.reading;
         if (rule.key) {
           joined.baseForm = rule.key(joined.surface);
           // Month reading computed, so 一月 is いちがつ "January" (the
@@ -763,7 +776,10 @@ async function joinKanaFragment(
     const stray = (t: PositionedToken) => t.surface.length === 1 && !PARTICLE_KANA.has(t.surface);
     const piece = (t: PositionedToken) => ['名詞', '接尾辞', '接頭辞'].includes(pos0(t) ?? '') || stray(t);
     const evidence = (t: PositionedToken) => ['接尾辞', '接頭辞'].includes(pos0(t) ?? '') || ['数詞', '固有名詞'].includes(pos1(t) ?? '') || stray(t);
-    if (!span.every(piece) || !span.some(evidence)) continue;
+    // Five or more kana spelling a common word need no other evidence, and
+    // may be cut through an interjection/adverb (うん|どう|かい → 運動会).
+    const long = surface.length >= 5 && span.every((t) => piece(t) || ['感動詞', '副詞', '代名詞', '連体詞'].includes(pos0(t) ?? ''));
+    if (!long && (!span.every(piece) || !span.some(evidence))) continue;
     const hp = await commonKanaWord(surface);
     if (![...hp].some((p) => /^(n|adj-na|adj-no|adv)/.test(p))) continue;
     return {
