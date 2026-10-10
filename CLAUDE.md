@@ -643,6 +643,25 @@ imports use it when `.venv-context` exists (`--no-context` /
   Remaining errors are long-tail: dialect/archaic forms, names, typos in
   the source, sense choice needing world knowledge.
 
+- **Tanaka corpus as a yardstick** (Oct 2026): the Tanaka B-lines
+  (`examples.utf` from edrdg.org, ~148k sentences tagged with JMDict
+  headword, reading and sometimes sense number) give an automatic,
+  no-LLM check. On 3,000 random sentences the pipeline agreed with the
+  tags on 98.2% of entries, 97.2% of tagged readings and 87.6% of tagged
+  senses. Mismatches surfaced real bugs (今 read こん, 君 read くん, counter
+  readings after full-width digits) plus tagging-convention differences
+  (Tanaka tags 彼の / 出発する / のです as one word). Inspect the
+  mismatches; don't treat the percentages as error rates.
+- **Trained sense chooser: rejected.** A scorer on frozen
+  multilingual-e5-small embeddings, trained on ~160k Tanaka-tagged words,
+  reached 91-94% on held-out Tanaka sentences (first-sense baseline 84%),
+  but applied to 100 corpus items it went 49 better / 82 worse, and 60 /
+  65 after adding untagged words as first-sense examples. Even its most
+  confident changes (p ≥ 0.9) were 17 / 22. Tanaka's sense distribution
+  (textbook sentences; 前 "ago" 312 vs "in front" 13) doesn't match
+  stories, and it pushes auxiliary uses (〜てみる, 〜すぎる) to lexical
+  senses. Training data would have to come from our own genres.
+
 Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
 after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
 of specialization"; only senses noted "usu. in compounds"/"after a name"
