@@ -28,7 +28,7 @@ import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 import { chooseSense, type ContextModel, type ContextSentenceIn } from './contextModel.js';
 import { splitSentences } from './sentenceSplitter.js';
-import { namesInTranslations, nameKatakanaRuns } from './nameFromTranslation.js';
+import { namesInTranslations, nameKatakanaRuns, kanaNameIn } from './nameFromTranslation.js';
 
 export const RESOLVED_FORMAT_VERSION = 1;
 
@@ -102,8 +102,39 @@ export async function resolveContent(
   // "Zoltan", レッド "Red" not "red"): one proper-noun token each.
   if (context?.translate) {
     const spans = splitSentences(text);
-    const names = namesInTranslations(await context.translate(spans.map((s) => text.slice(s.start, s.end))));
+    const translations = await context.translate(spans.map((s) => text.slice(s.start, s.end)));
+    const names = namesInTranslations(translations);
     if (names.length > 0) merged = nameKatakanaRuns(merged, names);
+    // Hiragana names: the translation keeps a name romanized (ゆき → "Yuki")
+    // where it translates the word ("snow"). One confirmed occurrence names
+    // every occurrence. A hiragana word Sudachi tagged as a name that the
+    // translation does NOT spell, and that is a common word, is the word
+    // (げんき "healthy", not "Genki").
+    const translationAt = (t: PositionedToken) => translations[spans.findIndex((s) => t.startIndex >= s.start && t.startIndex < s.end)];
+    const HONORIFIC = /^(さん|ちゃん|くん|君|様|さま)$/;
+    const confirmed = new Map<string, string>();
+    merged.forEach((t, k) => {
+      if (t.posDetail?.[0] !== '名詞' || t.fixed) return;
+      const tagged = t.posDetail?.[1] === '固有名詞' || HONORIFIC.test(merged[k + 1]?.surface ?? '');
+      const name = kanaNameIn(t.surface, translationAt(t), tagged);
+      if (name && !confirmed.has(t.surface)) confirmed.set(t.surface, name);
+    });
+    const renamed: PositionedToken[] = [];
+    for (let k = 0; k < merged.length; k++) {
+      const t = merged[k];
+      const name = t.posDetail?.[0] === '名詞' && !t.fixed ? confirmed.get(t.surface) : undefined;
+      if (name) {
+        renamed.push({ ...t, posDetail: ['名詞', '固有名詞', '人名', '一般'], fixed: { meaning: `${name} (name)`, reading: t.surface } });
+      } else if (
+        t.posDetail?.[1] === '固有名詞' && /^[ぁ-ゖー]+$/.test(t.surface) && translationAt(t) &&
+        !HONORIFIC.test(merged[k + 1]?.surface ?? '') && (await wordResolver.commonKanaWord(t.surface)).size > 0
+      ) {
+        renamed.push({ ...t, posDetail: ['名詞', '普通名詞', '一般'] });
+      } else {
+        renamed.push(t);
+      }
+    }
+    merged = renamed;
   }
 
   interface WorkToken extends ResolvedToken {
