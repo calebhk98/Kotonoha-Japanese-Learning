@@ -624,9 +624,9 @@ describe('homograph entry selection – kana searches prefer usually-kana entrie
     expect(pickBestEntry([counter, head], '頭', { pos: '名詞' }).id).toBe('1582310');
   });
 
-  it('kanji-primary entries still win kana searches when nothing marks the competitor', () => {
-    // あめ: 飴 vs 雨 — neither is uk, both common; selection stays stable
-    // (first in index order) rather than flipping on the new signals.
+  it('an exact kana tie (あめ: 飴 vs 雨, neither uk) goes to the easier kanji', () => {
+    // Both common, neither uk: once index order; now the easier kanji (雨,
+    // old JLPT 4) wins and the other stays visible as the "or:" alternative.
     const candy = {
       id: '1153520',
       kanji: [{ text: '飴', common: true }],
@@ -639,7 +639,7 @@ describe('homograph entry selection – kana searches prefer usually-kana entrie
       kana: [{ text: 'あめ', common: true }],
       sense: [{ partOfSpeech: ['n'], misc: [] }, {}],
     };
-    expect(pickBestEntry([candy, rain], 'あめ', { pos: '名詞' }).id).toBe('1153520');
+    expect(pickBestEntry([candy, rain], 'あめ', { pos: '名詞' }).id).toBe('1171900');
   });
 });
 
@@ -758,5 +758,22 @@ describe('findCloseAlternatives – ambiguous homographs surface the runner-up',
     };
     const alts = findCloseAlternatives([kobuEncourage, kobuLump], kobuLump, 'こぶ', { pos: '名詞' });
     expect(alts).toEqual([]);
+  });
+});
+
+// Graded on 100 random corpus items (kana beginner texts).
+describe('kana homographs: tie-breaks (100-item review)', () => {
+  const e = (id: string, kanji: string, kana: string, gloss: string) => ({
+    id, kanji: [{ text: kanji, common: true }], kana: [{ text: kana, common: true }],
+    sense: [{ partOfSpeech: ['n'], gloss: [{ lang: 'eng', text: gloss }] }],
+  });
+  it('an exact tie on kana えき goes to the entry with easier kanji (駅 over 液)', () => {
+    const best = pickBestEntry([e('1', '液', 'えき', 'liquid'), e('2', '益', 'えき', 'benefit'), e('3', '駅', 'えき', 'railway station')], 'えき', { pos: '名詞' });
+    expect(best.id).toBe('3');
+  });
+  it('a proper-noun token prefers the entry whose gloss is a name (ふじ → 富士 "Mount Fuji")', () => {
+    const fuji = { ...e('2', '富士', 'ふじ', 'Mount Fuji'), kanji: [{ text: '富士', common: false }] };
+    const best = pickBestEntry([e('1', '藤', 'ふじ', 'wisteria'), fuji], 'ふじ', { pos: '名詞', properNoun: true });
+    expect(best.id).toBe('2');
   });
 });

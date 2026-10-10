@@ -7,6 +7,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { WordDetailModal } from './components/WordDetailModal';
 import { WordDetailPage } from './components/WordDetailPage';
 import { Content } from './data/content';
+import { saveImport } from './lib/api';
 import { useContentBootstrap } from './hooks/useContentBootstrap';
 import { useContentData } from './hooks/useContentData';
 import { useContentView } from './hooks/useContentView';
@@ -163,8 +164,13 @@ export default function App() {
         onForceReload={() => loadVocabForContent(selectedContent, true)}
         onUpdateContent={(updatedContent) => {
           let updatedVocab = false;
+          // Saved on the server (an edit of disk content is saved under its
+          // id and overrides it); the text is re-resolved once, then the
+          // vocab list reloads from the saved document.
+          const saved = saveImport(updatedContent)
+            .catch(e => console.error('[App] Saving edit failed:', e));
           if (updatedContent.text !== selectedContent.text) {
-             loadVocabForContent(updatedContent, true);
+             saved.then(() => loadVocabForContent(updatedContent, true));
              updatedVocab = true;
           }
 
@@ -281,7 +287,11 @@ export default function App() {
           onClose={() => setShowImportOpts(false)}
           onImport={(newContent) => {
             setCustomContent(prev => [newContent, ...prev]);
-            loadVocabForContent(newContent);
+            // Resolve + save on the server first, so the vocab list and the
+            // reader both read the saved document.
+            saveImport(newContent)
+              .then(() => loadVocabForContent(newContent))
+              .catch(e => { console.error('[App] Import failed:', e); loadVocabForContent(newContent); });
             setSelectedContent(newContent);
           }}
         />

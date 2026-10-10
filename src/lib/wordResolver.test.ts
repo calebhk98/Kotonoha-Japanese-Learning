@@ -392,7 +392,7 @@ describe('WordResolver – POS hint reaches the dictionary', () => {
     const result = await resolver.resolve('おい', '置く', undefined, '動詞');
     expect(result.meaning).toBe('to put');
     expect(calls.length).toBeGreaterThan(0);
-    expect(calls[0][1]).toEqual({ pos: '動詞' });
+    expect(calls[0][1]).toMatchObject({ pos: '動詞' });
   });
 
   it('caches per (word, pos) so a noun lookup cannot poison a verb lookup', async () => {
@@ -460,7 +460,7 @@ describe('WordResolver – tokenizer reading is used for display and lookup', ()
     };
     const resolver = new WordResolver(dict as any);
     await resolver.resolve('かしら', '頭', undefined, '名詞', 'かしら');
-    expect(calls[0]).toEqual({ pos: '名詞', reading: 'かしら' });
+    expect(calls[0]).toMatchObject({ pos: '名詞', reading: 'かしら' });
   });
 
   it('does NOT pass a reading hint for conjugating tokens (surface reading ≠ base reading)', async () => {
@@ -887,5 +887,24 @@ describe('WordResolver – #257 follow-up: supplementary additions', { timeout: 
   it('ポカリ: brand name gets a curated gloss', async () => {
     const result = await new WordResolver(makeMockDictionary({})).resolve('ポカリ', 'ポカリ', undefined, '名詞');
     expect(result.meaning).toMatch(/pocari|drink/i);
+  });
+});
+
+// Graded on 100 random corpus items: kana ほう (方 "direction") showed the
+// interjection "oh, ho" because the one-token set-phrase step matched any
+// expression entry spelled like the surface.
+describe('WordResolver – one-token set phrases only for whole utterances when the token is a noun', () => {
+  const exp = (kana: string, gloss: string) => ({ entry: { kana: [{ text: kana }], sense: [{ partOfSpeech: ['exp', 'int'], gloss: [{ lang: 'eng', text: gloss }] }] }, score: 0, picked: false });
+  const dict = {
+    lookup: async (w: string) => (({ 方: { meaning: 'direction, way', reading: 'ほう' }, 只今: { meaning: 'now, at present', reading: 'ただいま' } } as any)[w] ?? null),
+    candidates: async (w: string) => (w === 'ほう' ? [exp('ほう', 'oh')] : w === 'ただいま' ? [exp('ただいま', "Here I am")] : []),
+  };
+  it('kana noun ほう mid-sentence is 方 "direction", not "oh"', async () => {
+    const r = await new WordResolver(dict).resolve('ほう', '方', undefined, '名詞', 'ほう', undefined, { notGrammar: true });
+    expect(r.meaning).toMatch(/direction/);
+  });
+  it('ただいま said on its own is the greeting', async () => {
+    const r = await new WordResolver(dict).resolve('ただいま', '只今', undefined, '名詞', 'ただいま', undefined, { notGrammar: true, utterance: true } as any);
+    expect(r.meaning).toMatch(/Here I am/);
   });
 });

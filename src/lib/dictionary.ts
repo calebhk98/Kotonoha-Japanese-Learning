@@ -1,8 +1,11 @@
 import { createRequire } from 'module';
+import kanjiData from 'kanji-data';
 
 export interface WordLookupResult {
   meaning: string;
   meanings?: string[]; // All available meanings/senses
+  /** Glosses per sense, in `meanings` order (JMDict only). */
+  senseSizes?: number[];
   reading?: string;
   // The language the returned gloss text is actually in (normalised 3-letter
   // tag, e.g. 'spa' | 'eng'), for the requested-vs-served comparison that lets
@@ -26,6 +29,22 @@ export interface LookupHint {
   // lookups return English glosses exactly as before. 'eng' should always be
   // last so English remains the mandatory fallback.
   lang?: string[];
+  /** Grammatical context from the previous token (tokenContext.ts), e.g. 'te'. */
+  after?: string;
+  /** Kana lemma (Sudachi dictionary_form) when the lookup key is a kanji spelling. */
+  kanaForm?: string;
+  /** The text writes this word in kana (lookup key may be a kanji spelling). */
+  kanaSurface?: boolean;
+  /** Sudachi tags the token as a proper noun (固有名詞). */
+  properNoun?: boolean;
+  /** ...specifically a person/place/organization name (人名/地名/組織). */
+  nameType?: boolean;
+  /**
+   * English head words of the verb's subject/object noun (風が → ['wind']).
+   * Among near-tied homographs, the entry whose glosses mention one wins:
+   * 風がふく is 吹く "to blow (of the wind)", not 拭く "to wipe".
+   */
+  argumentWords?: string[];
 }
 
 export interface Dictionary {
@@ -70,6 +89,119 @@ function entryMatchesPos(entry: any, sudachiPos: string | undefined): boolean {
   return (entry.sense || []).some((s: any) =>
     Array.isArray(s.partOfSpeech) && s.partOfSpeech.some(matches)
   );
+}
+
+/** jmdict-simplified restriction lists: "*" (or absent/empty) = applies to all. */
+function restrictionAllows(list: string[] | undefined, form: string): boolean {
+  return !list || list.length === 0 || list.includes('*') || list.includes(form);
+}
+
+/**
+ * The senses of `entry` that can apply to this occurrence, in JMDict order.
+ * Each filter only narrows when something survives it, so an entry never
+ * ends up with no senses:
+ *   1. spelling: sense.appliesToKanji / appliesToKana must allow the form
+ *      that was looked up
+ *   2. reading: for a kanji form, the token's contextual reading must be in
+ *      sense.appliesToKana (生物 せいぶつ vs なまもの style splits)
+ *   3. POS: the sense's partOfSpeech must fit the token's Sudachi POS, so a
+ *      verb token doesn't lead with a noun sense of the same entry
+ */
+export function selectSenses(entry: any, word: string, hint?: LookupHint): any[] {
+  let senses: any[] = entry.sense || [];
+  const narrow = (keep: (s: any) => boolean) => {
+    const kept = senses.filter(keep);
+    if (kept.length > 0) senses = kept;
+  };
+  const isKanjiForm = (entry.kanji || []).some((k: any) => k.text === word);
+  narrow((s) =>
+    isKanjiForm ? restrictionAllows(s.appliesToKanji, word) : restrictionAllows(s.appliesToKana, word)
+  );
+  if (isKanjiForm && hint?.reading && (entry.kana || []).some((k: any) => k.text === hint.reading)) {
+    narrow((s) => restrictionAllows(s.appliesToKana, hint.reading!));
+  }
+  const matches = hint?.pos ? jmdictPosMatcher(hint.pos) : null;
+  if (matches) narrow((s) => Array.isArray(s.partOfSpeech) && s.partOfSpeech.some(matches));
+  // A proper noun's capitalised sense (日産: "daily output" → "Nissan").
+  if (hint?.properNoun) {
+    const proper = senses.filter((sn) => /^[A-Z]/.test(getGlosses(sn, ['eng'])[0] ?? ''));
+    if (proper.length > 0) senses = [...proper, ...senses.filter((sn) => !proper.includes(sn))];
+  }
+
+  // 4. grammatical context: JMDict notes context-bound senses in `info`
+  //    ("after the -te form of a verb"). Senses whose note matches this
+  //    occurrence's context go first; context-bound senses whose context is
+  //    absent go last (ください with no te-form before it is "please give
+  //    me", not "please do for me"). Order is otherwise JMDict's.
+  // 5. kana spelling as a sense signal, for the few verbs where it is
+  //    reliable. A generic "prefer uk senses for kana" rule was measured and
+  //    rejected: it turns kana いく into a slang sense and あう into "to have
+  //    an accident". Kana あげる, though, is the everyday "to give" (the
+  //    "raise" senses are written 上げる).
+  const preferred = hint?.kanaSurface ? KANA_PREFERRED_SENSE[word] : undefined;
+  if (preferred) {
+    const hit = senses.filter((s) => getGlosses(s, ['eng'])[0] === preferred);
+    if (hit.length > 0) senses = [...hit, ...senses.filter((s) => !hit.includes(s))];
+  }
+
+  const fits = (s: any) => senseFitsHint(s, hint);
+  const bound = (s: any) => senseInfo(s).some((i) => /\bafter\b/i.test(i));
+  return [
+    ...senses.filter((s) => fits(s)),
+    ...senses.filter((s) => !fits(s) && !bound(s)),
+    ...senses.filter((s) => !fits(s) && bound(s)),
+  ];
+}
+
+/** Lemma → head gloss of the sense a KANA spelling of it means. */
+const KANA_PREFERRED_SENSE: Record<string, string> = {
+  上げる: 'to give',
+};
+
+const CONTEXT_INFO: Record<string, RegExp> = {
+  te: /te[- ]?form/i,
+  masu: /-?masu[- ]stem/i,
+  'adj-stem': /adj(ective)?\.?[- ]stem/i,
+  'verb-plain': /(present|plain|dictionary)[- ](non-past )?form of a verb/i,
+  'verb-past': /past form of a verb/i,
+};
+
+const senseInfo = (s: any): string[] => (Array.isArray(s.info) ? s.info : []);
+
+/**
+ * True when the sense is the one this occurrence's grammatical context
+ * calls for: its JMDict note fits ("after the -te form"), or, after a noun,
+ * its note marks a compound use (ラーメンバカ: バカ "fervent enthusiast",
+ * noted "usu. in compounds").
+ * lookup() lets such a sense outrank the slang/rare penalty — バカ's
+ * enthusiast sense is tagged sl.
+ */
+export function senseFitsHint(s: any, hint?: LookupHint): boolean {
+  if (!hint?.after) return false;
+  // Only senses JMDict NOTES as compound/after-noun uses: a blanket "prefer
+  // n-suf senses after a noun" rule was measured on the corpus and lost
+  // (一 "best", 回 "episode", 畑 "field of specialization", 箱 "counter").
+  // "after a noun" itself is too broad (前's "portion, helping" in 二年前).
+  if (hint.after === 'noun') return senseInfo(s).some((i) => /usu\. in compounds|after a (name|person)/i.test(i));
+  return senseFitsContext(s, hint.after);
+}
+
+/** True when a gloss of the sense names one of the hint's argument words. */
+export function senseMentionsArgument(s: any, hint?: LookupHint): boolean {
+  const words = hint?.argumentWords;
+  if (!words?.length) return false;
+  return getGlosses(s, ['eng']).some((g: string) => words.some((w) => new RegExp(`\\b${w}s?\\b`, 'i').test(g)));
+}
+
+/** True when the sense's JMDict note fits this grammatical context ('te', …). */
+export function senseFitsContext(s: any, after: string): boolean {
+  const re = CONTEXT_INFO[after];
+  return !!re && senseInfo(s).some((i) => re.test(i));
+}
+
+/** True when a sense only applies in a grammatical context ("after ..."). */
+export function isContextBoundSense(s: any): boolean {
+  return senseInfo(s).some((i) => /\bafter\b/i.test(i));
 }
 
 /** True when any sense is marked uk ("word usually written using kana alone"). */
@@ -295,6 +427,14 @@ export function getSenseCommonness(sense: any): number {
  * heavily weighting the common flag, those obscure entries win on kanji count
  * alone and the canonical meaning ("good") is lost.
  */
+function firstEnglishGloss(entry: any): string {
+  for (const sn of entry.sense ?? []) {
+    const g = (sn.gloss ?? []).find((x: any) => x.lang === 'eng' || x.lang === undefined);
+    if (g) return g.text ?? '';
+  }
+  return '';
+}
+
 export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint): number {
   const hasKanji = entry.kanji && entry.kanji.length > 0;
   const hasCommonKanji = hasKanji && entry.kanji.some((k: any) => k.common === true);
@@ -331,15 +471,40 @@ export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint)
 
   if (entry.sense && entry.sense.length > 1) score += 2;
 
+  // Sudachi says proper noun: an entry whose first English gloss is a name
+  // (ふじ → 富士 "Mount Fuji", not 藤 "wisteria") is the one meant.
+  if (hint?.properNoun && /^[A-Z]/.test(firstEnglishGloss(entry))) score += 15;
+
   // Grammatical compatibility with the token: Sudachi knows おく in
   // おいていきなさい is a VERB, which rules out 奥 "inner part" and 億
   // "hundred million"; a NOUN 頭 rules out the large-animal counter (ctr).
-  if (entryMatchesPos(entry, hint?.pos)) score += 10;
+  const posMatcher = hint?.pos ? jmdictPosMatcher(hint.pos) : null;
+  if (posMatcher && !entryMatchesPos(entry, hint?.pos)) {
+    // No sense fits the token's POS at all (好き tagged as a verb vs the
+    // adverb 良く/好く): a common-but-wrong-POS entry must not win on its
+    // common flag alone.
+    score -= 8;
+  }
+  if (entryMatchesPos(entry, hint?.pos)) {
+    score += 10;
+    // 感動詞 is only hinted for clear exclamations (Sudachi's own tag, or
+    // tokenContext.interjectionPos for あれ～？), where an interjection entry
+    // beats a more common pronoun/noun homograph.
+    if (hint?.pos === '感動詞') score += 10;
+  }
 
   // Contextual reading from UniDic — the strongest signal when present.
   // 家の前 reads まえ, so the 前(ぜん) entry cannot match; 六人 reads にん,
   // selecting the people-counter over the standalone-noun ひと entry.
   if (hint?.reading && entry.kana?.some((k: any) => k.text === hint.reading)) {
+    // For a kanji word the contextual reading is the strongest signal there
+    // is (第2種 しゅ "kind" vs たね "seed"; 等 とう vs ら): it must beat a
+    // more common homograph's common-flag lead. Known-bad UniDic readings
+    // are corrected before this point (READING_CORRECTIONS etc.).
+    score += word && /[一-鿿々]/.test(word) ? 30 : 15;
+  } else if (hint?.kanaForm && entry.kana?.some((k: any) => k.text === hint.kanaForm)) {
+    // Same signal for conjugating words: the kana lemma (拘る written
+    // こだわる) names the entry's reading.
     score += 15;
   }
 
@@ -367,11 +532,23 @@ export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint)
  * list of entries whose kanji or kana exactly match `word`.
  */
 export function pickBestEntry(exactMatches: any[], word: string, hint?: LookupHint): any {
+  const kana = /^[ぁ-んー]+$/.test(word);
   return exactMatches.reduce((best: any, current: any) => {
     const bestScore = getEntryCommonness(best, word, hint);
     const currentScore = getEntryCommonness(current, word, hint);
+    // An exact tie on a kana word (えき: 液 / 駅 / 益 all common nouns) went
+    // to index order. Text written in kana is beginner text, so the entry
+    // with easier kanji is the likelier one (駅, 越える over 肥える).
+    if (kana && currentScore === bestScore) return kanjiEase(current) > kanjiEase(best) ? current : best;
     return currentScore > bestScore ? current : best;
   });
+}
+
+/** Old JLPT level (4 = easiest) of the hardest kanji in the entry's first written form; 0 if none/unknown. */
+function kanjiEase(entry: any): number {
+  const text: string = entry.kanji?.[0]?.text ?? '';
+  const levels = [...text].filter((c) => /[一-鿿々]/.test(c)).map((c) => (kanjiData as any).get(c)?.jlpt ?? 0);
+  return levels.length ? Math.min(...levels) : 0;
 }
 
 /**
@@ -399,7 +576,7 @@ export function findCloseAlternatives(
     // Entry-level language choice (senses are grouped by language), then take
     // the first sense in that language.
     const entryLang = getEntryGlossLang(entry, langPriority) ?? DEFAULT_GLOSS_LANGS[0];
-    const firstSense = (entry.sense || []).find((s: any) => getGlosses(s, [entryLang]).length > 0);
+    const firstSense = selectSenses(entry, word, hint).find((s: any) => getGlosses(s, [entryLang]).length > 0);
     if (!firstSense) continue;
     const gloss = getGlosses(firstSense, [entryLang])[0];
 
@@ -414,6 +591,33 @@ export function findCloseAlternatives(
   }
 
   return alternatives;
+}
+
+/**
+ * The one-line meaning a reader sees on hover. The first sense alone often
+ * isn't the one in use (肉 "flesh" vs "meat", 結ぶ "to tie" vs "to bear
+ * fruit"), so: up to two glosses of the first sense, plus "(also: …)" with
+ * the head gloss of the next sense when it is ordinary (not slang/archaic/
+ * specialist, not bound to a grammatical context) and the line stays short.
+ */
+function buildHeadline(sorted: { sense: any; commonness: number }[], langs: string[]): string | undefined {
+  const usable = sorted.filter(({ sense }) => getGlosses(sense, langs).length > 0);
+  if (usable.length === 0) return undefined;
+  const first = getGlosses(usable[0].sense, langs).slice(0, 2).join(', ');
+  const second = usable[1];
+  // A second sense is only worth showing when it is everyday Japanese: not
+  // historical/rare/slang/abbreviation and not a specialist field (大学's
+  // "former imperial university (ritsuryō system)" is noise).
+  const niche = (sn: any) =>
+    (sn.field ?? []).length > 0 ||
+    (sn.misc ?? []).some((m: string) => ['hist', 'arch', 'obs', 'rare', 'sl', 'vulg', 'derog', 'abbr', 'dated', 'poet', 'X'].includes(m));
+  if (!second || second.commonness < 0 || niche(second.sense) || isContextBoundSense(second.sense) || first.length >= 40) return first;
+  const extra = getGlosses(second.sense, langs)[0];
+  if (!extra || first.includes(extra)) return first;
+  // Marked as secondary: graded on 120 corpus tokens, the extra sense was
+  // the right one 8 times where the first was wrong, and odd-but-harmless
+  // noise 19 times; "(also: …)" keeps the first sense visibly primary.
+  return `${first} (also: ${extra})`;
 }
 
 // ==================== JMDict Wrapper Dictionary ====================
@@ -473,6 +677,48 @@ export class JmdictDictionary implements Dictionary {
     );
   }
 
+  private forms: Promise<Set<string>> | null = null;
+
+  /**
+   * Every JMDict written form (kanji and kana), loaded once from the
+   * LevelDB index keys (`indexes/{kana|kanji}/{text}-{id}`). Lets callers
+   * test "is this span of tokens a dictionary word?" without a lookup per
+   * span (longest-match merging in contentResolver).
+   */
+  hasForm(text: string): Promise<boolean> {
+    if (!this.forms) {
+      this.forms = (async () => {
+        const set = new Set<string>();
+        if (!this.db || typeof this.db.keys !== 'function') return set;
+        for (const kind of ['kana', 'kanji']) {
+          const prefix = `indexes/${kind}/`;
+          for await (const key of this.db.keys({ gte: prefix, lt: `indexes/${kind}0` })) {
+            const k = String(key);
+            set.add(k.slice(prefix.length, k.lastIndexOf('-')));
+          }
+        }
+        return set;
+      })();
+    }
+    return this.forms.then((set) => set.has(text));
+  }
+
+  /**
+   * Every exact-match entry for `word` with the score pickBestEntry ranks it
+   * by, for inspection tooling (scripts/inspect-text.ts). Not used by lookup.
+   */
+  async candidates(word: string, hint?: LookupHint): Promise<{ entry: any; score: number; picked: boolean }[]> {
+    if (!this.db || typeof this.db.values !== 'function') return [];
+    const [kana, kanji] = await Promise.all([this.searchExact(word, 'kana'), this.searchExact(word, 'kanji')]);
+    const seen = new Set<string>();
+    const all = [...kana, ...kanji].filter((e) => !seen.has(e.id) && seen.add(e.id));
+    if (all.length === 0) return [];
+    const best = pickBestEntry(all, word, hint);
+    return all
+      .map((entry) => ({ entry, score: getEntryCommonness(entry, word, hint), picked: entry.id === best.id }))
+      .sort((a, b) => b.score - a.score);
+  }
+
   async lookup(word: string, quiet: boolean = false, hint?: LookupHint): Promise<WordLookupResult | null> {
     if (!this.db) return null;
 
@@ -504,7 +750,22 @@ export class JmdictDictionary implements Dictionary {
       // Among exact matches, pick the entry a learner most likely wants.
       // For words like 行く that have multiple variants (行く, 往く), all exact matches
       // refer to the same underlying word — pick the most common entry.
-      const bestMatch = pickBestEntry(exactMatches, word, hint);
+      let bestMatch = pickBestEntry(exactMatches, word, hint);
+      if (hint?.argumentWords?.length) {
+        const bestScore = getEntryCommonness(bestMatch, word, hint);
+        const mentions = (e: any) =>
+          (e.sense ?? []).some((sn: any) =>
+            getGlosses(sn, ['eng']).some((g: string) =>
+              hint.argumentWords!.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(g))
+            )
+          );
+        if (!mentions(bestMatch)) {
+          const alt = exactMatches.find(
+            (e) => e !== bestMatch && getEntryCommonness(e, word, hint) >= bestScore - 3 && mentions(e)
+          );
+          if (alt) bestMatch = alt;
+        }
+      }
 
       // Native-language gloss priority (#260): default ['eng'] keeps the
       // English-only behaviour byte-identical; ['spa','eng'] gives Spanish
@@ -517,11 +778,20 @@ export class JmdictDictionary implements Dictionary {
 
       // Extract all meanings, deprioritising rare/slang/archaic senses (#187).
       const meanings: string[] = [];
+      // How many glosses each sense contributed, in `meanings` order, so a
+      // later step can treat them as senses again (the translation context
+      // step picks a sense, not a gloss).
+      const senseSizes: number[] = [];
       const senseLangFilter = primaryGlossLang ? [primaryGlossLang] : DEFAULT_GLOSS_LANGS;
-      const sensesWithScores = (bestMatch.sense || []).map((sense: any, idx: number) => ({
+      const sensesWithScores = selectSenses(bestMatch, word, hint).map((sense: any, idx: number) => ({
         sense,
         order: idx,
-        commonness: this.getSenseCommonness(sense)
+        commonness:
+          this.getSenseCommonness(sense) +
+          (senseFitsHint(sense, hint) ? 100 : 0) +
+          // A sense whose gloss names this verb's actual object/subject
+          // (契約を結ぶ → "to conclude (e.g. a contract)") is the one in use.
+          (senseMentionsArgument(sense, hint) ? 60 : 0),
       }));
 
       // Sort by commonness descending; use original order as tiebreaker.
@@ -537,6 +807,7 @@ export class JmdictDictionary implements Dictionary {
         const glossTexts = getGlosses(sense, senseLangFilter);
         if (glossTexts.length > 0) {
           meanings.push(...glossTexts);
+          senseSizes.push(glossTexts.length);
         }
       }
 
@@ -548,7 +819,7 @@ export class JmdictDictionary implements Dictionary {
       // Beginner-facing ambiguity: when a homograph scores within a hair of
       // the winner (kana あめ: 飴 vs 雨), say so instead of picking silently.
       const alternatives = findCloseAlternatives(exactMatches, bestMatch, word, hint);
-      let meaning = meanings[0];
+      let meaning = buildHeadline(sensesWithScores, senseLangFilter) || meanings[0];
       if (alternatives.length > 0) {
         meaning = `${meaning} — or: ${alternatives.join('; ')}`;
         meanings.push(...alternatives.map((a) => `Other possibility: ${a}`));
@@ -564,6 +835,7 @@ export class JmdictDictionary implements Dictionary {
       return {
         meaning,
         meanings: meanings.length > 1 ? meanings : undefined,
+        ...(senseSizes.length > 1 ? { senseSizes } : {}),
         reading: matchedKana || word,
         ...(primaryGlossLang ? { glossLang: primaryGlossLang } : {}),
       };
@@ -583,6 +855,8 @@ export class JmdictDictionary implements Dictionary {
 // ==================== JMnedict Dictionary ====================
 export class JmnedictDictionary implements Dictionary {
   private entries: Map<string, WordLookupResult> = new Map();
+  /** Every reading of a kanji-written name (京子: あつこ, きょうこ, …). */
+  private readingsByWritten: Map<string, { kana: string; meanings: string[] }[]> = new Map();
   private initialized = false;
   private cache = new Map<string, WordLookupResult | null>();
 
@@ -629,6 +903,12 @@ export class JmnedictDictionary implements Dictionary {
             }
           }
 
+          if (kanji && kanji !== kana && kana && Array.isArray(meanings)) {
+            const list = this.readingsByWritten.get(kanji) ?? [];
+            list.push({ kana, meanings });
+            this.readingsByWritten.set(kanji, list);
+          }
+
           if (kanji && kanji !== kana) {
             // Also index by kanji/written form
             if (!this.entries.has(kanji)) {
@@ -650,18 +930,28 @@ export class JmnedictDictionary implements Dictionary {
     return this.initialized;
   }
 
-  async lookup(word: string, quiet: boolean = false): Promise<WordLookupResult | null> {
-    // Check cache first
-    if (this.cache.has(word)) {
-      return this.cache.get(word) || null;
+  async lookup(word: string, quiet: boolean = false, hint?: LookupHint): Promise<WordLookupResult | null> {
+    const cacheKey = `${word}|${hint?.reading ?? ''}`;
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey) || null;
     }
 
-    // Look up in entries
-    const result = this.entries.get(word) || null;
+    // A kanji name has many readings (京子 → Atsuko, Kyōko, …); the
+    // contextual reading picks the one the text means.
+    const byReading = hint?.reading
+      ? this.readingsByWritten.get(word)?.find((r) => r.kana === hint.reading)
+      : undefined;
+    const base = byReading
+      ? { meaning: byReading.meanings[0], meanings: byReading.meanings, reading: byReading.kana }
+      : this.entries.get(word) || null;
+    // Name entries list romanization variants of ONE name (エリン: Hellin,
+    // Ellin, Elyn, Erin); show them together and say it is a name, rather
+    // than presenting the first variant as the meaning.
+    const result = base
+      ? { ...base, meaning: `${(base.meanings ?? [base.meaning]).slice(0, 4).join(' / ')} (name)` }
+      : null;
 
-    // Cache the result (including null results to avoid repeated lookups)
-    this.cache.set(word, result);
-
+    this.cache.set(cacheKey, result);
     return result;
   }
 }
@@ -671,6 +961,22 @@ export class DictionaryManager {
   private primary: Dictionary | null = null;
   private fallback1: Dictionary | null = null;
   private fallback2: Dictionary | null = null;
+
+  /**
+   * False when JMDict could not be opened (most often: another process holds
+   * the jmdict-db LevelDB lock) and lookups silently degraded to kanji-data,
+   * which produces confident nonsense (狐 "to rule a country requires many
+   * great men"). Batch tools must refuse to run in that state.
+   */
+  async usingJmdict(): Promise<boolean> {
+    // A locked LevelDB still reports initialized; only a real read tells.
+    if (!(this.primary instanceof JmdictDictionary)) return false;
+    try {
+      return await this.primary.hasForm('猫');
+    } catch {
+      return false;
+    }
+  }
 
   async initialize(
     usePrimary: "jmdict" | "kanjidata" = "kanjidata",
@@ -708,19 +1014,63 @@ export class DictionaryManager {
     this.fallback1 = jmnedictDict;
   }
 
+  /**
+   * True when `text` (all kana) is a headword that is actually WRITTEN in
+   * kana: a kana-only entry, a usually-kana (uk) sense, or a grammatical
+   * expression. と|なり must not merge into 隣 "next to" just because
+   * となり is that word's reading.
+   */
+  async isKanaHeadword(text: string): Promise<boolean> {
+    if (!(this.primary instanceof JmdictDictionary)) return false;
+    const cands = await this.primary.candidates(text);
+    const GRAMMATICAL = new Set(['exp', 'conj', 'adv', 'int', 'prt', 'aux', 'aux-v', 'aux-adj', 'pn', 'adj-pn']);
+    return cands.some(({ entry }) =>
+      (entry.kana ?? []).some((k: any) => k.text === text) &&
+      ((entry.kanji ?? []).length === 0 ||
+        (entry.sense ?? []).some((sn: any) => (sn.misc ?? []).includes('uk') || (sn.partOfSpeech ?? []).some((p: string) => GRAMMATICAL.has(p))))
+    );
+  }
+
+  /** True when every JMDict entry written `text` is only a conjunction. */
+  async isConjunctionOnly(text: string): Promise<boolean> {
+    if (!(this.primary instanceof JmdictDictionary)) return false;
+    const cands = await this.primary.candidates(text);
+    return cands.length > 0 && cands.every(({ entry }) =>
+      (entry.sense ?? []).every((sn: any) => (sn.partOfSpeech ?? []).every((p: string) => p === 'conj' || p === 'exp'))
+      && (entry.sense ?? []).some((sn: any) => (sn.partOfSpeech ?? []).includes('conj')));
+  }
+
+  /** True when JMDict has an entry written exactly `text`. */
+  async hasForm(text: string): Promise<boolean> {
+    return this.primary instanceof JmdictDictionary ? this.primary.hasForm(text) : false;
+  }
+
+  /** JMDict exact-match candidates for inspection tooling; [] without JMDict. */
+  async candidates(word: string, hint?: LookupHint) {
+    return this.primary instanceof JmdictDictionary ? this.primary.candidates(word, hint) : [];
+  }
+
   async lookup(word: string, hint?: LookupHint): Promise<WordLookupResult | null> {
     if (!this.primary) return null;
 
     // Try primary dictionary first. The hint only means something to JMDict
     // (homograph entry selection); the other dictionaries ignore extra args.
     const result = await this.primary.lookup(word, false, hint);
+    // Sudachi says proper noun: JMDict's proper-noun sense wins when it has
+    // one (日本 "Japan", 日産 "Nissan" — selectSenses puts capitalised
+    // senses first); otherwise the name dictionary does (平作 "Heisaku",
+    // バリ "Bali"), not a common-noun homograph ("normal crop", "burr").
+    if (hint?.properNoun && hint.nameType && this.fallback1 && !(result && /^[A-Z]/.test(result.meaning))) {
+      const name = await this.fallback1.lookup(word, false, hint);
+      if (name) return name;
+    }
     if (result) return result;
 
     // Try JMnedict for names and proper nouns — these can be hiragana, katakana,
     // or kanji-written (e.g. 和彦, 山城屋). The previous guard limited this to
     // pure-hiragana only, causing kanji-written names to always return null here.
     if (this.fallback1) {
-      const jmnedictResult = await this.fallback1.lookup(word);
+      const jmnedictResult = await this.fallback1.lookup(word, false, hint);
       if (jmnedictResult) return jmnedictResult;
     }
 

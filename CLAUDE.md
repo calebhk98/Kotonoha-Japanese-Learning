@@ -203,6 +203,9 @@ Source of truth: `server.ts`. Endpoints found:
 | GET    | `/api/content/:contentId/story`     | Reader tokens for one item — serves committed `resolved.json` when present (`precomputed: true`), else live-resolves |
 | GET    | `/api/content/:contentId/words`     | Words for one content item (prefers `resolved.json`)          |
 | GET    | `/api/word/:word`                   | Single-word reading + meaning + score                        |
+| GET    | `/api/imports`                      | Saved user imports (content metadata + text)                 |
+| POST   | `/api/imports`                      | Create/replace an import (or an edit of a disk item, under its id): resolved ONCE and saved |
+| PUT / DELETE | `/api/imports/:id`            | Edit (re-resolves only if the text changed) / delete         |
 | POST   | `/api/wanikani/validate`            | Validate WaniKani API token                                  |
 | POST   | `/api/wanikani/sync`                | Pull WaniKani SRS data                                       |
 
@@ -303,6 +306,24 @@ Consequences worth knowing:
 
 After adding content, `STORIES_LIST.md` is hand-maintained; update it if
 relevant. There is no automatic regeneration.
+
+### User imports: saved once, one document for every view
+
+Imported texts (and in-app edits of disk content) are resolved ONCE by the
+server and saved with their resolved document in `data/imports/<id>.json`
+(`src/lib/importStore.ts`; gitignored; `IMPORTS_DIR` overrides the folder,
+the API tests use a temp dir). `resolvedFor(id)` in server.ts makes a saved
+import win over a disk `resolved.json`, and the reader (`/story`), the vocab
+list (`/words`, `/content/words`) and `inspect-text --id <id> --stored` all
+read that one document. Before this, an import's reader tokens came from
+`resolveContent` but its vocab list from the older `processText` path (no
+merges, no context rules), so hover and vocab list could disagree, and the
+text was re-processed on every visit. The client uploads any import still
+only in localStorage (`customContent`) once on load; localStorage is now a
+first-paint cache, and its `contentVocab` cache write is allowed to fail
+(600+ items exceed the ~5 MB quota, which used to blank the app after an
+import). `loadVocabForContent` reads the server document even on a forced
+reload; `/api/extract` is only the fallback for text the server has none for.
 
 ---
 
@@ -446,6 +467,228 @@ were tuned by exactly that review, and "composes to something wrong" is
 worse than "unknown" in this app. Kana homographs with identical signals
 (あめ) resolve to one entry and show the other as an alternative.
 TOKENIZER_ANALYSIS.md predates all of this and is historical.
+
+### Inspecting output: `scripts/inspect-text.ts` (use this, not tests, for definition quality)
+
+Which definition is "right" for a token is a judgement call, so a unit test
+that pins a gloss string mostly pins whatever the code did on the day it was
+written. To judge tokenization and definition choice, LOOK at the output:
+
+```bash
+npx tsx scripts/inspect-text.ts --text "右の方へ行った。"     # or --file ch1.txt, --id <contentId>, stdin
+npx tsx scripts/inspect-text.ts --id <contentId> --flagged --candidates
+npx tsx scripts/inspect-text.ts --id all --summary          # flag counts per item (whole corpus)
+```
+
+It runs the real pipeline (`resolveContent` on the whole text, exactly like
+resolve-content), then prints per sentence: surface, lookup key, shown
+reading, full UniDic POS, and the meaning the app shows. `--candidates` lists
+every JMDict entry for the key with `pickBestEntry`'s score (✓ = picked);
+`--raw` / `--modes` show ungrouped morphemes and A/B/C splits; `--json` for
+agents. Outcome-based flags (each fires only when the result actually differs):
+
+- `SHARED`: this occurrence shows a word entry resolved for a different
+  occurrence, and resolving it with its own reading/POS would differ (方
+  かた vs ほう). Words are per-context now, so this should stay at 0.
+- `KEY≠`: lookup uses Sudachi `normalized_form`; fires when `dictionary_form`
+  would pick a different JMDict entry. Usually normalized_form is the
+  better pick (see below), so read these, don't count them as bugs.
+- `SPLIT≠`: tokenizing the sentence alone differs from tokenizing the whole
+  text. Rare (23 in the corpus), always at sentence starts.
+- `UNKNOWN`: no definition.
+
+Startup is ~1 min (dictionary load) and it holds the `jmdict-db` lock, so
+stop the dev server first and run one instance at a time. A second process
+does NOT fail by itself: its lookups silently degrade to kanji-data and
+print confident nonsense (キツネ "to rule a country requires many great
+men"). `DictionaryManager.usingJmdict()` probes a real lookup, and
+inspect-text and resolve-content now refuse to run when it fails. Watch
+out for `diff <(cmd) <(cmd)`: it runs both at once. `--stored --id <id>`
+prints the saved document the app serves instead of re-resolving. Batch work with
+`--id a,b,c` / `--id all` instead of parallel processes.
+
+### Sentence context in resolution (what fixed the "wrong words")
+
+Measured by having reviewers grade every token of real texts with
+`inspect-text` (rubric: is the meaning the reader sees right in THIS
+sentence?). Baseline 100/970 wrong (10%); the pieces below took the five
+target texts (Kitsune-to-Tsuru, Hanasuke-Ohanami, Ni-hiki-no-Kaeru,
+Hanamizuki, nhk-japan-ramen) to a handful of residuals. Held-out texts
+graded at 7-12% before their own fixes, so expect new texts to surface new
+gaps: grade them with inspect-text, fix the PATTERN, re-grade.
+
+- **Per-context word entries** (`contentResolver.ts`): words are keyed by
+  surface + base + POS + reading + context, so 方 (かた) and 方 (ほう) get
+  separate entries. `buildWordsResponse` (the vocab summary) keeps one row
+  per (word, headline gloss) that some token actually shows, with
+  `frequencyInContent` counted per meaning; grammar morphemes stay one row
+  per word. Across the corpus that is +1.4% rows (人 person / counter,
+  そう thus / seeming, また again / and). `knownWords` is still keyed by
+  surface, so marking one meaning known marks both.
+- **Sense selection** (`selectSenses` in dictionary.ts): JMDict senses are
+  filtered by `appliesToKanji/Kana`, the contextual reading and POS, then
+  ordered by grammatical context: senses whose `info` note says "after the
+  -te form" / "-masu stem" / "adj. stem" go first when the previous token
+  fits (下さい after て = "please do"), and context-bound senses go last
+  otherwise. The headline shows the first sense's two glosses plus the
+  next everyday sense as "(also: …)" (肉 "flesh (also: meat)"). Measured on
+  120 corpus tokens: the extra sense was the right one 8 times where the
+  first was wrong, and odd-but-harmless 19 times; niche senses (hist/rare/
+  sl/abbr/field-tagged) are never shown. Drop it if that trade looks wrong.
+- **Grammar labels follow the full UniDic POS**
+  (`getContextualGrammarLabel`): copula な/に/で, conditional と,
+  conjunctive が, 連体詞 ある, もの/こと as nouns, interjections as words.
+  Sudachi tags locative で (家で) as the copula too, so that label covers both.
+- **tokenContext.ts**: re-joins split expressions (ので, いつか, どうか,
+  五月/12月, ところで, しょうがない, お先に, 今や, でも, なんだ) and
+  curated multi-token supplementary headwords; computes the previous
+  token's grammatical context; tags sentence-initial stretched kana as
+  interjections (あれ～？).
+- **Idioms**: noun + particle + verb that JMDict lists as an expression
+  (~5,100 of them: 実を結ぶ, 時間をかける, 手を伸ばす; は/も stand in for
+  を/が) give the verb the expression's meaning and the noun its reading.
+- **Argument tie-break**: a verb whose meaning is a near-tie ("to wipe —
+  or: to blow") is re-resolved with its subject/object's English head word
+  (風が → wind → 吹く).
+- **Keys and readings**: a kana `dictionary_form` under a kanji normalized
+  form is a reading hint (こだわる); katakana is looked up as written
+  (ワン "woof", not 椀) except interjections (ハイ → はい); one-token set
+  phrases use their JMDict expression (はじめまして); JMnedict names pick
+  the reading in use (京子 きょうこ). Reading corrections: 私 わたし,
+  言う いう, 下 した, 日本 にほん, and rendaku dropped on standalone words.
+
+- **Longest-match against JMDict** (`mergeDictionaryWords`): 2-5
+  adjacent tokens whose joined surface (or lemma) is a JMDict headword
+  become one token (として, かも知れない, 以下の通り, 在庫切れ). Guards, each
+  from a graded failure: no span opening with a verb/adjective/auxiliary
+  (いる|か ≠ "dolphin"), a number (80万|人 ≠ 万人), or を/が/へ/は/も (except
+  を巡って-type patterns); none ending in は/が/を/も/へ (今日|は ≠ "hello",
+  except 又は-type coordinators) or 名詞+から; all-kana spans only into
+  headwords written in kana (と|なり ≠ 隣); conjunctions only at a clause
+  start (そこで "there"+で mid-sentence).
+- **Proper nouns**: Sudachi 固有名詞 → JMDict's capitalised sense (日産
+  Nissan), else JMnedict for 人名/地名/組織 with the reading in use.
+- **Formal nouns** after a modifier (ため, はず, わけ, うち…), dates/months/
+  numbers with computed readings, kana readings in parentheses, and
+  katakana terms glossed by the text itself (ポストクロッシング
+  (Postcrossing)) are decided in tokenContext.ts.
+- **Measured on unseen random text** (Wikipedia/Wikinews/Aozora, graded by
+  Sonnet with the inspect-text rubric): 7.7% wrong before this work, 5.9%
+  after two fix rounds on two fresh test sets. The rate stopped falling
+  between rounds: what remains is long-tail (names, literary compounds
+  missing from JMDict, sense choice that needs world knowledge). A local
+  embedding-model sense chooser was prototyped and rejected (net loss).
+  Round 3 (test3): 4.9% (news 1.6%, wiki 6.8%, Aozora 5.5%); round 4
+  (test4): news 2.5%, wiki 4.4%, Aozora 10.1% on an Edo-era detective
+  story. Variance between texts is larger than between rounds, so judge a
+  change by the corpus BETTER/WORSE diff review, not one test set.
+  Remaining buckets, largest first: names split into common words (Chinese
+  names, katakana names Sudachi fragments), archaic inflections Sudachi
+  can't analyse (ながるる, 閉ねた), and sense choice needing world knowledge.
+- Also rejected after measuring: Tatoeba/Tanaka sense-tagged examples as a
+  sense prior (most-frequent-sense + collocations: 15 fixes vs 14 breaks
+  on 117 graded cases; textbook domain, sparse tags). NEologd (2020 seed)
+  lacks most single-name tokens the graders flagged (原, 島田, 内子).
+- **Merge guards added in round 3** (`mergeDictionaryWords`, each from a
+  graded WORSE): conjugated tails only into conjugating headwords
+  (と|か|きました ≠ とかく); particle-opened kana spans only into grammatical
+  headwords (か|いい ≠ "itchy"); adjective+noun only when the headword is
+  more than a literal noun (好い加減 yes, いい|顔 no); question word + も
+  (何も, どこにも) but not modified noun + にも (山の中にも); no
+  もので/ものとして/のでは merges, no と|する after a verb, and no spans opening with より/から/くらい.
+  A token's own kana lemma must not replace Sudachi's kanji lemma
+  (いいました → いう → 結う "do up hair" was the most frequent kana error).
+- **Traditional given names** (紋|作, 吉田|冠|蔵, 赤堀|水|右衛門): one
+  kanji + name suffix, merged as a name when the pair isn't a JMDict word
+  (strong suffixes 蔵/衛門/郎/助/吉; weak ones 作/七/平 need a surname
+  before or a repeat in the text, and never before a counter: 朝七時).
+
+### Translation context step (npm run setup-context; optional)
+
+`scripts/context/enrich.py` (FuguMT ja→en, greedy — its beam search
+degenerates — plus bge-small-en embeddings; CPU, no LLM) translates every
+sentence; `src/lib/contextModel.ts` drives it. resolve-content and server
+imports use it when `.venv-context` exists (`--no-context` /
+`KOTONOHA_CONTEXT=off` to skip); resolved.json then carries
+`sentences[].translation`, shown by inspect-text as `EN:`. Uses:
+- **Sense switch** (`chooseSense`): another of the first 4 senses of the
+  SAME entry wins only by margin 0.12 over sense 1, and never when an
+  aligned English word already appears in sense 1's glosses (星 "stars").
+  Fresh genre set test6: 26 right / 11 wrong switches. Switching to
+  another ENTRY of the same spelling went 0/4 and was reverted.
+- **Katakana names** (`nameFromTranslation.ts`): a katakana run spelling a
+  capitalised mid-sentence word of the translations becomes that name
+  (ゾル|タン → Zoltan); opening syllable must agree (ギルド ≠ Guard).
+- Measured and rejected (don't retry): exact gloss-word overlap, WordNet
+  synonyms, averaging two MT models, dictionary-anchored POS-aware
+  one-to-one alignment (held-out +20/-18), corpus sense priors from 96k
+  human-translated Tatoeba/OpenSubtitles pairs (4 fixes / 70 breaks on
+  graded data: three aligned words can't separate near-synonym senses),
+  JPDB/BCCWJ frequency as an entry prior (breaks ~14% of correct picks;
+  only a kana-only ratio≥3 rule is safe and it fixes ~2-5 rows),
+  showing up to two extra senses in the headline (7 better / 61 worse:
+  JMDict's 2nd/3rd senses for everyday words are often odd, 言う "the
+  alarm went ping").
+
+### Measurement notes (Oct 2026)
+
+- **Grader noise**: two independent Sonnet graders on the same text
+  disagree on 0.8% (kids story) to 4.1% (web novel) of tokens. A single
+  text's error rate is only good to a few points; judge changes by the
+  corpus BETTER/WORSE diff review and multi-text sets.
+- Genre sets (stories, folk tales, web fiction, lyrics, poems; fetchers
+  in the session scratchpad, rules: random pick, first item meeting a
+  length rule): test5 6.3%, test6 5.7% (folk tale 3.8%, app story 4.4%,
+  lyrics 5.1%, web novel 5.3%, Aozora kids 6.4%, dialect poem 7.9%).
+  Remaining errors are long-tail: dialect/archaic forms, names, typos in
+  the source, sense choice needing world knowledge.
+
+- **Tanaka corpus as a yardstick** (Oct 2026): the Tanaka B-lines
+  (`examples.utf` from edrdg.org, ~148k sentences tagged with JMDict
+  headword, reading and sometimes sense number) give an automatic,
+  no-LLM check. On 3,000 random sentences the pipeline agreed with the
+  tags on 98.2% of entries, 97.2% of tagged readings and 87.6% of tagged
+  senses. Mismatches surfaced real bugs (今 read こん, 君 read くん, counter
+  readings after full-width digits) plus tagging-convention differences
+  (Tanaka tags 彼の / 出発する / のです as one word). Inspect the
+  mismatches; don't treat the percentages as error rates.
+- **Trained sense chooser: rejected.** A scorer on frozen
+  multilingual-e5-small embeddings, trained on ~160k Tanaka-tagged words,
+  reached 91-94% on held-out Tanaka sentences (first-sense baseline 84%),
+  but applied to 100 corpus items it went 49 better / 82 worse, and 60 /
+  65 after adding untagged words as first-sense examples. Even its most
+  confident changes (p ≥ 0.9) were 17 / 22. Tanaka's sense distribution
+  (textbook sentences; 前 "ago" 312 vs "in front" 13) doesn't match
+  stories, and it pushes auxiliary uses (〜てみる, 〜すぎる) to lexical
+  senses. Training data would have to come from our own genres.
+
+Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
+after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
+of specialization"; only senses noted "usu. in compounds"/"after a name"
+count now); a generic "prefer uk senses for
+kana verbs" rule (kana いく → slang sense, あう → "to have an accident");
+switching the lookup key to `dictionary_form` (kana homophones: せんせい →
+先制). Known residuals: Sudachi mis-normalizations it is confident about
+(そら → 其れ in a sky context), kana nouns split into fragments
+(しゅくだい → しゅく|だ|い), and senses only world knowledge can pick.
+
+### Where "wrong words" come from (research + measurement, Oct 2026)
+
+`--id all --summary` over 607 items / 37,601 sentences (BEFORE the fixes
+above): SHARED 2,138 (313 items), KEY≠ 7,064 (517 items), SPLIT≠ 23,
+UNKNOWN 3. After: SHARED 0.
+
+1. **Keep `normalized_form` as the lookup key.** Common advice says "look up
+   dictionary_form", but KEY≠ shows it is much WORSE here: beginner content
+   is written in kana, dictionary_form keeps the kana (せんせい, きょう,
+   ぜんぶ) and kana lookups hit homophones (先制, 京, 前部), while
+   normalized_form restores the kanji (先生, 今日, 全部). A high KEY≠ count
+   is expected, not a bug count.
+2. **Sentence splitting** (SPLIT≠, 23): small but real. All cases are
+   sentence-initial: after a newline/space Sudachi splits differently than
+   at a fresh start. Per-sentence was better in 5 of 7 sampled
+   (からだ not から|だ, 区役所, 係長), worse in 2 (三日月 → 三|日|月).
+   `src/lib/sentenceSplitter.ts` exists if this is ever worth acting on.
 
 ### Multi-language architecture (#258 target axis, #260 native axis)
 
@@ -669,6 +912,11 @@ Exceptions where TDD is overkill:
 - Pure docs / comment changes.
 - New stories or content additions in `src/stories|music|videos/`.
 - Mechanical renames where `tsc` is the actual safety net.
+- Definition / sense / homograph choice. There is often no single correct
+  gloss, so a test just freezes today's output. Judge with
+  `scripts/inspect-text.ts` and the `resolve-content -- --all` artifact diff
+  instead. (Keep tests for well-defined behaviour: positions, splitting,
+  scoring math, grammar-morpheme guards.)
 
 For everything else — especially anything that touches `server.ts`,
 `src/lib/scoring.ts`, `src/lib/dictionary.ts`, `src/lib/tokenizers.ts`, or

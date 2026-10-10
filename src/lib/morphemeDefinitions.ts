@@ -1,4 +1,8 @@
 export const morphemeDefinitions: Record<string, string> = {
+  // Colloquial / classical endings graded wrong on folk tales and fiction.
+  'かい': 'question particle (familiar: 行くかい "are you going?")',
+  'わい': 'sentence-final emphasis (old-fashioned, masculine: 違うわい)',
+  'ず': 'not (classical negative = ない; 〜ずに "without doing")',
   // Past tense marker
   た: "Past tense marker",
   だ: "Copula / To be",
@@ -11,7 +15,7 @@ export const morphemeDefinitions: Record<string, string> = {
   す: "Causative marker",
   される: "Passive voice marker",
   さ: "Nominalizing suffix (-ness, e.g. 高さ); sentence-final emphasis; causative stem (させる)",
-  せ: "Causative passive",
+  せ: "causative: make / let someone do (聞かせる \"tell\", 待たせる \"keep waiting\")",
   ん: "Negative form / Emphatic particle",
   ぬ: "Negative form (classical)",
   ない: "not; negative form",
@@ -30,7 +34,7 @@ export const morphemeDefinitions: Record<string, string> = {
   ました: "polite past form",
   まし: "Polite verb stem (masu-stem form)",
   たい: "want to (do something); desiderative auxiliary",
-  なさい: "Imperative form",
+  なさい: "polite command: \"do ...!\" (〜なさい, e.g. 寝なさい \"go to sleep\")",
 
   // Honorific/humble prefixes
   お: "Honorific prefix",
@@ -45,7 +49,8 @@ export const morphemeDefinitions: Record<string, string> = {
   // Sentence particles
   ね: "Sentence final particle (agreement/confirmation)",
   よ: "Sentence final particle (assertion/emphasis)",
-  な: "Sentence final particle (prohibition/emphasis)",
+  な: "sentence-final: emphasis / wish (いいな \"how nice\"); after a plain verb: \"don't ...!\"",
+  なあ: "sentence-final exclamation: \"...!\", wistful \"ah, ...\" (いいなあ)",
   もの: "Sentence final particle (explanation)",
   わ: "Sentence final particle (emphasis; feminine)",
   ぞ: "Sentence final particle (strong emphasis; masculine)",
@@ -61,13 +66,19 @@ export const morphemeDefinitions: Record<string, string> = {
   が: "Subject marker",
   は: "Topic marker",
   へ: "Direction marker",
-  に: "Location / target marker",
-  で: "Location / means marker",
-  と: "With / and",
+  に: "to / at / in (target, place, time); also makes adverbs (一緒に \"together\")",
+  で: "at / in / by means of; \"is ... and\" (te-form of だ)",
+  と: "quotation marker / with / and; \"when, if\" after a verb",
   から: "From / because",
   まで: "Until / up to",
   や: "And / or (non-exhaustive listing)",
   けど: "But / although",
+  べく: "in order to, so as to (formal: 〜すべく \"in order to do\")",
+  べき: "should, ought to (〜べきだ)",
+  より: "than (comparison); from (formal: source, as in 〜より \"from ...\")",
+  // じゃあ/じゃ: Sudachi normalizes to で, whose label is about location.
+  じゃあ: "well then; so (at the start); contraction of では (じゃない \"is not\")",
+  じゃ: "well then; so (at the start); contraction of では (じゃない \"is not\")",
   けれど: "But / although",
   なら: "If / in the case of (conditional)",
   たり: "Doing things like ... (listing actions)",
@@ -90,6 +101,10 @@ export const morphemeDefinitions: Record<string, string> = {
   いく: "To go / to continue",
   くる: "To come",
 
+  ら: "plural suffix (彼ら \"they\", これら \"these\"); 等",
+  // A lone え is almost always the interjection (え～？ "huh?").
+  え: "eh? / huh? / what? (interjection)",
+
   // Small tsu variations
   っ: "Geminate consonant marker",
 
@@ -97,8 +112,8 @@ export const morphemeDefinitions: Record<string, string> = {
   つ: "Counter for things (一つ, 二つ, 三つ…)",
 
   // Additional verb forms
-  られる: "Passive / potential form",
-  れる: "Passive / potential form",
+  られる: "passive / potential / honorific form",
+  れる: "passive / potential / honorific form",
   せる: "Causative form",
 
   // Verb stems and additional components

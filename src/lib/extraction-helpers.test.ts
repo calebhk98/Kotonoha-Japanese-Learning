@@ -208,3 +208,12 @@ describe('getGrammarDefinition – Sudachi kanji-normalized grammar verbs', () =
     expect(getGrammarDefinition('ついて', 'つく')).toMatch(/about|concerning/i);
   });
 });
+
+describe('って and じゃ labels follow the POS (100-item review)', () => {
+  it('topic って (暮らしって) and copula じゃ mid-sentence', async () => {
+    const { getContextualGrammarLabel } = await import('./extraction-helpers.js');
+    expect(getContextualGrammarLabel('って', ['助詞', '副助詞'])).toMatch(/quoting.*as for/);
+    expect(getContextualGrammarLabel('じゃ', ['助動詞'])).toMatch(/^is/);
+    expect(getContextualGrammarLabel('じゃ', ['接続詞'])).toMatch(/well then/);
+  });
+});
