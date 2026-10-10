@@ -111,5 +111,31 @@ describe('resolveContent with a context model', { timeout: 30000 }, () => {
     expect(r.tokens[0].surface).toBe('ゾルタン');
     expect(r.words[r.tokens[0].wordIndex!].meaning).toBe('Zoltan (name)');
   });
+  it('does not switch kana-only spellings (かぜ stays "wind"; graded 13 wrong of 13 on corpus stories)', async () => {
+    const text = 'かぜがふく';
+    const tokens = [
+      { surface: 'かぜ', baseForm: '風', pos: '名詞', reading: 'かぜ', posDetail: ['名詞', '普通名詞', '一般'] },
+      { surface: 'が', baseForm: 'が', pos: '助詞', reading: 'が', posDetail: ['助詞', '格助詞'] },
+      { surface: 'ふく', baseForm: '吹く', pos: '動詞', reading: 'ふく', posDetail: ['動詞', '一般'] },
+    ];
+    const kanaDict = { lookup: async (w: string) => (w === '風' ? { meaning: 'wind', reading: 'かぜ', meanings: ['wind', 'cold'], senseSizes: [1, 1] } : null) };
+    const ctx = fakeContext([[0.2, 0.9]]);
+    const r = await resolveContent(text, makeTokenizer(tokens), new WordResolver(kanaDict), undefined, undefined, ctx);
+    expect(ctx.requests[0][0].candidates).toEqual([]);
+    expect(r.words[r.tokens[0].wordIndex!].meaning).toBe('wind');
+  });
+
+  it('a single katakana dictionary word is not renamed from a capitalised translation (カバン "bag")', async () => {
+    const text = 'カバンを持つ。';
+    const tokens = [
+      { surface: 'カバン', baseForm: 'カバン', pos: '名詞', reading: 'かばん', posDetail: ['名詞', '普通名詞', '一般'] },
+      { surface: 'を', baseForm: 'を', pos: '助詞', reading: 'を', posDetail: ['助詞', '格助詞'] },
+      { surface: '持つ', baseForm: '持つ', pos: '動詞', reading: 'もつ', posDetail: ['動詞', '一般'] },
+      { surface: '。', baseForm: '。' },
+    ];
+    const ctx = { ...fakeContext([[]]), translate: async (t: string[]) => t.map(() => 'I hold the Kaban.') };
+    const r = await resolveContent(text, makeTokenizer(tokens), new WordResolver(dict), undefined, undefined, ctx);
+    expect(r.words[r.tokens[0].wordIndex!].meaning).not.toMatch(/\(name\)/);
+  });
 });
 
