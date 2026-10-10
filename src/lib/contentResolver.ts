@@ -178,6 +178,8 @@ export async function resolveContent(
   // is not a common word (くまさん is still "Mr. Bear").
   const HONORIFIC = /^(さん|ちゃん|くん|君|様|さま)$/;
   const confirmed = new Map<string, string>();
+  /** Names that are also common words: only tagged occurrences are renamed. */
+  const taggedOnly = new Set<string>();
   {
     const count = new Map<string, number>();
     merged.forEach((t, k) => {
@@ -203,21 +205,23 @@ export async function resolveContent(
     const names = namesInTranslations(translations);
     if (names.length > 0) merged = nameKatakanaRuns(merged, names);
     // Hiragana names: the translation keeps a name romanized (ゆき → "Yuki")
-    // where it translates the word ("snow"). One confirmed occurrence names
-    // every occurrence. Kanji nouns count too when the translation spells
-    // their reading as a capitalised name.
+    // where it translates the word ("snow"). The translator also leaves
+    // words it can't translate romanized and capitalised (ほし "Hoshi",
+    // せんせい "Sensei", ひかり "Hikari"), so a common word only counts where
+    // Sudachi itself tags it as a name or an honorific follows, and only
+    // those occurrences are renamed (ゆき the person, ゆき the snow).
     translationAt = (t: PositionedToken) => translations[spans.findIndex((s) => t.startIndex >= s.start && t.startIndex < s.end)];
     for (let k = 0; k < merged.length; k++) {
       const t = merged[k];
-      if (t.posDetail?.[0] !== '名詞' || t.fixed || confirmed.has(t.surface)) continue;
+      if (t.posDetail?.[0] !== '名詞' || t.fixed || confirmed.has(t.surface) || !/^[ぁ-ゖー]+$/.test(t.surface)) continue;
       const tagged = t.posDetail?.[1] === '固有名詞' || HONORIFIC.test(merged[k + 1]?.surface ?? '');
-      const kana = /^[ぁ-ゖー]+$/.test(t.surface)
-        ? t.surface
-        : /[一-鿿々]/.test(t.surface) && !['数詞', '固有名詞'].includes(t.posDetail?.[1] ?? '') && t.reading ? toHiragana(t.reading) : null;
-      if (!kana) continue;
-      const common = kana === t.surface && t.posDetail?.[1] !== '固有名詞' && (await wordResolver.commonKanaWord(kana)).size > 0;
-      const name = kanaNameIn(kana, translationAt!(t), tagged && kana === t.surface, common);
-      if (name && (kana === t.surface || /^[A-Z]/.test(name))) confirmed.set(t.surface, name);
+      const common = (await wordResolver.commonKanaWord(t.surface)).size > 0;
+      if (common && !tagged) continue;
+      const name = kanaNameIn(t.surface, translationAt!(t), tagged);
+      if (name) {
+        confirmed.set(t.surface, name);
+        if (common) taggedOnly.add(t.surface);
+      }
     }
   }
   {
@@ -227,7 +231,8 @@ export async function resolveContent(
     const renamed: PositionedToken[] = [];
     for (let k = 0; k < merged.length; k++) {
       const t = merged[k];
-      const name = t.posDetail?.[0] === '名詞' && !t.fixed ? confirmed.get(t.surface) : undefined;
+      const nameTagged = t.posDetail?.[1] === '固有名詞' || HONORIFIC.test(merged[k + 1]?.surface ?? '');
+      const name = t.posDetail?.[0] === '名詞' && !t.fixed && (!taggedOnly.has(t.surface) || nameTagged) ? confirmed.get(t.surface) : undefined;
       if (name) {
         renamed.push({ ...t, posDetail: ['名詞', '固有名詞', '人名', '一般'], fixed: { meaning: `${name} (name)`, reading: /[一-鿿々]/.test(t.surface) ? t.reading : t.surface } });
       } else if (
@@ -266,6 +271,12 @@ export async function resolveContent(
     const prev = merged[i - 1];
     if (/^いっ/.test(surface) && t.baseForm === '言う' && prev && nextTo(text, prev, t) && /^[にへ]$/.test(prev.surface)) {
       t = { ...t, baseForm: '行く', dictionaryForm: '行く' };
+    }
+    // Kana たつ after a span of time is 経つ "to pass" (二年たつ, 時間がたった),
+    // not 立つ "to stand" (the two tie as kana).
+    if (/^た[つっちて]/.test(surface) && t.pos === '動詞' && /^(立つ|経つ|たつ|建つ|発つ)$/.test(t.baseForm)) {
+      const before = text.slice(Math.max(0, t.startIndex - 6), t.startIndex).replace(/[がも、\s　]+$/, '');
+      if (/(年|月|日|時間|分|秒|週間|ヶ月|か月|カ月|間|ねん|じかん|ふん)$/.test(before)) t = { ...t, baseForm: '経つ', dictionaryForm: '経つ' };
     }
     // Script decisions go through the language profile (#258). The grammar
     // guard is still the Japanese table directly — it becomes a profile
@@ -402,11 +413,14 @@ export async function resolveContent(
         // (…and a verb said on its own: 行ってきます "I'm off".)
         const kanaNoun = t.posDetail?.[0] === '名詞' && /^[ぁ-んー]+$/.test(surface);
         if ((!kanaNoun && t.posDetail?.[0] !== '動詞') || !atClauseStart(text, t.startIndex)) return false;
+        // Said, not narrated: in quotes or exclaimed (「ただいま」, ごめん！).
+        // A story's closing おしまい。 is "the end", not "that's enough".
+        const quoted = /[「『]\s*$/.test(text.slice(0, t.startIndex));
         // Sentence-final particles may follow (ごめんね。).
         let j = i + 1;
         let end = t.endIndex;
         while (merged[j] && merged[j].startIndex === end && merged[j].posDetail?.[1] === '終助詞') end = merged[j++].endIndex;
-        return /^[ 　]*([。！？!?」』\n～〜ー…]|$)/.test(text.slice(end));
+        return quoted ? /^[ 　]*([。！？!?」』\n～〜ー…]|$)/.test(text.slice(end)) : /^[ 　]*[！!]/.test(text.slice(end));
 
       })(),
     });

@@ -82,6 +82,9 @@ const READING_CORRECTIONS: Record<string, { wrong: string; right: string }> = {
   // UniDic reads 何時 as the literary なんどき ("at what moment"); in
   // everyday text 何時まで / 何時に is "what time" (なんじ).
   何時: { wrong: 'なんどき', right: 'なんじ' },
+  // Sound change UniDic misses on these one-token counters.
+  一回: { wrong: 'いちかい', right: 'いっかい' },
+  一階: { wrong: 'いちかい', right: 'いっかい' },
 };
 
 const katakanaToHiraganaStr = (s: string) =>

@@ -163,12 +163,13 @@ export function getContextualGrammarLabel(
       break;
     case 'って':
       if (p1 === '接続助詞') return 'and / -ing (colloquial て: 寒くって "it\'s cold and")';
-      if (p1 === '副助詞') return 'as for, speaking of (casual topic: 東京の暮らしって "life in Tokyo is ..."); also quoting "..." って';
+      // Sudachi tags quoting って (…って言った) 副助詞 as well as the topic って.
+      if (p1 === '副助詞') return 'quoting: "..." って (…って言った "said ..."); also casual topic "as for" (東京って "Tokyo is ...")';
       if (p1 === '格助詞') return 'quotation marker, casual と ("..." って言った "said ...")';
       break;
     case 'じゃ':
       if (p0 === '接続詞') return 'well then; so (じゃ at the start of a sentence)';
-      if (p0 === '助動詞') return 'is (casual/dialect copula, = だ)';
+      if (p0 === '助動詞') return 'is (casual/dialect copula, = だ); じゃない "is not"';
       if (p0 === '助詞') return 'contraction of では (じゃない "is not")';
       break;
     case 'し':

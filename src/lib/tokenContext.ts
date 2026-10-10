@@ -682,8 +682,10 @@ export async function mergeDictionaryWords(
       // read そと|に is "outside", not 外に (ほかに "else"); 何時|まで read
       // なんじ is "until what time", not いつまで. (Numbers excluded: 一|杯
       // reads いち|はい but the word is いっぱい.)
-      if (key && key === surface && KANJI.test(surface) && span.every((t) => t.reading) && !span.some((t) => pos1(t) === '数詞')) {
-        const hr = await headwordReadings(key);
+      // (Only spans with a hiragana piece: an all-kanji compound's pieces
+      // read differently on their own, 手水|舎 ちょうず|しゃ = ちょうずや.)
+      if (key && key === surface && KANJI.test(surface) && span.some((t) => /^[ぁ-ゖ]+$/.test(t.surface)) && span.every((t) => t.reading) && !span.some((t) => pos1(t) === '数詞')) {
+        const hr = new Set([...(await headwordReadings(key))].map(toHiragana));
         const joinedReading = span.map((t) => toHiragana(t.reading!)).join('');
         if (hr.size > 0 && !hr.has(joinedReading)) key = null;
       }
