@@ -215,6 +215,13 @@ describe('applyKanaConversion', () => {
     expect(out[2].baseForm).toBe('帰る');
     expect(out[2].kanaAlt?.baseForm).toBe('変える');
   });
+  it('keeps a same-kanji word through the reading check (気もち / 気持ち)', async () => {
+    const text = 'やさしい気もちです。';
+    const conv = '優しい気持ちです。';
+    const tk = tokenizerFor({ [conv]: [t('優しい', '優しい', 'やさしい'), t('気持ち', '気持ち', 'きもち', { posDetail: ['名詞'], dictionaryForm: '気持ち' }), t('です', 'です', 'です')] });
+    const out = await applyKanaConversion([], text, tk, async () => [conv], async (w) => new Set(w === '気持ち' ? ['きもち'] : []));
+    expect(out.find((x) => x.surface === '気もち')?.baseForm).toBe('気持ち');
+  });
   // The converter turned a full-width space into U+FFFD and garbage.
   it('sends sentences to the converter without spaces', async () => {
     let sent: string[] = [];
