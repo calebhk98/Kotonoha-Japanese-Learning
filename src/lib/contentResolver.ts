@@ -551,7 +551,9 @@ export async function resolveContent(
           }
           // Conjugated verbs / adjectives group under their dictionary form
           // in the vocab list (食べた, 食べます → 食べる).
-          const lemma = token.lemmaSurface;
+          // (The first verb's dictionary form: すわっていました groups under
+          // すわる, not すわっている.)
+          const lemma = token.parts?.length ? token.dictionaryForm ?? token.lemmaSurface : token.lemmaSurface;
           if (lemma && lemma !== token.surface && ['動詞', '形容詞'].includes(token.posDetail?.[0] ?? '')) {
             info.lemma = lemma;
             info.lemmaReading = /[一-鿿々]/.test(lemma) ? dictReading : lemma;

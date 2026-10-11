@@ -88,6 +88,8 @@ const READING_CORRECTIONS: Record<string, { wrong: string; right: string }> = {
   何時: { wrong: 'なんどき', right: 'なんじ' },
   // Sound change UniDic misses on these one-token counters.
   一回: { wrong: 'いちかい', right: 'いっかい' },
+  // こんにち "these days" is formal; in stories 今日 is きょう "today".
+  今日: { wrong: 'こんにち', right: 'きょう' },
   一階: { wrong: 'いちかい', right: 'いっかい' },
 };
 

@@ -717,7 +717,11 @@ export async function mergeDictionaryWords(
       // reads いち|はい but the word is いっぱい.)
       // (Only spans with a hiragana piece: an all-kanji compound's pieces
       // read differently on their own, 手水|舎 ちょうず|しゃ = ちょうずや.)
-      if (key && key === surface && KANJI.test(surface) && span.some((t) => /^[ぁ-ゖ]+$/.test(t.surface)) && span.every((t) => t.reading) && !span.some((t) => pos1(t) === '数詞')) {
+      // (Only the short shapes it was built for: X|particle and X|の|Y.
+      // Longer phrases (今日|中|に, いつ|の|間|に|か, 方|が|いい) and suffixes
+      // (あなた|方) have pieces Sudachi reads differently on their own.)
+      const shortShape = (n === 2 && pos0(span[1]) !== '接尾辞') || (n === 3 && span[1].surface === 'の');
+      if (key && key === surface && shortShape && KANJI.test(surface) && span.some((t) => /^[ぁ-ゖ]+$/.test(t.surface)) && span.every((t) => t.reading) && !span.some((t) => pos1(t) === '数詞')) {
         const hr = new Set([...(await headwordReadings(key))].map(toHiragana));
         const joinedReading = span.map((t) => toHiragana(t.reading!)).join('');
         if (hr.size > 0 && !hr.has(joinedReading)) key = null;

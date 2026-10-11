@@ -777,3 +777,10 @@ describe('kana homographs: tie-breaks (100-item review)', () => {
     expect(best.id).toBe('2');
   });
 });
+
+describe('kana tie-break by word frequency (full re-resolve review)', () => {
+  it('うみ: 海 "sea" (nf02) beats 生み "birth" (nf11) although 生 is the easier kanji', () => {
+    const e = (id: string, kanji: string) => ({ id, kanji: [{ text: kanji, common: true }], kana: [{ text: 'うみ', common: true }], sense: [{ partOfSpeech: ['n'], gloss: [{ lang: 'eng', text: kanji }] }] });
+    expect(pickBestEntry([e('1', '生み'), e('2', '海')], 'うみ', { pos: '名詞' }).id).toBe('2');
+  });
+});

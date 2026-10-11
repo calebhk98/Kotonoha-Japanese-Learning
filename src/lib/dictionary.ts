@@ -1,5 +1,6 @@
 import { createRequire } from 'module';
 import kanjiData from 'kanji-data';
+import { getCachedDictionaryEntries, findBestVariant } from './scoring.js';
 
 export interface SenseInfo {
   index: number;
@@ -552,9 +553,27 @@ export function pickBestEntry(exactMatches: any[], word: string, hint?: LookupHi
     // An exact tie on a kana word (えき: 液 / 駅 / 益 all common nouns) went
     // to index order. Text written in kana is beginner text, so the entry
     // with easier kanji is the likelier one (駅, 越える over 肥える).
-    if (kana && currentScore === bestScore) return kanjiEase(current) > kanjiEase(best) ? current : best;
+    // (First by how common the word is, JMDict's nf rank: 海 nf02 beats 生み
+    // nf11 for うみ; then by easier kanji.)
+    if (kana && currentScore === bestScore) {
+      const [fc, fb] = [freqRank(current), freqRank(best)];
+      if (fc !== fb) return fc < fb ? current : best;
+      return kanjiEase(current) > kanjiEase(best) ? current : best;
+    }
     return currentScore > bestScore ? current : best;
   });
+}
+
+/** JMDict nf frequency rank of the entry's first written form (1 = most common; 99 = unranked). */
+function freqRank(entry: any): number {
+  const text: string = entry.kanji?.[0]?.text ?? entry.kana?.[0]?.text ?? '';
+  try {
+    const { variant } = findBestVariant(text, getCachedDictionaryEntries(text)) as any;
+    const nf = (variant?.priorities ?? []).map((p: string) => /^nf(\d+)$/.exec(p)?.[1]).find(Boolean);
+    return nf ? Number(nf) : 99;
+  } catch {
+    return 99;
+  }
 }
 
 /** Old JLPT level (4 = easiest) of the hardest kanji in the entry's first written form; 0 if none/unknown. */
