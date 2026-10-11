@@ -166,6 +166,13 @@ describe('kana words Sudachi fragments (100-item review)', () => {
     // (reader test 2: あるこう showed no "let's").
     expect(conjugationNote(out[0].posDetail?.[5] ?? '*', [])).toBe("let's / I'll");
   });
+  // After a kanji conversion of the line before, Sudachi tags the ある of
+  // the repeated あるこう as the verb 有る (Sanpo: "to exist" + "like this").
+  it('re-joins ある|こう when ある is tagged as a verb', async () => {
+    const text = 'あるこう';
+    const out = await mergeK(lay(text, [['ある', ['動詞']], ['こう', ['副詞']]]), text);
+    expect(out.map((t) => t.surface)).toEqual(['あるこう']);
+  });
   it('five or more kana may be cut through an interjection/adverb (うん|どう|かい → 運動会)', async () => {
     const text = 'うんどうかいは';
     const out = await mergeDictionaryWords(lay(text, [['うん', ['感動詞']], ['どう', ['副詞']], ['かい', N], ['は', ['助詞', '係助詞']]]), text, none, none, () => false, none, async () => new Set(), async (s) => new Set(s === 'うんどうかい' ? ['n'] : []));
