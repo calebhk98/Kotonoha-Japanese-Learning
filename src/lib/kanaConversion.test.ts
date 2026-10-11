@@ -100,6 +100,18 @@ describe('alignConverted', () => {
       ['かく', '描く', 'かく'],
     ]);
   });
+  // Graded sample: 気もち (気持ち) became "気 + もち", はいって来 Unknown.
+  it('keeps the converted word when the original\'s kanji are part of it', () => {
+    const out = alignConverted('気もちが いい', 0, [t('気持ち', '気持ち', 'きもち', { posDetail: ['名詞'] }), t('が', 'が', 'が'), t('いい', '良い', 'いい')]);
+    expect(out?.[0].surface).toBe('気もち');
+    expect(out?.[0].baseForm).toBe('気持ち');
+  });
+  // その次の日 ほんとうに → 日本当に: a noun may not swallow a space.
+  it('lets only a verb or adjective disagree across a space', () => {
+    const conv = [t('日本', '日本', 'にほん', { posDetail: ['名詞'] }), t('当に', '当に', 'とうに', { posDetail: ['副詞'] })];
+    const out = alignConverted('日 ほんとうに', 0, conv);
+    expect(out?.some((x) => x.surface.includes(' ')) ?? false).toBe(false);
+  });
   it('never takes a word from a converter that rewrote kanji in the original', () => {
     const conv = [t('その', 'その', 'その'), t('日', '日', 'ひ'), t('の', 'の', 'の'), t('夜', '夜', 'よる')];
     const out = alignConverted('そのひの夕', 0, conv);
@@ -154,6 +166,54 @@ describe('applyKanaConversion', () => {
     });
     const out = await applyKanaConversion([], text, tk, async () => [conv], readingsOf);
     expect(out.find((x) => x.surface.startsWith('かいて'))?.baseForm).toBe('描く');
+  });
+  const pos = (surface: string, start: number, baseForm: string, posDetail: string[]) => ({
+    surface,
+    baseForm,
+    reading: surface,
+    posDetail,
+    pos: posDetail[0],
+    startIndex: start,
+    endIndex: start + surface.length,
+  });
+  // Graded sample: みお (a girl's name) became 澪 "waterway", あいこ ("a
+  // draw") became 愛子 "Aiko", katakana シロ became 城 "castle".
+  it('keeps the original token for names and katakana', async () => {
+    const text = 'みおと シロと あいこ。';
+    const conv = '澪と城と愛子。';
+    const original = [
+      pos('みお', 0, 'みお', ['名詞', '固有名詞', '人名', '名']),
+      pos('と', 2, 'と', ['助詞']),
+      pos('シロ', 4, 'シロ', ['名詞', '普通名詞', '一般']),
+      pos('と', 6, 'と', ['助詞']),
+      pos('あいこ', 8, '相子', ['名詞', '普通名詞', '一般']),
+    ];
+    const tk = tokenizerFor({
+      [conv]: [
+        t('澪', '澪', 'みお', { posDetail: ['名詞', '普通名詞', '一般'] }),
+        t('と', 'と', 'と'),
+        t('城', '城', 'しろ', { posDetail: ['名詞', '普通名詞', '一般'] }),
+        t('と', 'と', 'と'),
+        t('愛子', '愛子', 'あいこ', { posDetail: ['名詞', '固有名詞', '人名', '名'] }),
+      ],
+    });
+    const out = await applyKanaConversion(original, text, tk, async () => [conv], readingsOf);
+    expect(out.map((x) => x.baseForm)).toEqual(['みお', 'と', 'シロ', 'と', '相子']);
+  });
+  // Graded sample: the converter's pick for a short kana noun was wrong
+  // about as often as right (うち 内 for 家, あさ 麻 for 朝); where it and
+  // the original tokenization disagree on the same word, both are kept.
+  it('keeps the original reading of a same-span word as an alternative', async () => {
+    const text = 'うちに かえる。';
+    const conv = '内に帰る。';
+    const original = [pos('うち', 0, '内', ['名詞', '普通名詞', '副詞可能']), pos('に', 2, 'に', ['助詞']), pos('かえる', 4, '変える', ['動詞', '一般'])];
+    const tk = tokenizerFor({
+      [conv]: [t('内', '内', 'うち', { posDetail: ['名詞', '普通名詞'] }), t('に', 'に', 'に'), t('帰る', '帰る', 'かえる', { posDetail: ['動詞', '一般'], dictionaryForm: '帰る' })],
+    });
+    const out = await applyKanaConversion(original, text, tk, async () => [conv], readingsOf);
+    expect(out[0].kanaAlt).toBeUndefined(); // same word both ways
+    expect(out[2].baseForm).toBe('帰る');
+    expect(out[2].kanaAlt?.baseForm).toBe('変える');
   });
   // The converter turned a full-width space into U+FFFD and garbage.
   it('sends sentences to the converter without spaces', async () => {
