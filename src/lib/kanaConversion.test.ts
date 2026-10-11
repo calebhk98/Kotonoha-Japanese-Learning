@@ -74,7 +74,7 @@ describe('alignConverted', () => {
   });
   // Sample run: 31% of conversions were rejected, mostly for one token.
   it('matches a grouped token across a space in spaced-out text', () => {
-    const out = alignConverted('かざって あります', 0, [t('飾ってあります', '飾る', 'かざってあります', { dictionaryForm: '飾る' })]);
+    const out = alignConverted('かざって あります', 0, [t('飾ってあります', '飾る', 'かざってあります', { dictionaryForm: '飾る', posDetail: ['動詞', '一般'] })]);
     expect(out?.map((x) => x.surface)).toEqual(['かざって あります']);
     expect(out?.[0].baseForm).toBe('飾る');
   });

@@ -61,12 +61,13 @@ const MAX_MISMATCHES = 2;
 
 /**
  * End of `form` matched against the original from p (kana compared as
- * hiragana, spaces allowed inside: かざって あります), or -1.
+ * hiragana), or -1. With allowSpace, spaces may sit inside (a verb group:
+ * かざって あります); a noun never spans one (きょう　たろう is not 京太郎).
  */
-function matchAt(original: string, p: number, form: string): number {
+function matchAt(original: string, p: number, form: string, allowSpace: boolean): number {
   let q = p;
   for (const ch of toHiragana(form)) {
-    while (q > p && q < original.length && /\s/.test(original[q])) q++;
+    while (allowSpace && q > p && q < original.length && /\s/.test(original[q])) q++;
     if (q >= original.length || toHiragana(original[q]) !== ch) return -1;
     q++;
   }
@@ -133,9 +134,10 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
     const p = skip(from);
     if (k === toks.length) return p === original.length ? [] : null;
     const tk = toks[k];
+    const spans = ['動詞', '形容詞'].includes(tk.posDetail?.[0] ?? tk.pos ?? '');
     for (const form of new Set([tk.surface, tk.reading])) {
       if (!form) continue;
-      const q = matchAt(original, p, form);
+      const q = matchAt(original, p, form, spans);
       if (q < 0) continue;
       const rest = go(q, k + 1, mismatches);
       if (rest) return [place(tk, p, q, false), ...rest];
@@ -147,13 +149,14 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
     const longest = expected + (tk.posDetail?.[1] === '固有名詞' ? 1 : 0);
     // Count kana, not spaces (かいて います); stop at punctuation. Only a
     // verb/adjective group may span a space (日 ほんとう is not 日本).
-    const spans = ['動詞', '形容詞'].includes(tk.posDetail?.[0] ?? tk.pos ?? '');
+    // Shortest first: kanji in the original make it shorter than the
+    // reading (お客さま for おきゃくさま), and the rest must still align.
     let chars = 0;
     for (let q = p; q < original.length && chars < longest; ) {
       if (/[\p{P}\p{S}]/u.test(original[q]) || (!spans && q > p && /\s/.test(original[q]))) break;
       if (!/\s/.test(original[q])) chars++;
       q++;
-      if (chars < Math.max(1, expected - 1) || /\s/.test(original[q - 1])) continue;
+      if (/\s/.test(original[q - 1])) continue;
       const rest = go(q, k + 1, mismatches + 1);
       if (rest) return [place(tk, p, q, true), ...rest];
     }
