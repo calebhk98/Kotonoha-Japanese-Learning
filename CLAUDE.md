@@ -652,15 +652,27 @@ imports use it when `.venv-context` exists (`--no-context` /
   readings after full-width digits) plus tagging-convention differences
   (Tanaka tags 彼の / 出発する / のです as one word). Inspect the
   mismatches; don't treat the percentages as error rates.
-- **Trained sense chooser: rejected.** A scorer on frozen
-  multilingual-e5-small embeddings, trained on ~160k Tanaka-tagged words,
-  reached 91-94% on held-out Tanaka sentences (first-sense baseline 84%),
-  but applied to 100 corpus items it went 49 better / 82 worse, and 60 /
-  65 after adding untagged words as first-sense examples. Even its most
-  confident changes (p ≥ 0.9) were 17 / 22. Tanaka's sense distribution
-  (textbook sentences; 前 "ago" 312 vs "in front" 13) doesn't match
-  stories, and it pushes auxiliary uses (〜てみる, 〜すぎる) to lexical
-  senses. Training data would have to come from our own genres.
+- **Trained sense scorer** (`scripts/context/sense_scorer.py`, weights
+  `sense_scorer.pt`, training scripts in `scripts/context/sense-training/`):
+  frozen multilingual-e5-small features of the token in its Japanese
+  sentence, the English translation, and each sense's glosses, scored by a
+  small network trained on half the Tanaka corpus (other half + 3,000 eval
+  sentences held out). It only picks among the senses of the entry the
+  pipeline chose, only at p >= 0.8 (`MODEL_CONFIDENCE`), never for helper
+  verbs / numerals / counters, and a confident pick ADDS to the
+  embedding-margin switch (replacing it undid that step's good switches,
+  遅い "late" → "slow": 69 / 53). Graded: fresh 100 unseen items 92 better /
+  29 worse; integrated on the 100 random items 91 / 29 / 30 SAME. Most
+  WORSE: おばあさん "old woman" in family stories, 横の糸 "beside", 先生
+  "sensei, title". What failed on the way (don't retry): training without
+  the English (49 / 82: Tanaka's sense frequencies, 前 "ago" 312 vs "in
+  front" 13); letting it switch ENTRIES (kana words 3 better / 63 worse:
+  また → "groin", ここ → "nine"; Tanaka tags kana words under kanji
+  headwords, so it never learned kana homophones). More epochs don't help
+  (held-out Tanaka plateaus at ~95.8%); the gap is genre, not training.
+  enrich.py runs under `python -I`, which drops its own folder from
+  sys.path: it adds it back for `sense_scorer`, and the TS side prints the
+  helper's warnings (a silent import failure once disabled the scorer).
 
 Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
 after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
