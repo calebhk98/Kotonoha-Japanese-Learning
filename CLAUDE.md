@@ -693,6 +693,45 @@ imports use it when `.venv-context` exists (`--no-context` /
     after. Known miss: 四分の好奇 "four parts curiosity".
   - Exact kana ties: JMDict nf frequency rank first (うみ 海 nf02 over 生み
     nf11, くも 雲 over 蜘蛛), then easier kanji.
+  - Form notes after reader test 2: たら is "if / when" (not "past"),
+    imperative ませ is "please (polite request)", ている is "-ing / state
+    (is …-ed)" (割れていた "was cracked"), and "polite" is dropped from every
+    note when 2/3+ of a text's notes carry it (`dropDominantPolite`).
+
+- **Kana-to-kanji pre-conversion** (`kanaConversion.ts`, Oct 2026): reader
+  test 2 found the worst errors in hiragana children's text, where Sudachi
+  splits and normalizes long kana runs wrongly (いえにかえります → 言え "to
+  say", のみます → の + 見る). A sentence with a 4+ hiragana run and under
+  20% kanji (spaces ignored; 41% of corpus sentences) goes to zenz-v2.5-small
+  (Miwa-Keita, GPT-2 91M kana-kanji conversion model for the Zenzai IME,
+  CC-BY-SA 4.0, downloaded by setup-context, ~0.2 s/sentence on CPU) inside
+  enrich.py; Sudachi tokenizes the conversion and each token maps back onto
+  the original kana by reading. Surfaces stay the text's kana; segmentation,
+  POS and lookup key come from the kanji version; lemmas are rewritten in
+  the text's kana (帰る → かえる). Guards, each from a graded WORSE:
+  - Up to 2 tokens (1 per 4) may disagree with the kana (names the
+    converter guessed: けんじ → 健人 たけと; reading variants: 描く えがく);
+    a disagreeing word is kept only if the kana is one of its JMDict
+    readings or its kanji appear in the original (気もち = 気持ち), never a
+    different word (き "tree" → 旗 "flag"). Particles may not disagree.
+  - Only verb/adjective groups span a space (かざって あります); a noun
+    never does (きょう　たろう ≠ 京太郎, 日 ほんとう ≠ 日本当).
+  - Spaces are stripped before converting (zenz turned U+3000 into U+FFFD).
+  - Same span in both tokenizations: names and katakana keep the original
+    (みお ≠ 澪 "waterway", シロ ≠ 城); a same-POS word read differently keeps
+    the kana tokenization's meaning as "— or: …" (`kanaAlt`): the converter's
+    short-noun picks were wrong about as often as right (うち 内 for 家, あさ
+    麻, こうえん 公演; but やさしい 優しい, かぜ 風, かえる 帰る were fixes).
+  - The alignment search is memoized (a long failing sentence once hung a
+    run on 2^n retries).
+  Measured: 11,333 of 15,560 kana-heavy sentences converted, 379 rejected.
+  Corpus diff review (210 random changed tokens of 7,834): 107 better / 27
+  worse / 76 same. Remaining WORSE: converter homophone picks on short kana
+  (つな "tuna", りょう "dragon" for a name, ばん 番 for 晩), sense switches
+  the new keys feed the scorer (先生 "sensei, title"), and splits Sudachi
+  makes on the kanji text (澄ませる → 澄ま|せる). くさっぱら → 腐っぱら is a
+  converter miss. Needs `.venv-context` + the zenz model; without them
+  resolution is as before.
 
 Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
 after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
