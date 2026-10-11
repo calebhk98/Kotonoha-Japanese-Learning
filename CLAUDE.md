@@ -674,6 +674,26 @@ imports use it when `.venv-context` exists (`--no-context` /
   sys.path: it adds it back for `sense_scorer`, and the TS side prints the
   helper's warnings (a silent import failure once disabled the scorer).
 
+- **Reader test** (Oct 2026): 9 stories rendered as study list + hover
+  glosses only (no Japanese), a reader reconstructs the story, then grades
+  against the original. Average gist 4/5, ~3.7 story-breaking glosses per
+  story. Fixes that came out of it:
+  - **Conjugation note** (`conjugation.ts`): the tokenizer folds ます / ず /
+    た / て + いる・しまう・みる… into the verb token and keeps them as
+    `parts`; the note ("not · polite", "past · -ing (ongoing)", "command")
+    is `word.form`, shown under the meaning in the hover and in
+    inspect-text as `[…]`. Without it わかりません read "to understand".
+    ない / たい / れる / させる stay separate tokens with their own labels.
+  - **Vocab list grouped by dictionary form** (`buildWordsResponse`):
+    食べた / 食べます → one row 食べる with `forms` (each form, note,
+    count); the first verb's dictionary_form, in the text's spelling
+    (すわっていました → すわる). knownWords keys on that row word.
+  - **N分 minutes**: number + 十分 / 分 / digits+分 is one token (二十分
+    にじゅっぷん); not for fractions (三分の一), 度/寸/尺/割 before, 咲き
+    after. Known miss: 四分の好奇 "four parts curiosity".
+  - Exact kana ties: JMDict nf frequency rank first (うみ 海 nf02 over 生み
+    nf11, くも 雲 over 蜘蛛), then easier kanji.
+
 Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
 after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
 of specialization"; only senses noted "usu. in compounds"/"after a name"
