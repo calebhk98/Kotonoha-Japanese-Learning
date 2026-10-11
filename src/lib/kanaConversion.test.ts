@@ -71,8 +71,45 @@ describe('alignConverted', () => {
     const out = alignConverted('犬はのみます。', 0, [t('犬', '犬', 'いぬ'), t('は', 'は', 'は'), t('飲みます', '飲む', 'のみます')]);
     expect(out?.map((x) => x.surface)).toEqual(['犬', 'は', 'のみます']);
   });
+  // Sample run: 31% of conversions were rejected, mostly for one token.
+  it('matches a grouped token across a space in spaced-out text', () => {
+    const out = alignConverted('かざって あります', 0, [t('飾ってあります', '飾る', 'かざってあります', { dictionaryForm: '飾る' })]);
+    expect(out?.map((x) => x.surface)).toEqual(['かざって あります']);
+    expect(out?.[0].baseForm).toBe('飾る');
+  });
+  it('keeps the kana for one mis-guessed name and aligns the rest', () => {
+    const conv = [
+      t('健人', '健人', 'たけと', { posDetail: ['名詞', '固有名詞', '人名', '名'] }),
+      t('くん', 'くん', 'くん'),
+      t('が', 'が', 'が'),
+      t('来ました', '来る', 'きました', { dictionaryForm: '来る' }),
+    ];
+    const out = alignConverted('けんじくんが きました。', 0, conv);
+    expect(out?.map((x) => x.surface)).toEqual(['けんじ', 'くん', 'が', 'きました']);
+    expect(out?.[0].baseForm).toBe('けんじ');
+    expect(out?.[0].reading).toBe('けんじ');
+    expect(out?.[3].baseForm).toBe('来る');
+  });
+  it('keeps the word when only its reading differs (描く かく / えがく)', () => {
+    const conv = [t('絵', '絵', 'え'), t('を', 'を', 'を'), t('描く', '描く', 'えがく', { dictionaryForm: '描く', posDetail: ['動詞', '一般'] })];
+    const out = alignConverted('えを かく', 0, conv);
+    expect(out?.map((x) => [x.surface, x.baseForm, x.reading])).toEqual([
+      ['え', '絵', 'え'],
+      ['を', 'を', 'を'],
+      ['かく', '描く', 'かく'],
+    ]);
+  });
+  it('never takes a word from a converter that rewrote kanji in the original', () => {
+    const conv = [t('その', 'その', 'その'), t('日', '日', 'ひ'), t('の', 'の', 'の'), t('夜', '夜', 'よる')];
+    const out = alignConverted('そのひの夕', 0, conv);
+    expect(out?.[3].surface).toBe('夕');
+    expect(out?.[3].baseForm).toBe('夕');
+  });
   it('rejects a conversion whose readings do not spell the original', () => {
-    expect(alignConverted('いえにかえる', 0, [t('家', '家', 'うち'), t('に', 'に', 'に'), t('帰る', '帰る', 'かえる')])).toBeNull();
+    // Three mismatching tokens: too little of the conversion agrees.
+    expect(
+      alignConverted('いえにかえるよ', 0, [t('家', '家', 'うち'), t('に', 'に', 'へ'), t('帰る', '帰る', 'もどる'), t('よ', 'よ', 'よ')])
+    ).toBeNull();
     // The converter rewrote text it was not asked to (leftover kana).
     expect(alignConverted('いえに', 0, [t('家', '家', 'いえ')])).toBeNull();
   });
