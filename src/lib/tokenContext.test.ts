@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { conjugationNote } from './conjugation.js';
 import { mergeFixedExpressions, mergeDictionaryWords, type PositionedToken } from './tokenContext.js';
 
 // Positioned tokens from (surface, posDetail) pairs laid out over `text`.
@@ -161,6 +162,9 @@ describe('kana words Sudachi fragments (100-item review)', () => {
     expect(out.map((t) => t.surface)).toEqual(['あるこう', 'あるこう']);
     expect(out[0].baseForm).toBe('あるく');
     expect(out[0].pos).toBe('動詞');
+    // UniDic field 5 is the conjugation form; the hover note reads it
+    // (reader test 2: あるこう showed no "let's").
+    expect(conjugationNote(out[0].posDetail?.[5] ?? '*', [])).toBe("let's / I'll");
   });
   it('five or more kana may be cut through an interjection/adverb (うん|どう|かい → 運動会)', async () => {
     const text = 'うんどうかいは';
