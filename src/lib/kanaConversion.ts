@@ -97,8 +97,7 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
     // of the converted word, so it is the same word.
     const sameKanji = KANJI.test(surface) && [...surface].filter((c) => KANJI.test(c)).every((c) => tk.surface.includes(c));
     if (mismatch && sameKanji) {
-      delete token.reading;
-      for (const field of ['dictionaryForm', 'lemmaSurface'] as const) delete token[field];
+      delete token.mismatch; // the shared kanji are the evidence; no reading check
       return token;
     }
     if (mismatch && (KANJI.test(surface) || tk.posDetail?.[1] === '固有名詞')) {

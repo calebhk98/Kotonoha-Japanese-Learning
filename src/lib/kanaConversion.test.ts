@@ -112,6 +112,19 @@ describe('alignConverted', () => {
     const out = alignConverted('日 ほんとうに', 0, conv);
     expect(out?.some((x) => x.surface.includes(' ')) ?? false).toBe(false);
   });
+  // Graded sample: きょう　たろう became the name "Kyōtarō".
+  it('never matches a noun across a space, even exactly', () => {
+    const conv = [t('京太郎', '京太郎', 'きょうたろう', { posDetail: ['名詞', '固有名詞', '人名'] }), t('は', 'は', 'は')];
+    const out = alignConverted('きょう　たろうは', 0, conv);
+    expect(out?.some((x) => /\s/.test(x.surface)) ?? false).toBe(false);
+  });
+  // Graded sample: お客さまが became one Unknown token.
+  it('a disagreeing word with kanji in the original does not swallow the next particle', () => {
+    const conv = [t('お客様', 'お客様', 'おきゃくさま', { posDetail: ['名詞'] }), t('が', 'が', 'が'), t('来た', '来る', 'きた')];
+    const out = alignConverted('お客さまが きた', 0, conv);
+    expect(out?.map((x) => x.surface)).toEqual(['お客さま', 'が', 'きた']);
+    expect(out?.[0].baseForm).toBe('お客様');
+  });
   it('never takes a word from a converter that rewrote kanji in the original', () => {
     const conv = [t('その', 'その', 'その'), t('日', '日', 'ひ'), t('の', 'の', 'の'), t('夜', '夜', 'よる')];
     const out = alignConverted('そのひの夕', 0, conv);
