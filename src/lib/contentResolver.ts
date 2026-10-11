@@ -652,9 +652,11 @@ export async function resolveContent(
     asked.forEach((mine, si) => {
       mine.forEach(({ idx, groups, kana }, ci) => {
         const answer = answers[si]?.candidates[ci];
-        const sense = answer?.probs
-          ? chooseSenseByModel(answer.probs)
-          : kana ? 0 : chooseSense(answer?.sims ?? [], answer?.aligned ?? [], groups);
+        // A confident scorer pick wins; otherwise the embedding-margin switch
+        // decides as before (replacing it outright undid its good switches:
+        // 遅い "late" → "slow", 日 "date" → "day"; graded 42 better / 38 worse).
+        const byModel = answer?.probs ? chooseSenseByModel(answer.probs) : 0;
+        const sense = byModel !== 0 ? byModel : kana ? 0 : chooseSense(answer?.sims ?? [], answer?.aligned ?? [], groups);
         if (sense === 0 || sense >= groups.length) return;
         const base = tokenWord(idx)!;
         const key = `${base}:${sense}`;
