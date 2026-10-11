@@ -807,7 +807,7 @@ async function joinKanaFragment(
       const dict = span[0].surface + vol[0];
       if ((await commonKanaWord(dict)).has(vol[1])) {
         return {
-          token: { ...base, baseForm: dict, pos: '動詞', posDetail: ['動詞', '一般', '五段', '意志推量形'], dictionaryForm: dict, lemmaSurface: dict },
+          token: { ...base, baseForm: dict, pos: '動詞', posDetail: ['動詞', '一般', '*', '*', '五段', '意志推量形-一般'], dictionaryForm: dict, lemmaSurface: dict },
           used: 2,
         };
       }

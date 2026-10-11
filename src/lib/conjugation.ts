@@ -16,8 +16,10 @@ export interface MorphPart {
 }
 
 const ASPECT: Record<string, string> = {
-  居る: '-ing (ongoing)',
-  てる: '-ing (ongoing)',
+  // ている is also a resulting state: 割れていた "was cracked", not "was
+  // breaking" (reader test 2). Which one needs the verb's aspect class.
+  居る: '-ing / state (is …-ed)',
+  てる: '-ing / state (is …-ed)',
   仕舞う: 'completely / regretfully',
   見る: 'try doing',
   おく: 'in advance / for later',
@@ -39,9 +41,13 @@ export function conjugationNote(headConj: string, parts: MorphPart[]): string | 
   const labels = new Map<number, string>(); // rank → label (not, past, aspect, polite)
   for (const [k, m] of parts.entries()) {
     if (m.pos === '助動詞' && m.norm === 'ず') labels.set(0, 'not');
-    else if (m.pos === '助動詞' && m.norm === 'た') labels.set(1, 'past');
+    // たら / だら is the conditional form of た: いたら "if there is".
+    else if (m.pos === '助動詞' && m.norm === 'た') labels.set(1, /^仮定形/.test(m.conj) ? 'if / when' : 'past');
     else if (m.pos === '助動詞' && m.norm === 'てる') labels.set(2, ASPECT['てる']);
     else if (m.pos === '動詞' && ASPECT[m.norm] && parts[k - 1] && /^[てで]$/.test(parts[k - 1].surface)) labels.set(2, ASPECT[m.norm]);
+    // Imperative ませ only makes polite requests and greetings
+    // (いらっしゃいませ, お待ちくださいませ), never a command.
+    else if (m.pos === '助動詞' && m.norm === 'ます' && /^命令形/.test(m.conj)) return 'please (polite request)';
     else if (m.pos === '助動詞' && m.norm === 'ます') labels.set(3, 'polite');
   }
   const last = parts[parts.length - 1];
@@ -52,4 +58,21 @@ export function conjugationNote(headConj: string, parts: MorphPart[]): string | 
   if (/^意志推量形/.test(finalConj)) labels.set(4, "let's / I'll");
   if (labels.size === 0) return undefined;
   return [...labels.entries()].sort((a, b) => a[0] - b[0]).map(([, l]) => l).join(' · ');
+}
+
+/**
+ * Drops "polite" from every note when most notes in a text carry it: in an
+ * all-です/ます children's story it sat on nearly every verb and readers
+ * called it noise (reader test 2); in mixed text it still marks the
+ * difference. A note left empty becomes undefined.
+ */
+export function dropDominantPolite(forms: (string | undefined)[]): (string | undefined)[] {
+  const noted = forms.filter((f): f is string => !!f);
+  const polite = noted.filter((f) => f.split(' · ').includes('polite'));
+  if (noted.length === 0 || polite.length * 3 < noted.length * 2) return forms;
+  return forms.map((f) => {
+    if (!f) return f;
+    const rest = f.split(' · ').filter((l) => l !== 'polite');
+    return rest.length ? rest.join(' · ') : undefined;
+  });
 }

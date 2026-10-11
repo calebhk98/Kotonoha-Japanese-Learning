@@ -28,7 +28,7 @@ import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 import { chooseSense, chooseSenseByModel, type ContextModel, type ContextSentenceIn } from './contextModel.js';
 import { splitSentences } from './sentenceSplitter.js';
-import { conjugationNote } from './conjugation.js';
+import { conjugationNote, dropDominantPolite } from './conjugation.js';
 import { namesInTranslations, nameKatakanaRuns, kanaNameIn, romanizeName } from './nameFromTranslation.js';
 
 export const RESOLVED_FORMAT_VERSION = 1;
@@ -712,6 +712,12 @@ export async function resolveContent(
 
   // senseInfo is pipeline input only; the stored document stays as before.
   for (const w of words) if (w) delete w.senseInfo;
+  // "polite" on nearly every verb of an all-です/ます text is noise.
+  dropDominantPolite(words.map((w) => w?.form)).forEach((f, k) => {
+    if (!words[k]) return;
+    if (f) words[k].form = f;
+    else delete words[k].form;
+  });
 
   return {
     formatVersion: RESOLVED_FORMAT_VERSION,
