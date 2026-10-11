@@ -30,6 +30,7 @@ import { resolveContent } from '../src/lib/contentResolver.js';
 import { listContentEntries } from '../src/lib/storyLoader.js';
 import { ensureJmnedictPrepared } from '../src/lib/jmnedict-utils.js';
 import { PythonContextModel } from '../src/lib/contextModel.js';
+import { kanaConversionStats } from '../src/lib/kanaConversion.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -107,6 +108,8 @@ async function main() {
       const resolved = await resolveContent(text, tokenizer, resolver, lookupCache, undefined, context ?? undefined);
       fs.writeFileSync(outPath, JSON.stringify(resolved) + '\n');
       written++;
+      const k = kanaConversionStats;
+      if (k.sentences > 0) console.log(`[resolve-content] ${entry.id}: kana-heavy ${k.sentences}, converted ${k.converted}, rejected ${k.rejected}`);
       if (written % 25 === 0 || i === entries.length - 1) {
         console.log(`[resolve-content] ${written} written, ${skipped} skipped (${i + 1}/${entries.length})`);
       }

@@ -18,6 +18,12 @@ For each candidate (a token's character span within its sentence) the
 English words the model attended to most while translating that span are
 "aligned"; "sims" is the cosine similarity of those words to each sense's
 glosses. Choosing a sense from the sims is left to the caller.
+Kana-to-kanji conversion (src/lib/kanaConversion.ts):
+Request:  {"kana2kanji": ["こどもはいえにかえります。", ...]}
+Response: {"converted": ["子どもは家に帰ります。", ...]}
+Uses zenz-v2.5-small (Miwa-Keita, GPT-2 91M, CC-BY-SA 4.0), a kana-kanji
+conversion model built for the Zenzai IME, greedy decoding. Loaded on the
+first request; null per sentence when it is not installed.
 On startup it prints {"ready": true} once the models are loaded.
 """
 import json
@@ -35,6 +41,7 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer  # noqa: E402
 from sentence_transformers import SentenceTransformer  # noqa: E402
 
 MT_MODEL = "staka/fugumt-ja-en"
+KKC_MODEL = "Miwa-Keita/zenz-v2.5-small"
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 # Cross-attention layers averaged for alignment (measured on graded cases:
 # the middle layers align best; the last layer mostly attends to </s>).
@@ -89,6 +96,28 @@ class Enricher:
             print(json.dumps({"warning": f"sense scorer unavailable: {e}"}), file=sys.stderr, flush=True)
             self.scorer = None
 
+    def kana2kanji(self, texts):
+        if not hasattr(self, "kkc"):
+            try:
+                from transformers import AutoModelForCausalLM
+                self.kkc_tok = AutoTokenizer.from_pretrained(KKC_MODEL)
+                self.kkc = AutoModelForCausalLM.from_pretrained(KKC_MODEL).eval()
+            except Exception as e:  # model not downloaded
+                print(json.dumps({"warning": f"kana-kanji converter unavailable: {e}"}), file=sys.stderr, flush=True)
+                self.kkc = None
+        if self.kkc is None:
+            return [None] * len(texts)
+        out = []
+        for text in texts:
+            # zenz input format: U+EE00 <katakana> U+EE01 -> conversion.
+            kata = "".join(chr(ord(c) + 0x60) if "\u3041" <= c <= "\u3096" else c for c in text)
+            ids = self.kkc_tok("\uEE00" + kata + "\uEE01", return_tensors="pt").input_ids
+            with torch.no_grad():
+                gen = self.kkc.generate(ids, max_new_tokens=len(text) + 16, do_sample=False,
+                                        eos_token_id=self.kkc_tok.eos_token_id, pad_token_id=self.kkc_tok.eos_token_id)
+            out.append(self.kkc_tok.decode(gen[0][ids.shape[1]:], skip_special_tokens=True).strip() or None)
+        return out
+
     def translate(self, text):
         # Cached: a text is translated once even when asked twice (the
         # pipeline asks for translations first, then for sense evidence).
@@ -133,6 +162,8 @@ class Enricher:
         return [re.sub(r"[^\w'-]", "", words[k][0]) for _, k in ranked]
 
     def run(self, request):
+        if "kana2kanji" in request:
+            return {"converted": self.kana2kanji(request["kana2kanji"])}
         out = []
         for s in request.get("sentences", []):
             cands = s.get("candidates", [])

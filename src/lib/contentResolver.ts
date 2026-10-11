@@ -29,6 +29,7 @@ import type { LanguageDisplayProfile } from './language/types.js';
 import { chooseSense, chooseSenseByModel, type ContextModel, type ContextSentenceIn } from './contextModel.js';
 import { splitSentences } from './sentenceSplitter.js';
 import { conjugationNote, dropDominantPolite } from './conjugation.js';
+import { applyKanaConversion } from './kanaConversion.js';
 import { namesInTranslations, nameKatakanaRuns, kanaNameIn, romanizeName } from './nameFromTranslation.js';
 
 export const RESOLVED_FORMAT_VERSION = 1;
@@ -139,10 +140,17 @@ export async function resolveContent(
     searchStart = segmentIndex + t.surface.length;
   }
 
+  // ---- kana-heavy sentences are tokenized from a kanji conversion and
+  // mapped back onto the kana (kanaConversion.ts); needs the context helper.
+  const kanaToKanji = context?.kanaToKanji?.bind(context);
+  const segmented = kanaToKanji
+    ? await applyKanaConversion(positioned, text, tokenizer, (s) => kanaToKanji(s).catch(() => s.map(() => null)))
+    : positioned;
+
   // ---- sentence context: re-join split expressions, then classify each
   // token with what its neighbour says about it (see tokenContext.ts).
   let merged = await mergeDictionaryWords(
-    mergeFixedExpressions(markGlossaryTerms(markParenthesizedReadings(positioned, text), text), text),
+    mergeFixedExpressions(markGlossaryTerms(markParenthesizedReadings(segmented, text), text), text),
     text,
     async (s) => (await wordResolver.hasForm(s)) && !(await wordResolver.isTitleOnly(s)),
     (s) => wordResolver.isKanaHeadword(s),

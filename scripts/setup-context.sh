@@ -18,7 +18,7 @@ fi
 export HF_HOME="${KOTONOHA_MODELS:-$PWD/.models}"
 "$VENV/bin/python" - <<'PY'
 from huggingface_hub import snapshot_download
-for repo in ("staka/fugumt-ja-en", "BAAI/bge-small-en-v1.5", "intfloat/multilingual-e5-small"):
+for repo in ("staka/fugumt-ja-en", "BAAI/bge-small-en-v1.5", "intfloat/multilingual-e5-small", "Miwa-Keita/zenz-v2.5-small"):
     snapshot_download(repo)
     print("downloaded", repo)
 PY

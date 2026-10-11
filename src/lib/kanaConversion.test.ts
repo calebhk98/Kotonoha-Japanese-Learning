@@ -49,8 +49,8 @@ describe('alignConverted', () => {
       t('。', '。', '。'),
     ];
     const out = alignConverted(original, 10, conv);
-    expect(out?.map((x) => x.surface)).toEqual(['子ども', 'は', 'いえ', 'に', 'かえります', '。']);
-    expect(out?.map((x) => x.startIndex)).toEqual([10, 13, 14, 16, 17, 22]);
+    expect(out?.map((x) => x.surface)).toEqual(['子ども', 'は', 'いえ', 'に', 'かえります']);
+    expect(out?.map((x) => x.startIndex)).toEqual([10, 13, 14, 16, 17]);
     expect(out?.[2].baseForm).toBe('家');
     expect(out?.[4].baseForm).toBe('帰る');
     expect(out?.[4].dictionaryForm).toBe('かえる');
@@ -66,6 +66,10 @@ describe('alignConverted', () => {
       ['とんで', 5, 8],
     ]);
     expect(out?.[2].dictionaryForm).toBe('とぶ');
+  });
+  it('skips punctuation the tokenizer leaves out', () => {
+    const out = alignConverted('犬はのみます。', 0, [t('犬', '犬', 'いぬ'), t('は', 'は', 'は'), t('飲みます', '飲む', 'のみます')]);
+    expect(out?.map((x) => x.surface)).toEqual(['犬', 'は', 'のみます']);
   });
   it('rejects a conversion whose readings do not spell the original', () => {
     expect(alignConverted('いえにかえる', 0, [t('家', '家', 'うち'), t('に', 'に', 'に'), t('帰る', '帰る', 'かえる')])).toBeNull();

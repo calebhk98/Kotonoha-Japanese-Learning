@@ -41,6 +41,8 @@ export interface ContextModel {
   enrich(sentences: ContextSentenceIn[]): Promise<ContextSentenceOut[]>;
   /** Translations alone (cached by the helper, so enrich reuses them). */
   translate?(sentences: string[]): Promise<(string | null)[]>;
+  /** Kana-to-kanji conversion of kana-heavy sentences (kanaConversion.ts). */
+  kanaToKanji?(sentences: string[]): Promise<(string | null)[]>;
 }
 
 export const SENSE_MARGIN = 0.12;
@@ -136,18 +138,26 @@ export class PythonContextModel implements ContextModel {
     return new PythonContextModel(proc, lines);
   }
 
-  enrich(sentences: ContextSentenceIn[]): Promise<ContextSentenceOut[]> {
+  private request(body: object): Promise<any> {
     // One request at a time over the pipe.
     const run = this.queue.then(async () => {
-      this.proc.stdin.write(JSON.stringify({ sentences }) + '\n');
+      this.proc.stdin.write(JSON.stringify(body) + '\n');
       const line = await this.lines.next();
       if (line.done) throw new Error('context helper exited');
       const resp = JSON.parse(line.value);
       if (resp.error) throw new Error(`context helper: ${resp.error}`);
-      return resp.sentences as ContextSentenceOut[];
+      return resp;
     });
     this.queue = run.catch(() => {});
     return run;
+  }
+
+  enrich(sentences: ContextSentenceIn[]): Promise<ContextSentenceOut[]> {
+    return this.request({ sentences }).then((r) => r.sentences as ContextSentenceOut[]);
+  }
+
+  kanaToKanji(sentences: string[]): Promise<(string | null)[]> {
+    return this.request({ kana2kanji: sentences }).then((r) => r.converted as (string | null)[]);
   }
 
   translate(sentences: string[]): Promise<(string | null)[]> {
