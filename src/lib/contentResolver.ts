@@ -273,6 +273,8 @@ export async function resolveContent(
     lemmaSurface?: string;
     /** Endings grouped into the token (tokenizers.ts), for the form note. */
     parts?: { surface: string; norm: string; pos: string; conj: string }[];
+    /** The kana tokenization's reading of this word (kanaConversion.ts). */
+    kanaAlt?: PositionedToken;
   }
   const tokens: WorkToken[] = [];
 
@@ -422,6 +424,7 @@ export async function resolveContent(
       counterReading: t.counterReading,
       parts: t.parts,
       lemmaSurface: t.lemmaSurface,
+      kanaAlt: t.kanaAlt,
       utterance: (() => {
         // Only a kana noun reads differently on its own (ただいま, ごめん);
         // other tokens keep one word entry wherever they stand.
@@ -487,7 +490,7 @@ export async function resolveContent(
   // inheriting the first one's resolution. buildWordsResponse still collapses
   // the vocab list to one entry per surface.
   const keyOf = (t: WorkToken) =>
-    [t.surface, t.baseForm, t.pos, t.reading, t.grammarLabel, t.context, t.dictionaryForm, t.idiom?.expression, t.fixed?.meaning, t.utterance ? 'U' : ''].join('\u0000');
+    [t.surface, t.baseForm, t.pos, t.reading, t.grammarLabel, t.context, t.dictionaryForm, t.idiom?.expression, t.fixed?.meaning, t.utterance ? 'U' : '', t.kanaAlt?.baseForm].join('\u0000');
   const wordIndexByKey = new Map<string, number>();
   const argumentOverride = new Map<number, number>(); // token index → word index
   const frequency = new Map<string, number>();
@@ -565,6 +568,21 @@ export async function resolveContent(
           if (lemma && lemma !== token.surface && ['動詞', '形容詞'].includes(token.posDetail?.[0] ?? '')) {
             info.lemma = lemma;
             info.lemmaReading = /[一-鿿々]/.test(lemma) ? dictReading : lemma;
+          }
+          // The kana tokenization read this word differently (うち: 内 vs
+          // 家): its meaning stays visible as an alternative.
+          if (token.kanaAlt) {
+            const alt = token.kanaAlt;
+            const r = await wordResolver.resolve(alt.surface, alt.baseForm, lookupCache, alt.pos, alt.reading, undefined, {
+              after: token.context,
+              dictionaryForm: alt.dictionaryForm,
+              notGrammar: true,
+            });
+            const head = String(r.meaning ?? '').split(/ — or: /)[0];
+            if (head && !/^Unknown/.test(head) && !String(info.meaning).includes(head)) {
+              const form = /[一-鿿々]/.test(alt.baseForm) ? ` (${alt.baseForm})` : '';
+              info.meaning = `${info.meaning}${String(info.meaning).includes(' — or: ') ? '; ' : ' — or: '}${head}${form}`;
+            }
           }
           if (meanings) info.meanings = meanings;
           if (meanings && senseSizes) info.senseSizes = senseSizes;

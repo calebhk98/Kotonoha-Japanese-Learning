@@ -25,6 +25,12 @@ export interface PositionedToken extends TokenInfo {
   fixed?: { meaning: string; reading?: string };
   /** Sound-changed counter reading (20分 → ぷん), kept over the resolver's. */
   counterReading?: string;
+  /**
+   * The original kana tokenization of the same word when the kanji
+   * conversion read it differently (うち: 内 converted, 家 meant); its
+   * meaning is shown as "— or: …" (kanaConversion.ts).
+   */
+  kanaAlt?: PositionedToken;
 }
 
 const KANJI_DIGIT: Record<string, number> = { 〇: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };

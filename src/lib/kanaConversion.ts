@@ -93,6 +93,14 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
     const surface = original.slice(p, q);
     const token: ConvertedToken = { ...tk, surface, startIndex: offset + p, endIndex: offset + q };
     if (mismatch) token.mismatch = true;
+    // 気もち for 気持ち, はいって来 for 入って来: the original's kanji are part
+    // of the converted word, so it is the same word.
+    const sameKanji = KANJI.test(surface) && [...surface].filter((c) => KANJI.test(c)).every((c) => tk.surface.includes(c));
+    if (mismatch && sameKanji) {
+      delete token.reading;
+      for (const field of ['dictionaryForm', 'lemmaSurface'] as const) delete token[field];
+      return token;
+    }
     if (mismatch && (KANJI.test(surface) || tk.posDetail?.[1] === '固有名詞')) {
       Object.assign(token, { baseForm: surface, dictionaryForm: surface, lemmaSurface: surface });
       if (KANJI.test(surface)) delete token.reading;
@@ -138,10 +146,12 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
     if (mismatches >= budget || ['助詞', '助動詞'].includes(tk.posDetail?.[0] ?? tk.pos ?? '')) return null;
     const expected = (tk.reading ?? tk.surface).length;
     const longest = expected + (tk.posDetail?.[1] === '固有名詞' ? 1 : 0);
-    // Count kana, not spaces (かいて います); stop at punctuation.
+    // Count kana, not spaces (かいて います); stop at punctuation. Only a
+    // verb/adjective group may span a space (日 ほんとう is not 日本).
+    const spans = ['動詞', '形容詞'].includes(tk.posDetail?.[0] ?? tk.pos ?? '');
     let chars = 0;
     for (let q = p; q < original.length && chars < longest; ) {
-      if (/[\p{P}\p{S}]/u.test(original[q])) break;
+      if (/[\p{P}\p{S}]/u.test(original[q]) || (!spans && q > p && /\s/.test(original[q]))) break;
       if (!/\s/.test(original[q])) chars++;
       q++;
       if (chars < Math.max(1, expected - 1) || /\s/.test(original[q - 1])) continue;
@@ -204,6 +214,25 @@ export async function applyKanaConversion(
       const kana = toHiragana((tk.dictionaryForm ?? tk.surface).replace(/\s/g, ''));
       const known = [...(await readingsOf(tk.baseForm))].map(toHiragana);
       if (!known.includes(kana)) Object.assign(tk, { baseForm: tk.surface, dictionaryForm: tk.surface, lemmaSurface: tk.surface });
+    }
+    // Where both tokenizations have the same word span: names and katakana
+    // keep the original (みお is a name, not 澪 "waterway"; シロ not 城), and
+    // a different reading of the same word is kept as an alternative (the
+    // converter's short-noun picks were wrong about as often as right).
+    const original = new Map(out.filter(inside).map((t) => [`${t.startIndex}:${t.endIndex}`, t]));
+    for (const [n, tk] of aligned.entries()) {
+      const orig = original.get(`${tk.startIndex}:${tk.endIndex}`);
+      if (!orig) continue;
+      const name = (t: PositionedToken) => t.posDetail?.[1] === '固有名詞';
+      if (name(orig) !== name(tk) || /^[ァ-ヺー]+$/.test(tk.surface)) {
+        aligned[n] = orig;
+        continue;
+      }
+      const content = ['名詞', '動詞', '形容詞', '副詞'];
+      const pos0 = (t: PositionedToken) => t.posDetail?.[0] ?? t.pos;
+      if (/^[ぁ-ゖー]+$/.test(orig.surface) && pos0(orig) === pos0(tk) && content.includes(pos0(tk) ?? '') && orig.baseForm !== tk.baseForm) {
+        tk.kanaAlt = orig;
+      }
     }
     kanaConversionStats.converted++;
     const spaces = out.filter((t) => inside(t) && /^\s+$/.test(t.surface));
