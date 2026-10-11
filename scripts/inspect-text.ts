@@ -279,7 +279,7 @@ async function inspect(
         pos: m?.pos?.filter((p) => p !== '*').join('-'),
         kind: t.isMorpheme ? 'grammar' : word ? 'vocab' : 'punct',
         shownReading: word?.reading,
-        meaning: word?.meaning,
+        meaning: word?.form ? `${word.meaning}  [${word.form}]` : word?.meaning,
         flags,
       };
       if (flag('--candidates') && word && !t.isMorpheme) {

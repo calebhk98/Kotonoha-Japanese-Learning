@@ -40,6 +40,12 @@ export interface TokenInfo {
    */
   tail?: { surface: string; pos: string; conj: string };
   /**
+   * The morphemes grouped after the first (ます, ず, た, て, いる, しまう…),
+   * in order. Turned into a hover note (conjugation.ts) so 分かりません
+   * shows "not · polite", not just "to understand".
+   */
+  parts?: { surface: string; norm: string; pos: string; conj: string }[];
+  /**
    * The token with its LAST morpheme in dictionary form (付いて来た →
    * 付いて来る): the headword a conjugated multi-morpheme token would have.
    */
@@ -256,6 +262,7 @@ export class SudachiWasmImpl implements Tokenizer {
     let groupPosDetail: string[] | undefined;
     let groupDictForm: string | undefined;
     let groupTail: TokenInfo['tail'];
+    let groupParts: NonNullable<TokenInfo['parts']> = [];
     let groupHead = ''; // surface before the group's last morpheme
     let groupLastDict = '';
 
@@ -278,6 +285,7 @@ export class SudachiWasmImpl implements Tokenizer {
           posDetail: groupPosDetail,
           dictionaryForm: groupDictForm,
           tail: groupTail,
+          ...(groupParts.length ? { parts: groupParts } : {}),
           lemmaSurface: groupHead + (groupLastDict || groupTail?.surface || ''),
         });
         groupSurface = '';
@@ -308,6 +316,7 @@ export class SudachiWasmImpl implements Tokenizer {
         if (reading === null) groupReadingValid = false;
         else groupReading += reading;
         groupTail = tail;
+        groupParts.push({ surface, norm: m.normalized_form || surface, pos, conj: m.part_of_speech[5] ?? '*' });
         // The lemma replaces the group's LAST VERB with its dictionary form
         // (付いて+来た → 付いて来る; し+た → する); trailing auxiliaries
         // (ます, た) are conjugation, not part of the headword.
@@ -328,6 +337,7 @@ export class SudachiWasmImpl implements Tokenizer {
         groupPosDetail = [...m.part_of_speech];
         groupDictForm = m.dictionary_form || undefined;
         groupTail = tail;
+        groupParts = [];
         groupHead = '';
         groupLastDict = m.dictionary_form || surface;
       };

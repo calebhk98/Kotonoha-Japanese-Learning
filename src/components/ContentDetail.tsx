@@ -267,6 +267,17 @@ export function ContentDetail({
                         </div>
                         <div className="font-bold text-lg">{w.word}</div>
                         <div lang="en" className="text-sm font-medium text-gray-700 mt-1">{w.meaning}</div>
+                        {w.forms && w.forms.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {w.forms.map((f) => (
+                              <span key={`${f.word}-${f.form ?? ''}`} className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs text-gray-600">
+                                {f.word}
+                                {f.form && <span lang="en" className="text-amber-700"> ({f.form})</span>}
+                                {f.count > 1 && <span className="text-gray-400"> ×{f.count}</span>}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="bg-white border border-gray-200 p-3 rounded-lg text-xs space-y-1 min-w-[200px]">
                         <div className="flex justify-between font-semibold border-b border-gray-100 pb-1 mb-1">

@@ -18,6 +18,8 @@ export interface WordResolution {
   senseSizes?: number[];
   /** Per-sense JMDict facts for the trained sense scorer (see dictionary.ts). */
   senseInfo?: SenseInfo[];
+  /** Kana reading of the dictionary entry's headword (たべる for 食べました). */
+  dictReading?: string;
   variant: DictionaryVariant | null;
   entry: DictionaryEntry | null;
   jlpt: number;
@@ -434,6 +436,7 @@ export class WordResolver {
     let meanings = kanjiMeanings;
     let senseSizes: number[] | undefined;
     let senseInfo: SenseInfo[] | undefined;
+    let dictReading: string | undefined;
     // The language the served gloss is actually in (#260); undefined unless a
     // JMDict hit set it. Lets callers flag English fallback when the learner
     // asked for another language.
@@ -515,6 +518,7 @@ export class WordResolver {
           meanings = dictResult.meanings;
           senseSizes = dictResult.senseSizes;
           senseInfo = dictResult.senseInfo;
+          dictReading = dictResult.reading;
           if (dictResult.glossLang) servedGlossLang = dictResult.glossLang;
         }
       }
@@ -605,7 +609,7 @@ export class WordResolver {
     // (5) Score calculation — always uses the same variant selected above.
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
 
-    return { reading, meaning, meanings, senseSizes, senseInfo, variant, entry, jlpt, joyo, score, breakdown, glossLang: servedGlossLang };
+    return { reading, meaning, meanings, senseSizes, senseInfo, dictReading, variant, entry, jlpt, joyo, score, breakdown, glossLang: servedGlossLang };
   }
 
   /** Dictionary lookup that only returns real glosses (never "Unknown"). */
