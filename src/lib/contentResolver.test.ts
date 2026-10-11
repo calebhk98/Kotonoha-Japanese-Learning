@@ -180,3 +180,30 @@ describe('furigana in parentheses', { timeout: 30000 }, () => {
     expect(resolved.tokens.find((t) => t.surface === 'が')!.startIndex).toBe(text.indexOf('が'));
   });
 });
+
+// Reader test on 9 stories: "to eat" appeared as 8 separate study rows (one
+// per conjugated form), and a beginner can't tell they are one verb.
+describe('vocab list grouped by dictionary form', () => {
+  it('one row per dictionary form + meaning, listing every form used with its count and note', () => {
+    const resolved: any = {
+      formatVersion: RESOLVED_FORMAT_VERSION,
+      words: [
+        { word: '食べた', reading: 'たべた', meaning: 'to eat', lemma: '食べる', lemmaReading: 'たべる', form: 'past' },
+        { word: '食べます', reading: 'たべます', meaning: 'to eat', lemma: '食べる', lemmaReading: 'たべる', form: 'polite' },
+        { word: '猫', reading: 'ねこ', meaning: 'cat' },
+      ],
+      tokens: [
+        { surface: '食べた', wordIndex: 0 }, { surface: '食べた', wordIndex: 0 }, { surface: '食べた', wordIndex: 0 },
+        { surface: '食べます', wordIndex: 1 }, { surface: '猫', wordIndex: 2 },
+      ],
+    };
+    const rows = buildWordsResponse(resolved);
+    const eat = rows.find((r: any) => r.word === '食べる');
+    expect(eat).toMatchObject({ reading: 'たべる', meaning: 'to eat', frequencyInContent: 4 });
+    expect(eat.forms).toEqual([
+      { word: '食べた', reading: 'たべた', form: 'past', count: 3 },
+      { word: '食べます', reading: 'たべます', form: 'polite', count: 1 },
+    ]);
+    expect(rows.find((r: any) => r.word === '猫').forms).toBeUndefined();
+  });
+});
