@@ -809,7 +809,7 @@ async function joinKanaFragment(
     };
     // ある|こう: a volitional the pieces spell.
     const vol = n === 2 ? VOLITIONAL[span[1].surface] : undefined;
-    if (vol && ['連体詞', '副詞', '名詞'].includes(pos0(span[0]) ?? '')) {
+    if (vol && ['連体詞', '副詞', '名詞', '動詞'].includes(pos0(span[0]) ?? '')) {
       const dict = span[0].surface + vol[0];
       if ((await commonKanaWord(dict)).has(vol[1])) {
         return {
