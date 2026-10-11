@@ -190,3 +190,17 @@ describe('trained sense scorer (probs from the helper)', { timeout: 30000 }, () 
     expect(ctx.requests[0][0].candidates).toEqual([]);
   });
 });
+
+describe('trained scorer adds to the embedding-margin switch (does not replace it)', { timeout: 30000 }, () => {
+  it('keeps the margin switch when the scorer is not confident (遅い "late" stays)', async () => {
+    const lateDict = { lookup: async (w: string) => (w === '遅い' ? { meaning: 'slow', reading: 'おそい', meanings: ['slow', 'late'], senseSizes: [1, 1], senseInfo: [{ index: 0, misc: [], common: true, primary: true }, { index: 1, misc: [], common: true, primary: true }] } : null) };
+    const tokens = [{ surface: '遅い', baseForm: '遅い', pos: '形容詞', reading: 'おそい', posDetail: ['形容詞', '一般'] }];
+    const ctx: ContextModel = {
+      async enrich(sentences) {
+        return sentences.map((s) => ({ translation: 'It is late.', candidates: s.candidates.map(() => ({ aligned: ['late'], sims: [0.2, 0.9], probs: [0.6, 0.4] })) }));
+      },
+    };
+    const r = await resolveContent('遅い', makeTokenizer(tokens), new WordResolver(lateDict), undefined, undefined, ctx);
+    expect(r.words[r.tokens[0].wordIndex!].meaning).toBe('late (also: slow)');
+  });
+});
