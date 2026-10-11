@@ -106,6 +106,15 @@ describe('alignConverted', () => {
     expect(out?.[3].surface).toBe('夕');
     expect(out?.[3].baseForm).toBe('夕');
   });
+  // A 120-token sentence that fails at its end hung the sample run
+  // (kana tokens match by surface and by reading: 2^n retries).
+  it('fails fast on a long sentence that does not align at the end', () => {
+    const original = 'あ'.repeat(120) + 'い';
+    const conv = Array.from({ length: 120 }, () => t('あ', 'あ', 'あ')).concat([t('う', 'う', 'う')]);
+    const started = Date.now();
+    alignConverted(original, 0, conv);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
   it('rejects a conversion whose readings do not spell the original', () => {
     // Three mismatching tokens: too little of the conversion agrees.
     expect(
