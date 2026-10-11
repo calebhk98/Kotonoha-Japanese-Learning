@@ -21,8 +21,12 @@ const KANJI = /[一-鿿々〆]/;
 const JAPANESE = /[ぁ-ゖァ-ヺー一-鿿々〆]/g;
 const toHiragana = (s: string) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
-/** A sentence worth converting: a hiragana run of 4+ and under 20% kanji. */
+/**
+ * A sentence worth converting: a hiragana run of 4+ (spaces between words
+ * ignored: えを かいて います) and under 20% kanji.
+ */
 export function isKanaHeavy(sentence: string): boolean {
+  sentence = sentence.replace(/\s+/g, '');
   const jp = sentence.match(JAPANESE) ?? [];
   if (jp.length === 0) return false;
   const longestRun = Math.max(0, ...(sentence.match(/[ぁ-ゖー]+/g) ?? []).map((r) => r.length));
@@ -44,6 +48,11 @@ export function kanaLemma(convSurface: string, kanaSurface: string, lemma: strin
   const tail = convSurface.slice(headLen);
   if (!lemma.startsWith(head) || !toHiragana(kanaSurface).endsWith(toHiragana(tail))) return undefined;
   return kanaSurface.slice(0, kanaSurface.length - tail.length) + lemma.slice(head.length);
+}
+
+/** A placed token; `mismatch` when its kana disagreed with the conversion. */
+export interface ConvertedToken extends PositionedToken {
+  mismatch?: boolean;
 }
 
 const SKIP = /[\s\p{P}\p{S}]/u;
@@ -74,22 +83,23 @@ function matchAt(original: string, p: number, form: string): number {
  * It keeps the converted word only when the original is kana and the token
  * is not a name; otherwise its own text is the lookup key.
  */
-export function alignConverted(original: string, offset: number, conv: TokenInfo[]): PositionedToken[] | null {
+export function alignConverted(original: string, offset: number, conv: TokenInfo[]): ConvertedToken[] | null {
   const toks = conv.filter((tk) => !/^[\s\p{P}\p{S}]*$/u.test(tk.surface));
   const skip = (p: number) => {
     while (p < original.length && SKIP.test(original[p])) p++;
     return p;
   };
-  const place = (tk: TokenInfo, p: number, q: number, mismatch: boolean): PositionedToken => {
+  const place = (tk: TokenInfo, p: number, q: number, mismatch: boolean): ConvertedToken => {
     const surface = original.slice(p, q);
-    const token: PositionedToken = { ...tk, surface, startIndex: offset + p, endIndex: offset + q };
+    const token: ConvertedToken = { ...tk, surface, startIndex: offset + p, endIndex: offset + q };
+    if (mismatch) token.mismatch = true;
     if (mismatch && (KANJI.test(surface) || tk.posDetail?.[1] === '固有名詞')) {
       Object.assign(token, { baseForm: surface, dictionaryForm: surface, lemmaSurface: surface });
       if (KANJI.test(surface)) delete token.reading;
       else token.reading = toHiragana(surface);
       return token;
     }
-    if (mismatch) token.reading = toHiragana(surface);
+    if (mismatch) token.reading = toHiragana(surface.replace(/\s/g, ''));
     if (surface !== tk.surface) {
       for (const field of ['dictionaryForm', 'lemmaSurface'] as const) {
         const lemma = tk[field];
@@ -102,7 +112,7 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
     return token;
   };
   let budget = 0;
-  const go = (from: number, k: number, mismatches: number): PositionedToken[] | null => {
+  const go = (from: number, k: number, mismatches: number): ConvertedToken[] | null => {
     const p = skip(from);
     if (k === toks.length) return p === original.length ? [] : null;
     const tk = toks[k];
@@ -118,8 +128,13 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
     if (mismatches >= budget || ['助詞', '助動詞'].includes(tk.posDetail?.[0] ?? tk.pos ?? '')) return null;
     const expected = (tk.reading ?? tk.surface).length;
     const longest = expected + (tk.posDetail?.[1] === '固有名詞' ? 1 : 0);
-    for (let q = p + Math.max(1, expected - 1); q <= Math.min(original.length, p + longest); q++) {
-      if (SKIP.test(original[q - 1])) break;
+    // Count kana, not spaces (かいて います); stop at punctuation.
+    let chars = 0;
+    for (let q = p; q < original.length && chars < longest; ) {
+      if (/[\p{P}\p{S}]/u.test(original[q])) break;
+      if (!/\s/.test(original[q])) chars++;
+      q++;
+      if (chars < Math.max(1, expected - 1) || /\s/.test(original[q - 1])) continue;
       const rest = go(q, k + 1, mismatches + 1);
       if (rest) return [place(tk, p, q, true), ...rest];
     }
@@ -147,16 +162,19 @@ export async function applyKanaConversion(
   positioned: PositionedToken[],
   text: string,
   tokenizer: Tokenizer,
-  convert: (sentences: string[]) => Promise<(string | null)[]>
+  convert: (sentences: string[]) => Promise<(string | null)[]>,
+  readingsOf: (word: string) => Promise<Set<string>> = async () => new Set()
 ): Promise<PositionedToken[]> {
   const sentences = splitSentences(text).filter((s) => isKanaHeavy(s.text));
   Object.assign(kanaConversionStats, { sentences: sentences.length, converted: 0, rejected: 0 });
   if (sentences.length === 0) return positioned;
-  const converted = await convert(sentences.map((s) => s.text));
+  // Spaces between words go: the converter garbles a full-width space
+  // (U+3000 came back as U+FFFD and took the next word with it).
+  const converted = await convert(sentences.map((s) => s.text.replace(/\s+/g, '')));
   let out = positioned;
   for (const [k, s] of sentences.entries()) {
     const c = converted[k];
-    if (!c || c === s.text) continue;
+    if (!c || c === s.text.replace(/\s+/g, '')) continue;
     const inside = (t: PositionedToken) => t.startIndex >= s.start && t.endIndex <= s.end;
     const outside = (t: PositionedToken) => t.endIndex <= s.start || t.startIndex >= s.end;
     // A token straddling the sentence edge: leave the sentence as it is.
@@ -165,6 +183,16 @@ export async function applyKanaConversion(
     if (!aligned) {
       kanaConversionStats.rejected++;
       continue;
+    }
+    // A disagreeing word is kept only when the kana is one of its readings
+    // (かく for 描く), never a different word (き "tree" converted to 旗 "flag").
+    for (const tk of aligned) {
+      if (!tk.mismatch) continue;
+      delete tk.mismatch;
+      if (tk.baseForm === tk.surface) continue;
+      const kana = toHiragana((tk.dictionaryForm ?? tk.surface).replace(/\s/g, ''));
+      const known = [...(await readingsOf(tk.baseForm))].map(toHiragana);
+      if (!known.includes(kana)) Object.assign(tk, { baseForm: tk.surface, dictionaryForm: tk.surface, lemmaSurface: tk.surface });
     }
     kanaConversionStats.converted++;
     const spaces = out.filter((t) => inside(t) && /^\s+$/.test(t.surface));

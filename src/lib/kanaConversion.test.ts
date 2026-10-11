@@ -18,6 +18,7 @@ describe('isKanaHeavy', () => {
   it('flags hiragana-only and nearly kanji-free sentences', () => {
     expect(isKanaHeavy('子どもはいえにかえります。')).toBe(true);
     expect(isKanaHeavy('くさっぱらをあるこう')).toBe(true);
+    expect(isKanaHeavy('えを かいて います。')).toBe(true);
   });
   it('leaves ordinary mixed text and short or non-Japanese lines alone', () => {
     expect(isKanaHeavy('日本の首都は東京で、人口は約千四百万人です。')).toBe(false);
