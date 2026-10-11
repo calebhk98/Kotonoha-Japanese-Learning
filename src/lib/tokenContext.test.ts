@@ -234,6 +234,11 @@ describe('number + 分 is N minutes', () => {
     const out2 = mergeFixedExpressions(lay(t2, [['三', NUM], ['十', NUM], ['分', CTR], ['後', ['接尾辞']]]), t2);
     expect(out2[0]).toMatchObject({ surface: '三十分', fixed: { meaning: '30 minutes', reading: 'さんじゅっぷん' } });
   });
+  it('a fraction is not minutes (三分の一 "one third")', () => {
+    const t = '三分の一';
+    const out = mergeFixedExpressions(lay(t, [['三', ['名詞', '数詞']], ['分', ['名詞', '普通名詞', '助数詞可能']], ['の', ['助詞', '格助詞']], ['一', ['名詞', '数詞']]]), t);
+    expect(out[0].surface).toBe('三');
+  });
   it('十分 alone stays "enough"', () => {
     const t = '時間は十分ある';
     const out = mergeFixedExpressions(lay(t, [['時間', N], ['は', ['助詞', '係助詞']], ['十分', ['副詞']], ['ある', ['動詞']]]), t);

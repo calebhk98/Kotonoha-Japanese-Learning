@@ -82,6 +82,15 @@ export function counterReading(n: number, counter: string): string | undefined {
   return d === 1 || d === 6 || d === 8 || d === 0 ? f[0] : d === 3 ? f[1] : f[2];
 }
 
+/** Reading of N分 (20 にじゅっぷん, 15 じゅうごふん, 1 いっぷん); under 100 only. */
+export function minutesReading(n: number): string | undefined {
+  if (!(n >= 1 && n < 100)) return undefined;
+  const counter = counterReading(n, '分')!;
+  let num = numberReading(n);
+  if (counter === 'ぷん') num = num.replace(/(じゅう|いち|ろく|はち)$/, (m) => ({ じゅう: 'じゅっ', いち: 'いっ', ろく: 'ろっ', はち: 'はっ' } as any)[m]);
+  return num + counter;
+}
+
 export function dayReading(n: number): string | undefined {
   if (!(n >= 1 && n <= 31)) return undefined;
   if (DAY_SPECIAL[n]) return DAY_SPECIAL[n];
@@ -369,6 +378,30 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
           ...join([numTok, dayTok], '名詞'),
           reading,
           fixed: { meaning: `the ${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'} (day of the month); ${n} day${n === 1 ? '' : 's'}`, reading },
+        });
+        i += 2;
+        continue outer;
+      }
+    }
+    // N分: minutes. Sudachi splits 二十分 as 二|十分 ("two … enough") and
+    // １５分 as １|５分 (reader test); a number right before 十分 / 分 /
+    // digits+分 is one "N minutes" token. (Not after 寸/尺: 七寸五分 is a
+    // length, "bun".)
+    // (Nor a fraction: 三分の一 "one third".)
+    // Nor a temperature (38度5分 = 38.5°) or blooming (三分咲き "30% in bloom").
+    if (numTok && dayTok && pos1(numTok) === '数詞' && numTok.endIndex === dayTok.startIndex && !/[寸尺割度]$/.test(out[out.length - 1]?.surface ?? '') &&
+      !/^(の[〇一二三四五六七八九十百0-9０-９]|咲)/.test(text.slice(dayTok.endIndex))) {
+      const next = dayTok.surface;
+      const value = next === '十分' ? numberValue(numTok.surface + '十')
+        : next === '分' ? numberValue(numTok.surface)
+        : /^[0-9０-９]+分$/.test(next) && /^[0-9０-９]+$/.test(numTok.surface) ? numberValue(numTok.surface + next.slice(0, -1))
+        : NaN;
+      if (Number.isFinite(value) && value > 0) {
+        const reading = minutesReading(value);
+        out.push({
+          ...join([numTok, dayTok], '名詞'),
+          reading,
+          fixed: { meaning: `${value} minute${value === 1 ? '' : 's'}`, ...(reading ? { reading } : {}) },
         });
         i += 2;
         continue outer;
