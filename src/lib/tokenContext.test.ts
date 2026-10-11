@@ -212,3 +212,31 @@ describe('merged headword must fit the pieces\' readings (100-item review)', () 
     expect(out2[0].surface).toBe('外に');
   });
 });
+
+// Reader test: 二|十分 and 五|十分 read "two … enough" / "five … enough";
+// １|５分 lost its 1.
+describe('number + 分 is N minutes', () => {
+  const NUM = ['名詞', '数詞'];
+  const CTR = ['名詞', '普通名詞', '助数詞可能'];
+  it('二|十分 is 20 minutes (にじゅっぷん); 五|十分 50 minutes', () => {
+    const t1 = '二十分です';
+    const out = mergeFixedExpressions(lay(t1, [['二', NUM], ['十分', ['形状詞', '一般']], ['です', ['助動詞']]]), t1);
+    expect(out[0].surface).toBe('二十分');
+    expect(out[0].fixed).toEqual({ meaning: '20 minutes', reading: 'にじゅっぷん' });
+    const t2 = '五十分で';
+    expect(mergeFixedExpressions(lay(t2, [['五', NUM], ['十分', ['形状詞', '一般']], ['で', ['助詞']]]), t2)[0].fixed?.meaning).toBe('50 minutes');
+  });
+  it('１|５分 keeps every digit; 三十|分 is one token', () => {
+    const t1 = '１５分かかる';
+    const out = mergeFixedExpressions(lay(t1, [['１', NUM], ['５分', ['名詞', '普通名詞', '一般']], ['かかる', ['動詞']]]), t1);
+    expect(out[0]).toMatchObject({ surface: '１５分', fixed: { meaning: '15 minutes', reading: 'じゅうごふん' } });
+    const t2 = '三十分後';
+    const out2 = mergeFixedExpressions(lay(t2, [['三', NUM], ['十', NUM], ['分', CTR], ['後', ['接尾辞']]]), t2);
+    expect(out2[0]).toMatchObject({ surface: '三十分', fixed: { meaning: '30 minutes', reading: 'さんじゅっぷん' } });
+  });
+  it('十分 alone stays "enough"', () => {
+    const t = '時間は十分ある';
+    const out = mergeFixedExpressions(lay(t, [['時間', N], ['は', ['助詞', '係助詞']], ['十分', ['副詞']], ['ある', ['動詞']]]), t);
+    expect(out[2].fixed).toBeUndefined();
+  });
+});
