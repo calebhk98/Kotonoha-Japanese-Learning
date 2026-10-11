@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isKanaHeavy, alignConverted, kanaLemma } from './kanaConversion.js';
+import { isKanaHeavy, alignConverted, kanaLemma, applyKanaConversion } from './kanaConversion.js';
 import type { TokenInfo } from './tokenizers.js';
 
 // Reader test 2: in all-hiragana children's text Sudachi split and looked up
@@ -112,5 +112,43 @@ describe('alignConverted', () => {
     ).toBeNull();
     // The converter rewrote text it was not asked to (leftover kana).
     expect(alignConverted('いえに', 0, [t('家', '家', 'いえ')])).toBeNull();
+  });
+});
+
+describe('applyKanaConversion', () => {
+  const tokenizerFor = (map: Record<string, TokenInfo[]>) => ({
+    name: 'fake',
+    ready: async () => {},
+    segment: async (s: string) => map[s] ?? [],
+  });
+  const readings: Record<string, string[]> = { 旗: ['はた'], 描く: ['かく', 'えがく'], 黄色: ['きいろ'], 絵: ['え'] };
+  const readingsOf = async (w: string) => new Set(readings[w] ?? []);
+
+  // Sample run: きいろの き (yellow tree) converted to 黄色の旗 (flag) kept 旗.
+  it('drops a mismatched word the kana is not a reading of', async () => {
+    const text = 'きいろの きが ありました。';
+    const conv = '黄色の旗がありました。';
+    const tk = tokenizerFor({
+      [conv]: [t('黄色', '黄色', 'きいろ'), t('の', 'の', 'の'), t('旗', '旗', 'はた', { posDetail: ['名詞', '普通名詞'] }), t('が', 'が', 'が'), t('ありました', '有る', 'ありました')],
+    });
+    const out = await applyKanaConversion([], text, tk, async () => [conv], readingsOf);
+    const ki = out.find((x) => x.surface === 'き');
+    expect(ki?.baseForm).toBe('き');
+    expect(out.find((x) => x.surface === 'きいろ')?.baseForm).toBe('黄色');
+  });
+  it('keeps a mismatched word the kana is a reading of', async () => {
+    const text = 'えを かいて います。';
+    const conv = '絵を描いています。';
+    const tk = tokenizerFor({
+      [conv]: [t('絵', '絵', 'え'), t('を', 'を', 'を'), t('描いています', '描く', 'えがいています', { dictionaryForm: '描く', posDetail: ['動詞', '一般'] })],
+    });
+    const out = await applyKanaConversion([], text, tk, async () => [conv], readingsOf);
+    expect(out.find((x) => x.surface.startsWith('かいて'))?.baseForm).toBe('描く');
+  });
+  // The converter turned a full-width space into U+FFFD and garbage.
+  it('sends sentences to the converter without spaces', async () => {
+    let sent: string[] = [];
+    await applyKanaConversion([], 'おばあちゃんは\u3000うなずきました。', tokenizerFor({}), async (s) => ((sent = s), s.map(() => null)), readingsOf);
+    expect(sent).toEqual(['おばあちゃんはうなずきました。']);
   });
 });
