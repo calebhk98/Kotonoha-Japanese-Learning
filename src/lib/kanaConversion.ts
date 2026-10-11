@@ -112,11 +112,21 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
     return token;
   };
   let budget = 0;
+  // Failed (position, token, mismatches) states: without this a long
+  // sentence failing near its end retried 2^n paths.
+  let failed = new Set<string>();
   const go = (from: number, k: number, mismatches: number): ConvertedToken[] | null => {
+    const key = `${from}:${k}:${mismatches}`;
+    if (failed.has(key)) return null;
+    const out = step(from, k, mismatches);
+    if (!out) failed.add(key);
+    return out;
+  };
+  const step = (from: number, k: number, mismatches: number): ConvertedToken[] | null => {
     const p = skip(from);
     if (k === toks.length) return p === original.length ? [] : null;
     const tk = toks[k];
-    for (const form of [tk.surface, tk.reading]) {
+    for (const form of new Set([tk.surface, tk.reading])) {
       if (!form) continue;
       const q = matchAt(original, p, form);
       if (q < 0) continue;
@@ -144,6 +154,7 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
   // per four tokens, so a mostly-wrong conversion is dropped.
   const allowed = Math.min(MAX_MISMATCHES, Math.max(1, Math.floor(toks.length / 4)));
   for (budget = 0; budget <= allowed; budget++) {
+    failed = new Set();
     const out = go(0, 0, 0);
     if (out) return out;
   }
