@@ -31,6 +31,9 @@ export function isKanaHeavy(sentence: string): boolean {
   if (jp.length === 0) return false;
   const longestRun = Math.max(0, ...(sentence.match(/[ぁ-ゖー]+/g) ?? []).map((r) => r.length));
   const kanji = jp.filter((c) => KANJI.test(c)).length;
+  // A whole short kana utterance (「いたい！」, だいじょうぶ？) counts too:
+  // alone, Sudachi read いたい as 遺体 "corpse".
+  if (jp.length >= 3 && jp.every((c) => /[ぁ-ゖー]/.test(c))) return true;
   return longestRun >= 4 && kanji / jp.length < 0.2;
 }
 
@@ -53,6 +56,8 @@ export function kanaLemma(convSurface: string, kanaSurface: string, lemma: strin
 /** A placed token; `mismatch` when its kana disagreed with the conversion. */
 export interface ConvertedToken extends PositionedToken {
   mismatch?: boolean;
+  /** Disagreed and fell back to its own text as the lookup key. */
+  fallback?: boolean;
 }
 
 const SKIP = /[\s\p{P}\p{S}]/u;
@@ -102,7 +107,7 @@ export function alignConverted(original: string, offset: number, conv: TokenInfo
       return token;
     }
     if (mismatch && (KANJI.test(surface) || tk.posDetail?.[1] === '固有名詞')) {
-      Object.assign(token, { baseForm: surface, dictionaryForm: surface, lemmaSurface: surface });
+      Object.assign(token, { baseForm: surface, dictionaryForm: surface, lemmaSurface: surface, fallback: true });
       if (KANJI.test(surface)) delete token.reading;
       else token.reading = toHiragana(surface);
       return token;
@@ -224,9 +229,13 @@ export async function applyKanaConversion(
     const original = new Map(out.filter(inside).map((t) => [`${t.startIndex}:${t.endIndex}`, t]));
     for (const [n, tk] of aligned.entries()) {
       const orig = original.get(`${tk.startIndex}:${tk.endIndex}`);
+      const fellBack = tk.fallback;
+      delete tk.fallback;
       if (!orig) continue;
       const name = (t: PositionedToken) => t.posDetail?.[1] === '固有名詞';
-      if (name(orig) !== name(tk) || /^[ァ-ヺー]+$/.test(tk.surface)) {
+      // A word that fell back to its own text (見た when the converter wrote
+      // 観た) is better served by the original tokenization's lookup key.
+      if (fellBack || name(orig) !== name(tk) || /^[ァ-ヺー]+$/.test(tk.surface)) {
         aligned[n] = orig;
         continue;
       }

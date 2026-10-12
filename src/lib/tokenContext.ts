@@ -126,7 +126,8 @@ function atSentenceStart(text: string, index: number): boolean {
 interface MergeRule {
   /** Number of tokens the rule consumes. */
   length: number;
-  match: (toks: PositionedToken[], text: string) => boolean;
+  /** `prev` is the token before the span (already merged), if any. */
+  match: (toks: PositionedToken[], text: string, prev?: PositionedToken) => boolean;
   /** POS for the merged token (drives lookup hints). */
   pos: string;
   /** Dictionary lookup key for the merged surface, when it differs. */
@@ -231,6 +232,28 @@ const MERGE_RULES: MergeRule[] = [
       // …and の|では is "isn't it that" (行くのではない).
       a.surface === 'の' && pos1(a) === '準体助詞' && b.surface === 'で' && pos0(b) === '助動詞' && !/^\s*[あは]/.test(text.slice(b.endIndex)),
     pos: '助詞',
+  },
+  // のに "although" after a verb / adjective / copula: UniDic splits it into
+  // nominalizer の + に, glossed "the one" + "to / at" (random-story
+  // grading: 送ったのに, 3 of 41 wrong tokens). Not before は/も/とって/つい
+  // (行くのには "for going", のにとって).
+  {
+    length: 2,
+    match: ([a, b], text, prev) =>
+      a.surface === 'の' && pos1(a) === '準体助詞' && b.surface === 'に' && pos1(b) === '格助詞' &&
+      !!prev && ['動詞', '形容詞', '助動詞'].includes(pos0(prev) ?? '') && !/^\s*[はもとつ]/.test(text.slice(b.endIndex)),
+    pos: '助詞',
+    fixed: 'although, even though (also: in order to)',
+  },
+  // Kana 足りない after a noun or particle: UniDic reads たり as the listing
+  // particle and ない as "not" (かみが たりない "not enough paper"). After a
+  // verb, たり is the listing form (見たり).
+  {
+    length: 2,
+    match: ([a, b], _text, prev) =>
+      a.surface === 'たり' && /^(ない|なかっ|なく|なけれ)$/.test(b.surface) && !(prev && ['動詞', '助動詞'].includes(pos0(prev) ?? '')),
+    pos: '動詞',
+    fixed: 'not enough, insufficient (足りない)',
   },
   // しょうがない / しようがない "it can't be helped"
   {
@@ -426,7 +449,7 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
     }
     for (const rule of MERGE_RULES) {
       const span = tokens.slice(i, i + rule.length);
-      if (span.length === rule.length && adjacent(span) && rule.match(span, text)) {
+      if (span.length === rule.length && adjacent(span) && rule.match(span, text, out[out.length - 1])) {
         const joined = join(span, rule.pos);
         if (rule.fixed) joined.fixed = { meaning: rule.fixed, ...(rule.reading ? { reading: rule.reading } : {}) };
         if (rule.reading) joined.reading = rule.reading;
@@ -445,7 +468,32 @@ export function mergeFixedExpressions(input: PositionedToken[], text: string): P
     out.push(tokens[i]);
     i++;
   }
+  // Counter suffixes the dictionary reads as nouns (random-story grading):
+  // 名 after a number is the counter for people (十五名), not "first name";
+  // め / 目 after a counted number is the ordinal "-th" (いちまい めの かみ,
+  // 二回目), not "eye".
+  for (const [k, t] of out.entries()) {
+    const prev = out[k - 1];
+    if (!prev || !/^[ 　]*$/.test(text.slice(prev.endIndex, t.startIndex))) continue;
+    if (t.surface === '名' && prev.endIndex === t.startIndex && isNumberToken(prev)) {
+      out[k] = { ...t, fixed: { meaning: 'counter for people (十五名 "15 people")', reading: 'めい' }, reading: 'めい' };
+    } else if (/^[め目]$/.test(t.surface) && isCounted(prev, out[k - 2])) {
+      out[k] = { ...t, fixed: { meaning: '-th (ordinal suffix: 一枚目 "the first one")', reading: 'め' }, reading: 'め' };
+    }
+  }
   return out;
+}
+
+const NUMBER_START = /^([0-9０-９〇一二三四五六七八九十百千]|いち|にじゅう|さん|よん|ご|ろく|なな|しち|はち|きゅう|じゅう|ひと|ふた|みっ|よっ|いっ|はっ|ろっ|じゅっ)/;
+const COUNTER_END = /(枚|まい|回|かい|番|ばん|人|にん|本|ほん|ぽん|ぼん|個|こ|度|ど|つ|台|だい|杯|はい|ぱい|ばい|号|ごう|週|しゅう|年|ねん|日|にち|階|がい|曲|きょく|話|わ|巻|かん|位|い|冊|さつ|匹|ひき|ぴき|びき|周)$/;
+function isNumberToken(t: PositionedToken): boolean {
+  return pos1(t) === '数詞' || / \(number\)$/.test(t.fixed?.meaning ?? '') || Number.isFinite(numberValue(t.surface));
+}
+/** A number + counter (いちまい, 二|回), the base of an ordinal 目. */
+function isCounted(prev: PositionedToken, before?: PositionedToken): boolean {
+  if (NUMBER_START.test(prev.surface) && COUNTER_END.test(prev.surface) && prev.surface.length > 1) return true;
+  const counter = (prev.posDetail ?? []).some((p) => p.startsWith('助数詞')) || COUNTER_END.test(prev.surface);
+  return counter && !!before && before.endIndex === prev.startIndex && isNumberToken(before);
 }
 
 /**

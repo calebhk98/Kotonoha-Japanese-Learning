@@ -80,6 +80,13 @@ export const SUPPLEMENTARY_DICTIONARY: Record<string, SupplementaryEntry> = {
   耳無: { reading: 'みみなし', meaning: 'earless ("Mimi-nashi" Hoichi, the earless minstrel)' },
   やせ蛙: { reading: 'やせがえる', meaning: 'skinny frog (from Issa\'s famous haiku)' },
 
+  // ── Everyday words whose JMDict headline misleads beginners ────────────
+  // (graded in all three reader tests and the random-story grading:
+  // JMDict's first glosses read "safe, secure" / "wonderful, marvelous"
+  // where stories almost always mean "OK?" / "strange")
+  大丈夫: { reading: 'だいじょうぶ', meaning: 'all right, OK (also: safe; "no thanks")' },
+  不思議: { reading: 'ふしぎ', meaning: 'strange, mysterious (also: wonderful)' },
+
   // ── Brands / modern coinages / abbreviations ───────────────────────────
   ポカリ: { reading: 'ぽかり', meaning: 'Pocari (sports drink; short for Pocari Sweat)' },
   マネーフォワード: { reading: 'まねーふぉわーど', meaning: 'Money Forward (Japanese budgeting app / company)' },
