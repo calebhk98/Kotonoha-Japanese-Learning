@@ -503,6 +503,9 @@ function isCounted(prev: PositionedToken, before?: PositionedToken): boolean {
  */
 export function interjectionPos(text: string, t: PositionedToken): string | undefined {
   if (!/^[ぁ-ん]+$/.test(t.surface) || !atSentenceStart(text, t.startIndex)) return undefined;
+  // An adjective / na-adjective / verb said alone keeps its word (いたい！
+  // is 痛い "it hurts", not 遺体 "corpse"; だいじょうぶ？ is 大丈夫).
+  if (['形容詞', '形状詞', '動詞'].includes(pos0(t) ?? '')) return undefined;
   return /^[～〜ー？！?!]/.test(text.slice(t.endIndex)) ? '感動詞' : undefined;
 }
 

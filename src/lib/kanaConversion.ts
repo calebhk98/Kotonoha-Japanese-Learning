@@ -191,7 +191,8 @@ export async function applyKanaConversion(
   text: string,
   tokenizer: Tokenizer,
   convert: (sentences: string[]) => Promise<(string | null)[]>,
-  readingsOf: (word: string) => Promise<Set<string>> = async () => new Set()
+  readingsOf: (word: string) => Promise<Set<string>> = async () => new Set(),
+  commonWord: (kana: string) => Promise<boolean> = async () => false
 ): Promise<PositionedToken[]> {
   const sentences = splitSentences(text).filter((s) => isKanaHeavy(s.text));
   Object.assign(kanaConversionStats, { sentences: sentences.length, converted: 0, rejected: 0 });
@@ -229,6 +230,11 @@ export async function applyKanaConversion(
     const original = new Map(out.filter(inside).map((t) => [`${t.startIndex}:${t.endIndex}`, t]));
     for (const [n, tk] of aligned.entries()) {
       const orig = original.get(`${tk.startIndex}:${tk.endIndex}`);
+      // A name the converter made of a common kana word (かみ → 嘉美 "Kami"
+      // where 紙 "paper" was meant) is looked up as the kana word instead.
+      if (tk.posDetail?.[1] === '固有名詞' && /^[ぁ-ゖー]+$/.test(tk.surface) && !orig && (await commonWord(tk.surface))) {
+        Object.assign(tk, { baseForm: tk.surface, dictionaryForm: tk.surface, lemmaSurface: tk.surface, posDetail: ['名詞', '普通名詞', '一般'], pos: '名詞' });
+      }
       const fellBack = tk.fallback;
       delete tk.fallback;
       if (!orig) continue;

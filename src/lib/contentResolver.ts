@@ -144,7 +144,7 @@ export async function resolveContent(
   // mapped back onto the kana (kanaConversion.ts); needs the context helper.
   const kanaToKanji = context?.kanaToKanji?.bind(context);
   const segmented = kanaToKanji
-    ? await applyKanaConversion(positioned, text, tokenizer, (s) => kanaToKanji(s).catch(() => s.map(() => null)), (w) => wordResolver.headwordReadings(w))
+    ? await applyKanaConversion(positioned, text, tokenizer, (s) => kanaToKanji(s).catch(() => s.map(() => null)), (w) => wordResolver.headwordReadings(w), async (w) => (await wordResolver.commonKanaWord(w)).size > 0)
     : positioned;
 
   // ---- sentence context: re-join split expressions, then classify each
