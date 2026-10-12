@@ -232,8 +232,10 @@ export async function applyKanaConversion(
       const orig = original.get(`${tk.startIndex}:${tk.endIndex}`);
       // A name the converter made of a common kana word (かみ → 嘉美 "Kami"
       // where 紙 "paper" was meant) is looked up as the kana word instead.
-      if (tk.posDetail?.[1] === '固有名詞' && /^[ぁ-ゖー]+$/.test(tk.surface) && !orig && (await commonWord(tk.surface))) {
+      if (tk.posDetail?.[1] === '固有名詞' && /^[ぁ-ゖー]+$/.test(tk.surface) && (!orig || orig.posDetail?.[1] === '固有名詞') && (await commonWord(tk.surface))) {
         Object.assign(tk, { baseForm: tk.surface, dictionaryForm: tk.surface, lemmaSurface: tk.surface, posDetail: ['名詞', '普通名詞', '一般'], pos: '名詞' });
+        delete tk.fallback;
+        continue;
       }
       const fellBack = tk.fallback;
       delete tk.fallback;

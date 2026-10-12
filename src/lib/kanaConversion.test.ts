@@ -270,10 +270,14 @@ describe('applyKanaConversion', () => {
       ],
     });
     const common = async (w: string) => w === 'かみ';
-    const out = await applyKanaConversion([], text, tk, async () => [conv], readingsOf, common);
-    const kami = out.find((x) => x.surface === 'かみ');
-    expect(kami?.baseForm).toBe('かみ');
-    expect(kami?.posDetail?.[1]).toBe('普通名詞');
+    // Also when the kana tokenization tagged it a name too.
+    const original = [pos('かみ', 6, 'かみ', ['名詞', '固有名詞', '一般'])];
+    for (const orig of [[], original]) {
+      const out = await applyKanaConversion(orig, text, tk, async () => [conv], readingsOf, common);
+      const kami = out.find((x) => x.surface === 'かみ');
+      expect(kami?.baseForm).toBe('かみ');
+      expect(kami?.posDetail?.[1]).toBe('普通名詞');
+    }
   });
   // The converter turned a full-width space into U+FFFD and garbage.
   it('sends sentences to the converter without spaces', async () => {
