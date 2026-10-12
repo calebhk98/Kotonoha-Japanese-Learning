@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { conjugationNote } from './conjugation.js';
-import { mergeFixedExpressions, mergeDictionaryWords, type PositionedToken } from './tokenContext.js';
+import { mergeFixedExpressions, mergeDictionaryWords, interjectionPos, type PositionedToken } from './tokenContext.js';
 
 // Positioned tokens from (surface, posDetail) pairs laid out over `text`.
 function lay(text: string, parts: [string, string[]][]): PositionedToken[] {
@@ -302,5 +302,19 @@ describe('random-story grading fixes', () => {
     const text = 'いぬの め。';
     const out = mergeFixedExpressions(lay(text, [['いぬ', N], ['の', ['助詞']], ['め', N]]), text);
     expect(out.find((t) => t.surface === 'め')?.fixed).toBeUndefined();
+  });
+});
+
+describe('interjectionPos', () => {
+  // Random-story grading: 「いたい！」 became the interjection いたい, looked
+  // up by kana as 遺体 "corpse"; 「だいじょうぶ？」 lost its 大丈夫 key.
+  it('keeps adjectives, na-adjectives and verbs that open an exclamation', () => {
+    const text = 'いたい！だいじょうぶ？まって！';
+    const toks = lay(text, [['いたい', ['形容詞', '一般']], ['だいじょうぶ', ['形状詞', '一般']], ['まって', ['動詞', '一般']]]);
+    expect(toks.map((t) => interjectionPos(text, t))).toEqual([undefined, undefined, undefined]);
+  });
+  it('still turns a sentence-opening pronoun into an interjection (あれ～？)', () => {
+    const text = 'あれ～？';
+    expect(interjectionPos(text, lay(text, [['あれ', ['代名詞']]])[0])).toBe('感動詞');
   });
 });
