@@ -19,6 +19,8 @@ describe('isKanaHeavy', () => {
     expect(isKanaHeavy('子どもはいえにかえります。')).toBe(true);
     expect(isKanaHeavy('くさっぱらをあるこう')).toBe(true);
     expect(isKanaHeavy('えを かいて います。')).toBe(true);
+    // A whole short kana utterance (Peter Rabbit: いたい！ read as 遺体 "corpse").
+    expect(isKanaHeavy('「いたい！」')).toBe(true);
   });
   it('leaves ordinary mixed text and short or non-Japanese lines alone', () => {
     expect(isKanaHeavy('日本の首都は東京で、人口は約千四百万人です。')).toBe(false);
@@ -234,6 +236,24 @@ describe('applyKanaConversion', () => {
     const tk = tokenizerFor({ [conv]: [t('優しい', '優しい', 'やさしい'), t('気持ち', '気持ち', 'きもち', { posDetail: ['名詞'], dictionaryForm: '気持ち' }), t('です', 'です', 'です')] });
     const out = await applyKanaConversion([], text, tk, async () => [conv], async (w) => new Set(w === '気持ち' ? ['きもち'] : []));
     expect(out.find((x) => x.surface === '気もち')?.baseForm).toBe('気持ち');
+  });
+  // Random-story grading: the converter wrote 観た for 見た, the token fell
+  // back to its own text as the lookup key and matched a proverb.
+  it('uses the original token where a disagreeing kanji word has the same span', async () => {
+    const text = 'わたしはかおを見た。';
+    const conv = '私は顔を観た。';
+    const original = [
+      pos('わたし', 0, '私', ['代名詞']),
+      pos('は', 3, 'は', ['助詞']),
+      pos('かお', 4, '顔', ['名詞', '普通名詞', '一般']),
+      pos('を', 6, 'を', ['助詞']),
+      { ...pos('見た', 7, '見る', ['動詞', '一般']), dictionaryForm: '見る' },
+    ];
+    const tk = tokenizerFor({
+      [conv]: [t('私', '私', 'わたし'), t('は', 'は', 'は'), t('顔', '顔', 'かお', { posDetail: ['名詞'] }), t('を', 'を', 'を'), t('観た', '観る', 'みた', { posDetail: ['動詞', '一般'], dictionaryForm: '観る' })],
+    });
+    const out = await applyKanaConversion(original, text, tk, async () => [conv], readingsOf);
+    expect(out.find((x) => x.surface === '見た')?.baseForm).toBe('見る');
   });
   // The converter turned a full-width space into U+FFFD and garbage.
   it('sends sentences to the converter without spaces', async () => {

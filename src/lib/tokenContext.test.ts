@@ -256,3 +256,51 @@ describe('number + 分 is N minutes', () => {
     expect(out[2].fixed).toBeUndefined();
   });
 });
+
+// Random-story grading (10 unseen stories): split grammar and counters
+// read as the wrong word.
+describe('random-story grading fixes', () => {
+  const V = ['動詞', '一般'];
+  it('verb + の|に is のに "although", not nominalizer + "to / at"', () => {
+    const text = '送ったのに、届かない。';
+    const out = mergeFixedExpressions(lay(text, [['送った', V], ['の', ['助詞', '準体助詞']], ['に', ['助詞', '格助詞']], ['、', ['補助記号']], ['届かない', V]]), text);
+    expect(out.map((t) => t.surface)).toContain('のに');
+    expect(out.find((t) => t.surface === 'のに')?.fixed?.meaning).toMatch(/although/);
+  });
+  it('…のには (purpose, topic) stays split', () => {
+    const text = '行くのには時間がかかる。';
+    const out = mergeFixedExpressions(lay(text, [['行く', V], ['の', ['助詞', '準体助詞']], ['に', ['助詞', '格助詞']], ['は', ['助詞', '係助詞']]]), text);
+    expect(out.map((t) => t.surface)).not.toContain('のに');
+  });
+  it('noun が|たり|ない is 足りない "not enough", not the listing たり', () => {
+    const text = 'かみが たりない。';
+    const out = mergeFixedExpressions(lay(text, [['かみ', N], ['が', ['助詞', '格助詞']], ['たり', ['助詞', '副助詞']], ['ない', ['助動詞']]]), text);
+    expect(out.map((t) => t.surface)).toContain('たりない');
+    expect(out.find((t) => t.surface === 'たりない')?.fixed?.meaning).toMatch(/not enough/);
+  });
+  it('verb たり|ない listing is left alone', () => {
+    const text = '見たりない';
+    const out = mergeFixedExpressions(lay(text, [['見', V], ['たり', ['助詞', '副助詞']], ['ない', ['助動詞']]]), text);
+    expect(out.map((t) => t.surface)).not.toContain('たりない');
+  });
+  it('名 after a number is the counter for people, not "first name"', () => {
+    const text = '参加者は十五名です。';
+    const out = mergeFixedExpressions(lay(text, [['参加者', N], ['は', ['助詞']], ['十五', ['名詞', '数詞']], ['名', ['接尾辞', '名詞的', '助数詞']], ['です', ['助動詞']]]), text);
+    const mei = out.find((t) => t.surface === '名');
+    expect(mei?.fixed?.meaning).toMatch(/counter for people/);
+    expect(mei?.fixed?.reading).toBe('めい');
+  });
+  it('め / 目 after a counted number is the ordinal "-th", not "eye"', () => {
+    const text = 'いちまい めの かみ。二回目です。';
+    const out = mergeFixedExpressions(
+      lay(text, [['いちまい', ['名詞', '数詞']], ['め', N], ['の', ['助詞']], ['かみ', N], ['二', ['名詞', '数詞']], ['回', ['接尾辞', '名詞的', '助数詞']], ['目', ['接尾辞', '名詞的', '一般']], ['です', ['助動詞']]]),
+      text
+    );
+    expect(out.filter((t) => /^[め目]$/.test(t.surface)).map((t) => t.fixed?.meaning)).toEqual([expect.stringMatching(/-th/), expect.stringMatching(/-th/)]);
+  });
+  it('め after an ordinary noun is untouched', () => {
+    const text = 'いぬの め。';
+    const out = mergeFixedExpressions(lay(text, [['いぬ', N], ['の', ['助詞']], ['め', N]]), text);
+    expect(out.find((t) => t.surface === 'め')?.fixed).toBeUndefined();
+  });
+});
