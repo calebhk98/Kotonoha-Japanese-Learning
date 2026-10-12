@@ -255,6 +255,26 @@ describe('applyKanaConversion', () => {
     const out = await applyKanaConversion(original, text, tk, async () => [conv], readingsOf);
     expect(out.find((x) => x.surface === '見た')?.baseForm).toBe('見る');
   });
+  // Random-story grading: いちまい めの かみに → 嘉美 "Kami (name)" for 紙.
+  it('does not take a converter name for a common kana word', async () => {
+    const text = 'いちまいめのかみにかきました。';
+    const conv = '一枚目の嘉美に書きました。';
+    const tk = tokenizerFor({
+      [conv]: [
+        t('一枚', '一枚', 'いちまい'),
+        t('目', '目', 'め'),
+        t('の', 'の', 'の'),
+        t('嘉美', '嘉美', 'かみ', { posDetail: ['名詞', '固有名詞', '人名', '名'] }),
+        t('に', 'に', 'に'),
+        t('書きました', '書く', 'かきました', { posDetail: ['動詞', '一般'] }),
+      ],
+    });
+    const common = async (w: string) => w === 'かみ';
+    const out = await applyKanaConversion([], text, tk, async () => [conv], readingsOf, common);
+    const kami = out.find((x) => x.surface === 'かみ');
+    expect(kami?.baseForm).toBe('かみ');
+    expect(kami?.posDetail?.[1]).toBe('普通名詞');
+  });
   // The converter turned a full-width space into U+FFFD and garbage.
   it('sends sentences to the converter without spaces', async () => {
     let sent: string[] = [];
