@@ -248,7 +248,9 @@ export async function resolveContent(
         translationAt && t.posDetail?.[1] === '固有名詞' && /^[ぁ-ゖー]+$/.test(t.surface) && translationAt(t) &&
         !HONORIFIC.test(merged[k + 1]?.surface ?? '') && (await wordResolver.commonKanaWord(t.surface)).size > 0
       ) {
-        renamed.push({ ...t, posDetail: ['名詞', '普通名詞', '一般'] });
+        // …looked up by its kana: Sudachi's name spelling (かみ → 嘉美) has
+        // no common-word entry.
+        renamed.push({ ...t, posDetail: ['名詞', '普通名詞', '一般'], baseForm: t.surface, dictionaryForm: t.surface });
       } else {
         renamed.push(t);
       }
