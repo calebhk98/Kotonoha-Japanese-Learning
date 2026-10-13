@@ -354,3 +354,25 @@ describe('isSaidAlone: a word at a clause start that is the whole utterance', ()
     expect(say('おしまい。', 'おしまい')).toBe(false);
   });
 });
+
+describe('demonstrative + formal noun is a noun phrase before a case particle', () => {
+  const RENTAI = ['連体詞'];
+  const hasForm = async (s: string) => s === 'そんなもの' || s === 'こんなこと';
+  const mergeKana = (toks: PositionedToken[], text: string, has: (s: string) => Promise<boolean>) =>
+    mergeDictionaryWords(toks, text, has, async () => true, () => false, none, async () => new Set(['exp', 'n']));
+  it('そんなものが is "such a thing" + が, not the set phrase "such is life"', async () => {
+    const text = 'そんなものが私を唆った';
+    const out = await mergeKana(lay(text, [['そんな', RENTAI], ['もの', ['名詞', '普通名詞', '一般']], ['が', ['助詞', '格助詞']], ['私', ['代名詞']]]), text, hasForm);
+    expect(out.map((t) => t.surface)).toEqual(['そんな', 'もの', 'が', '私']);
+  });
+  it('こんなことを too', async () => {
+    const text = 'こんなことを言う';
+    const out = await mergeKana(lay(text, [['こんな', RENTAI], ['こと', ['名詞', '普通名詞', '一般']], ['を', ['助詞', '格助詞']], ['言う', ['動詞']]]), text, hasForm);
+    expect(out.map((t) => t.surface)).toEqual(['こんな', 'こと', 'を', '言う']);
+  });
+  it('clause-final そんなもの(だ) still merges', async () => {
+    const text = '世の中はそんなものだ';
+    const out = await mergeKana(lay(text, [['世の中', ['名詞']], ['は', ['助詞', '係助詞']], ['そんな', RENTAI], ['もの', ['名詞', '普通名詞', '一般']], ['だ', ['助動詞']]]), text, hasForm);
+    expect(out.map((t) => t.surface)).toContain('そんなもの');
+  });
+});
