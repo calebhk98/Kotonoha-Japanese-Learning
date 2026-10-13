@@ -43,3 +43,22 @@ describe('buildHeadline "(also: …)" only shows a plain second sense', () => {
     expect(buildHeadline(sorted(sense('carrot'), sense('turnip', { misc: ['uk'] })), ['eng'])).toBe('carrot (also: turnip)');
   });
 });
+
+import { selectSenses } from './dictionary';
+
+describe('a noun right after a numeral prefers its counter sense (一顆: counter, not condyle)', () => {
+  const entry = {
+    kanji: [{ text: '顆' }],
+    kana: [{ text: 'か' }],
+    sense: [
+      { partOfSpeech: ['n'], misc: [], field: ['anat'], info: [], gloss: [{ lang: 'eng', text: 'condyle' }] },
+      { partOfSpeech: ['ctr'], misc: [], field: [], info: [], gloss: [{ lang: 'eng', text: 'counter for grains and small spheres' }] },
+    ],
+  };
+  it('without a numeral the noun sense leads', () => {
+    expect(selectSenses(entry, '顆', { pos: '名詞' })[0].gloss[0].text).toBe('condyle');
+  });
+  it('after a numeral the counter sense leads', () => {
+    expect(selectSenses(entry, '顆', { pos: '名詞', after: 'number' })[0].gloss[0].text).toBe('counter for grains and small spheres');
+  });
+});

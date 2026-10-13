@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { conjugationNote } from './conjugation.js';
-import { mergeFixedExpressions, mergeDictionaryWords, interjectionPos, isSaidAlone, type PositionedToken } from './tokenContext.js';
+import { mergeFixedExpressions, mergeDictionaryWords, interjectionPos, isSaidAlone, grammaticalContext, type PositionedToken } from './tokenContext.js';
 
 // Positioned tokens from (surface, posDetail) pairs laid out over `text`.
 function lay(text: string, parts: [string, string[]][]): PositionedToken[] {
@@ -374,5 +374,18 @@ describe('demonstrative + formal noun is a noun phrase before a case particle', 
     const text = '世の中はそんなものだ';
     const out = await mergeKana(lay(text, [['世の中', ['名詞']], ['は', ['助詞', '係助詞']], ['そんな', RENTAI], ['もの', ['名詞', '普通名詞', '一般']], ['だ', ['助動詞']]]), text, hasForm);
     expect(out.map((t) => t.surface)).toContain('そんなもの');
+  });
+});
+
+describe('grammaticalContext: number', () => {
+  it('a plain noun glued to a numeral is in the "number" context', () => {
+    const toks = lay('一顆の', [['一', ['名詞', '数詞']], ['顆', N]]);
+    expect(grammaticalContext(toks[0], toks[1], '一顆の')).toBe('number');
+  });
+  it('not for a counter-capable noun (handled by the counter logic) or after a space', () => {
+    const toks = lay('三か月', [['三', ['名詞', '数詞']], ['か月', ['名詞', '普通名詞', '助数詞可能']]]);
+    expect(grammaticalContext(toks[0], toks[1], '三か月')).toBeUndefined();
+    const sp = lay('一 顆', [['一', ['名詞', '数詞']], ['顆', N]]);
+    expect(grammaticalContext(sp[0], sp[1], '一 顆')).toBeUndefined();
   });
 });
