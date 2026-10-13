@@ -207,3 +207,48 @@ describe('vocab list grouped by dictionary form', () => {
     expect(rows.find((r: any) => r.word === '猫').forms).toBeUndefined();
   });
 });
+
+describe('street-name 通', { timeout: 30000 }, () => {
+  // Sudachi tags the 通 of 寺町通 as a given name (つう "Tsuu"); after a place
+  // or surname token it is the street suffix, read どおり.
+  const text = '寺町通は賑やかだ。';
+  const tokens = (tsuuTag: string[]) => [
+    { surface: '寺町', baseForm: '寺町', pos: '名詞', reading: 'てらまち', posDetail: ['名詞', '固有名詞', '人名', '姓', '*', '*'] },
+    { surface: '通', baseForm: '通', pos: '名詞', reading: 'つう', posDetail: tsuuTag },
+    { surface: 'は', baseForm: 'は', pos: '助詞', reading: 'は' },
+  ];
+
+  it('reads どおり and says "street" instead of the name Tsuu', async () => {
+    const resolved = await resolveContent('寺町通は', makeTokenizer(tokens(['名詞', '固有名詞', '人名', '名', '*', '*'])), new WordResolver(dict));
+    const w = resolved.words[resolved.tokens[1].wordIndex!];
+    expect(w.reading).toBe('どおり');
+    expect(w.meaning).toMatch(/street/i);
+    expect(w.meaning).not.toMatch(/\(name\)/);
+  });
+
+  it('leaves a plain common-noun 通 (usage 通) alone', async () => {
+    const resolved = await resolveContent('寺町通は', makeTokenizer(tokens(['名詞', '普通名詞', '一般', '*', '*', '*'])), new WordResolver(dict));
+    const w = resolved.words[resolved.tokens[1].wordIndex!];
+    expect(w.reading).toBe('つう');
+  });
+});
+
+describe('words the translator leaves romanized are not names', { timeout: 30000 }, () => {
+  const text = 'おでんが好きだ';
+  const tokens = [
+    { surface: 'おでん', baseForm: 'おでん', pos: '名詞', reading: 'おでん', posDetail: ['名詞', '普通名詞', '一般', '*', '*', '*'] },
+    { surface: 'が', baseForm: 'が', pos: '助詞', reading: 'が' },
+  ];
+  const context = { enrich: async () => [], translate: async () => ['I like Oden.'] } as any;
+  const odenDict = { lookup: async (w: string) => (w === 'おでん' ? { meaning: 'oden (dish)', reading: 'おでん' } : null), isKanaHeadword: async (w: string) => w === 'おでん' };
+
+  it('おでん, a kana headword of the dictionary, keeps its dictionary meaning', async () => {
+    const r = await resolveContent(text, makeTokenizer(tokens), new WordResolver(odenDict as any), undefined, undefined, context);
+    expect(r.words[r.tokens[0].wordIndex!].meaning).toBe('oden (dish)');
+  });
+
+  it('an unknown kana word the translation spells as a name is still that name', async () => {
+    const r = await resolveContent(text, makeTokenizer(tokens), new WordResolver({ lookup: async () => null, isKanaHeadword: async () => false } as any), undefined, undefined, context);
+    expect(r.words[r.tokens[0].wordIndex!].meaning).toBe('Oden (name)');
+  });
+});

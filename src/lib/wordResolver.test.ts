@@ -946,3 +946,29 @@ describe('WordResolver – one-token set phrases only for whole utterances when 
     expect(r.meaning).toMatch(/Here I am/);
   });
 });
+
+describe('WordResolver – a name-tagged token keeps the reading of the entry it shows', () => {
+  it('清 tagged as a name (きよし) but defined by the JMDict word 清 (しん) is read しん', async () => {
+    // Sudachi guesses a given-name reading for 清 in 清湯 / 清淡; the gloss
+    // is the Qing dynasty, so the reading must be the dynasty's.
+    const dict = makeMockDictionary({ 清: { meaning: 'Qing dynasty', reading: 'しん' } });
+    const resolver = new WordResolver(dict);
+    const r = await resolver.resolve('清', '清', undefined, '名詞', 'きよし', undefined, { properNoun: true, nameType: true });
+    expect(r.meaning).toBe('Qing dynasty');
+    expect(r.reading).toBe('しん');
+  });
+
+  it('a JMnedict name keeps the contextual reading', async () => {
+    const dict = makeMockDictionary({ 清: { meaning: 'Kiyoshi (name)', reading: 'きよし' } });
+    const resolver = new WordResolver(dict);
+    const r = await resolver.resolve('清', '清', undefined, '名詞', 'きよし', undefined, { properNoun: true, nameType: true });
+    expect(r.reading).toBe('きよし');
+  });
+
+  it('an ordinary (not name-tagged) token still takes the tokenizer reading', async () => {
+    const dict = makeMockDictionary({ 家: { meaning: 'house', reading: 'いえ' } });
+    const resolver = new WordResolver(dict);
+    const r = await resolver.resolve('家', '家', undefined, '名詞', 'うち');
+    expect(r.reading).toBe('うち');
+  });
+});

@@ -333,3 +333,13 @@ describe('interjectionPos', () => {
     expect(interjectionPos(text, lay(text, [['あれ', ['代名詞']]])[0])).toBe('感動詞');
   });
 });
+
+describe('mixed-script kana spans are never one headword', () => {
+  it('ピッ|と (a beep + と) is not merged into the loanword ピット "pit"', async () => {
+    const text = 'カードでピッと済んだ';
+    const toks = lay(text, [['で', ['助詞', '格助詞']], ['ピッ', ['副詞']], ['と', ['助詞', '格助詞']], ['済んだ', ['動詞', '一般']]]);
+    const out = await mergeDictionaryWords(toks, text, async (s) => s === 'ピッと', async () => true, () => false, none, async () => new Set(['adv']));
+    expect(out.map((t) => t.surface)).toContain('ピッ');
+    expect(out.map((t) => t.surface)).not.toContain('ピッと');
+  });
+});

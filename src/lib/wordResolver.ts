@@ -43,7 +43,7 @@ export interface WordResolution {
 interface DictionaryLike {
   lookup(
     word: string,
-    hint?: { pos?: string; reading?: string; lang?: string[] }
+    hint?: { pos?: string; reading?: string; lang?: string[]; requirePos?: boolean }
   ): Promise<{ reading?: string; meaning?: string; meanings?: string[]; senseSizes?: number[]; senseInfo?: SenseInfo[]; glossLang?: string } | null | false>;
   /** True when JMDict has an entry written exactly `text`. */
   hasForm?(text: string): Promise<boolean>;
@@ -103,6 +103,27 @@ const VOICED: Record<string, string> = {
 };
 
 /** True when `voiced` is `plain` with only its first kana voiced (ぶかい / ふかい). */
+/**
+ * The dictionary-form reading of a conjugated token, derived from its
+ * surface reading: 入っ (はいっ) under lemma 入る is はいる, which tells
+ * 入る "enter" from 入る "set (of the sun)" (いる). The inflected tail is the
+ * part of the surface after its longest common prefix with the lemma; the
+ * lemma's own ending replaces it. Irregular stems (来た きた → くる) simply
+ * derive a reading no entry has, which is harmless: it is only a hint.
+ */
+export function lemmaReadingFor(surface: string, reading: string | undefined, lemma: string): string | undefined {
+  if (!reading || !/[一-鿿々]/.test(lemma) || !/^[ぁ-んー]+$/.test(reading)) return undefined;
+  let p = 0;
+  while (p < surface.length && p < lemma.length && surface[p] === lemma[p]) p++;
+  if (p === 0 || !/[一-鿿々]/.test(surface.slice(0, p))) return undefined;
+  const sTail = surface.slice(p);
+  if (!/^[ぁ-んー]*$/.test(sTail) || !/^[ぁ-んー]*$/.test(lemma.slice(p)) || !reading.endsWith(sTail)) return undefined;
+  const stem = reading.slice(0, reading.length - sTail.length);
+  // Every character of the shared prefix is at least one kana of reading.
+  if (stem.length < p) return undefined;
+  return stem + lemma.slice(p);
+}
+
 function isRendakuOf(voiced: string, plain: string): boolean {
   return voiced.length === plain.length && VOICED[voiced[0]] === plain[0] && voiced.slice(1) === plain.slice(1);
 }
@@ -451,8 +472,14 @@ export class WordResolver {
       // of the dictionary form: always for non-conjugating words, and for a
       // conjugating word written in its dictionary form (辛い read つらい
       // "painful", not からい "spicy").
+      // A conjugated verb / adjective contributes the dictionary-form
+      // reading its surface reading implies (入っ はいっ → はいる).
       const hintReading =
-        tokenReading && pos && (NON_CONJUGATING_POS.has(pos) || wordStr === baseForm) ? tokenReading : undefined;
+        tokenReading && pos && (NON_CONJUGATING_POS.has(pos) || wordStr === baseForm)
+          ? tokenReading
+          : tokenReading && (pos === '動詞' || pos === '形容詞')
+            ? lemmaReadingFor(wordStr, tokenReading, ctx?.dictionaryForm && /[一-鿿々]/.test(ctx.dictionaryForm) ? ctx.dictionaryForm : baseForm)
+            : undefined;
       // A kana dictionary_form under a kanji normalized form IS the lemma's
       // reading, which the surface reading can't give for conjugated verbs.
       const kanaForm =
@@ -495,7 +522,10 @@ export class WordResolver {
       // the text's own spelling names the right entry.
       const kanjiLemma = ctx?.dictionaryForm;
       if (dictResult === null && kanjiLemma && kanjiLemma !== baseForm && /[一-鿿々]/.test(kanjiLemma)) {
-        dictResult = await this.dictionary.lookup(kanjiLemma, hint);
+        // The spelling must fit the token's POS: 少なから (classical -ku
+        // adjective) has dictionary_form 少なし, which JMDict files only
+        // inside a proverb ("those who resort to blandishments…").
+        dictResult = await this.dictionary.lookup(kanjiLemma, hint?.pos ? { ...hint, requirePos: true } : hint);
       }
       if (dictResult === null) {
         dictResult = await this.dictionary.lookup(baseForm, hint);
@@ -600,6 +630,13 @@ export class WordResolver {
     // reading over; the dictionary reading is right.
     if (tokenReading && reading && reading !== tokenReading && isRendakuOf(tokenReading, reading)) {
       tokenReading = reading;
+    }
+    // A name-tagged token whose gloss is an ordinary JMDict word (清 in 清湯
+    // "Qing dynasty"): UniDic's reading is a guessed name reading (きよし)
+    // that belongs to no sense of the entry shown, so the card would pair a
+    // reading with another word's meaning. The entry's own reading wins.
+    if (tokenReading && ctx?.properNoun && dictReading && dictReading !== tokenReading && !/ \(name\)$/.test(meaning)) {
+      tokenReading = dictReading;
     }
     if (tokenReading) reading = tokenReading;
 
