@@ -733,6 +733,25 @@ imports use it when `.venv-context` exists (`--no-context` /
   converter miss. Needs `.venv-context` + the zenz model; without them
   resolution is as before.
 
+- **Random-story grading** (Oct 2026): 10 random unseen stories, first 40
+  sentences each (~2,500 tokens), every token graded OK / MINOR (still
+  understandable) / WRONG (misleads). Baseline 41 WRONG (1.6%) + 98 MINOR.
+  Fixes from it: のに as one token, but only in a concessive context (past /
+  negative / なのに / before a comma; after a plain verb it is usually a
+  purpose: 表すのに使います); kana 足りない after a noun; 名 after a number =
+  counter for people; め / 目 after a counted number = ordinal "-th";
+  whole short kana utterances are converted (「いたい！」); the exclamation
+  override (`interjectionPos`) skips adjectives / na-adjectives / verbs
+  (いたい！ had become 遺体 "corpse"); a converter word that fell back to
+  its own text uses the original token (見た → a proverb via 観た);
+  curated headlines for 大丈夫 "all right, OK" and 不思議 "strange".
+  After: 30 WRONG (1.2%) + 93 MINOR; all-items diff review 176 better /
+  9 worse / 25 same. Rejected: demoting a kana "name" that is also a common
+  word (fixed かみ "paper" once, broke ~22 names: なな "seven", けんじ
+  "public prosecutor"). Remaining WRONG: the うえ/した chant (した read as
+  する), sound effects (ぷるる, かちゃ), 誠 as "truth" for a name, 後 "also"
+  for "after", 四人がけ "cliff".
+
 Rejected after measuring (don't re-add): a blanket "prefer n-suf senses
 after a noun" rule (corpus diff review: 一 "best", 回 "episode", 畑 "field
 of specialization"; only senses noted "usu. in compounds"/"after a name"
