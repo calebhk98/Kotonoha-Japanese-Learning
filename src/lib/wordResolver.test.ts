@@ -773,6 +773,15 @@ describe('WordResolver – #257 follow-up: manual-review pins (no false info)', 
     expect(result.meaning).not.toMatch(/Scase|pattern/);
   });
 
+  it('中専: a two-kanji word is never the sum of its two characters (Chinese 中专 got "inside + exclusively doing")', async () => {
+    const dict = makeMockDictionary({
+      中: { meaning: 'inside', reading: 'なか' },
+      専: { meaning: 'exclusively doing ...', reading: 'せん' },
+    });
+    const result = await new WordResolver(dict).resolve('中専', '中専', undefined, '名詞');
+    expect(result.meaning).not.toMatch(/inside|exclusively/);
+  });
+
   it('おいしさ: suffix さ wins — the honorific rule must not surface JMnedict names for kana remainders', async () => {
     const dict = makeMockDictionary({
       いしさ: { meaning: 'Ishisa', reading: 'いしさ' },

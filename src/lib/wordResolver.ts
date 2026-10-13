@@ -850,7 +850,12 @@ export class WordResolver {
         }
       }
       const parts = await this.bestNounParts(baseForm, 3, new Map());
-      if (parts && parts.length >= 2) {
+      // A two-kanji word is a jukugo, not the sum of its characters: when
+      // JMDict lacks it (Chinese 中专 written 中専, a coined abbreviation) the
+      // two single-character glosses ("inside" + "exclusively doing …")
+      // describe nothing, so it stays unknown rather than wrong.
+      const bareJukugo = /^[一-鿿々]{2}$/.test(baseForm);
+      if (parts && parts.length >= 2 && !bareJukugo) {
         return { meaning: parts.map((p) => `${p.surface} (${shortGloss(p.meaning)})`).join(' + ') };
       }
     }
