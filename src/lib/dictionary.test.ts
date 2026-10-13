@@ -406,6 +406,12 @@ describe('DictionaryManager – names are nouns', () => {
     }
   });
 
+  it('does not take a kana word from kanji-data either (readings give nonsense)', async () => {
+    const manager = make();
+    (manager as any).fallback2 = { lookup: async () => ({ meaning: 'common merganser', reading: 'わあい' }) };
+    expect(await manager.lookup('わーい', { pos: '感動詞' })).toBeNull();
+  });
+
   it('still falls back to JMnedict for nouns and for lookups with no POS', async () => {
     expect((await make().lookup('わーい', { pos: '名詞' }))?.meaning).toBe('Waai');
     expect((await make().lookup('わーい'))?.meaning).toBe('Waai');
@@ -428,6 +434,15 @@ describe('JmdictDictionary – requirePos', () => {
 
   it('returns null when no sense of the picked entry fits the POS and requirePos is set', async () => {
     expect(await make().lookup('少なし', true, { pos: '形容詞', requirePos: true })).toBeNull();
+  });
+
+  it('DictionaryManager does not fall through to name / kanji dictionaries on a requirePos miss', async () => {
+    const manager = new DictionaryManager();
+    (manager as any).primary = make();
+    const other = { lookup: async () => ({ meaning: 'proverb from elsewhere', reading: '少なし' }) };
+    (manager as any).fallback1 = other;
+    (manager as any).fallback2 = other;
+    expect(await manager.lookup('少なし', { pos: '形容詞', requirePos: true })).toBeNull();
   });
 
   it('keeps today\'s behaviour without requirePos', async () => {

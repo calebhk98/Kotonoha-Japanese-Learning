@@ -1108,6 +1108,10 @@ export class DictionaryManager {
       if (name) return name;
     }
     if (result) return result;
+    // A lookup that insists on a POS-fitting JMDict entry is for an
+    // alternative SPELLING of the word; the name and kanji dictionaries
+    // would answer for any string (少なし → a proverb quoted in kanji-data).
+    if (hint?.requirePos) return null;
 
     // Try JMnedict for names and proper nouns — these can be hiragana, katakana,
     // or kanji-written (e.g. 和彦, 山城屋). The previous guard limited this to
@@ -1120,7 +1124,9 @@ export class DictionaryManager {
     }
 
     // Try remaining fallback: KanjiData
-    if (this.fallback2) {
+    // (kanji-data is a kanji dictionary: a kana word "matches" it only through
+    // a reading, which gives nonsense — わあい "common merganser".)
+    if (this.fallback2 && /[一-鿿々]/.test(word)) {
       const result2 = await this.fallback2.lookup(word);
       if (result2) return result2;
     }

@@ -972,3 +972,11 @@ describe('WordResolver – a name-tagged token keeps the reading of the entry it
     expect(r.reading).toBe('うち');
   });
 });
+
+describe('WordResolver – katakana name readings are not rewritten', () => {
+  it('a katakana name keeps the tokenizer reading when the entry reading is the same kana in hiragana', async () => {
+    const dict = makeMockDictionary({ ローソン: { meaning: 'Lawson', reading: 'ろーそん' } });
+    const r = await new WordResolver(dict).resolve('ローソン', 'ローソン', undefined, '名詞', 'ローソン', undefined, { properNoun: true, nameType: true });
+    expect(r.reading).toBe('ローソン');
+  });
+});

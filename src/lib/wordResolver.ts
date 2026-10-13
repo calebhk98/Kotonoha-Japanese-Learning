@@ -124,6 +124,8 @@ export function lemmaReadingFor(surface: string, reading: string | undefined, le
   return stem + lemma.slice(p);
 }
 
+const toHiragana = (s: string) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+
 function isRendakuOf(voiced: string, plain: string): boolean {
   return voiced.length === plain.length && VOICED[voiced[0]] === plain[0] && voiced.slice(1) === plain.slice(1);
 }
@@ -635,7 +637,7 @@ export class WordResolver {
     // "Qing dynasty"): UniDic's reading is a guessed name reading (きよし)
     // that belongs to no sense of the entry shown, so the card would pair a
     // reading with another word's meaning. The entry's own reading wins.
-    if (tokenReading && ctx?.properNoun && dictReading && dictReading !== tokenReading && !/ \(name\)$/.test(meaning)) {
+    if (tokenReading && ctx?.properNoun && dictReading && toHiragana(dictReading) !== toHiragana(tokenReading) && !/ \(name\)$/.test(meaning)) {
       tokenReading = dictReading;
     }
     if (tokenReading) reading = tokenReading;
