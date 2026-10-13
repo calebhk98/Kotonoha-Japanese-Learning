@@ -1,14 +1,16 @@
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from 'react';
 import { Content } from '../data/content';
-import { getAllContentWords } from '../lib/api';
+import { getAllContentWords, listImports, saveImport } from '../lib/api';
 import { WaniKaniData } from '../lib/wanikani';
 import { applyWaniKaniToWords } from './useContentData';
 import { WordInfo } from '../types';
 
 /**
  * Owns the content-loading side of the app shell: fetching disk-based
- * content from /api/content, merging in user-imported customContent
- * (persisted to localStorage), and the background startup job that loads
+ * content from /api/content, merging in user-imported customContent (saved
+ * on the server with its resolved document; localStorage is only a cache
+ * for first paint and the source for a one-time migration), and the
+ * background startup job that loads
  * already-processed vocab from the server then batch-extracts whatever is
  * still missing.
  *
@@ -57,8 +59,40 @@ export function useContentBootstrap(
   }, [diskContent, customContent]);
 
   useEffect(() => {
-    localStorage.setItem('customContent', JSON.stringify(customContent));
+    try {
+      localStorage.setItem('customContent', JSON.stringify(customContent));
+    } catch (e) {
+      console.warn('[App] Could not cache imports in localStorage:', e);
+    }
   }, [customContent]);
+
+  // Server-saved imports are the source of truth. Anything only in this
+  // browser's localStorage (imports from before server storage, or a backup
+  // restore) is uploaded once so it gets resolved and saved too.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const server = await listImports();
+        const onServer = new Set(server.map((c) => c.id));
+        const local: Content[] = JSON.parse(localStorage.getItem('customContent') || '[]');
+        const migrated: Content[] = [];
+        for (const c of local) {
+          if (onServer.has(c.id)) continue;
+          try {
+            migrated.push(await saveImport(c));
+          } catch (e) {
+            console.warn(`[App] Could not save import ${c.id} to the server:`, e);
+            migrated.push(c);
+          }
+        }
+        if (!cancelled) setCustomContent([...migrated, ...server]);
+      } catch (e) {
+        console.warn('[App] Could not load imports from server, using local copy:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Track whether we've attempted batch extraction
   const [batchExtractionAttempted, setBatchExtractionAttempted] = useState(false);

@@ -29,6 +29,8 @@ import { WordResolver } from '../src/lib/wordResolver.js';
 import { resolveContent } from '../src/lib/contentResolver.js';
 import { listContentEntries } from '../src/lib/storyLoader.js';
 import { ensureJmnedictPrepared } from '../src/lib/jmnedict-utils.js';
+import { PythonContextModel } from '../src/lib/contextModel.js';
+import { kanaConversionStats } from '../src/lib/kanaConversion.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -55,11 +57,27 @@ async function main() {
     (jmnedictFile as string) ?? undefined
   );
 
+  // Never write artifacts from a degraded dictionary (jmdict-db locked by the
+  // dev server or another script): every resolved.json would be garbage.
+  if (!(await dictionary.usingJmdict())) {
+    console.error('[resolve-content] JMDict did not open (is the dev server or another script holding the jmdict-db lock?). Aborting.');
+    process.exit(1);
+  }
+
   const resolver = new WordResolver(dictionary);
   const lookupCache = new Map<string, any>();
 
+  // Sentence translations + translation-based sense choice (optional setup:
+  // npm run setup-context). Without it, artifacts are dictionary-only.
+  const context = process.argv.includes('--no-context') ? null : await PythonContextModel.start();
+  console.log(context ? '[resolve-content] Translation context: on' : '[resolve-content] Translation context: OFF (npm run setup-context, or --no-context given)');
+
   let entries = listContentEntries();
-  if (onlyId) entries = entries.filter((e) => e.id === onlyId);
+  // --id a,b,c resolves just those items.
+  if (onlyId) {
+    const ids = new Set(onlyId.split(','));
+    entries = entries.filter((e) => ids.has(e.id));
+  }
   if (onlyId && entries.length === 0) {
     console.error(`[resolve-content] No content folder found for id "${onlyId}"`);
     process.exit(1);
@@ -87,9 +105,11 @@ async function main() {
 
     try {
       const text = fs.readFileSync(textPath, 'utf-8').trim();
-      const resolved = await resolveContent(text, tokenizer, resolver, lookupCache);
+      const resolved = await resolveContent(text, tokenizer, resolver, lookupCache, undefined, context ?? undefined);
       fs.writeFileSync(outPath, JSON.stringify(resolved) + '\n');
       written++;
+      const k = kanaConversionStats;
+      if (k.sentences > 0) console.log(`[resolve-content] ${entry.id}: kana-heavy ${k.sentences}, converted ${k.converted}, rejected ${k.rejected}`);
       if (written % 25 === 0 || i === entries.length - 1) {
         console.log(`[resolve-content] ${written} written, ${skipped} skipped (${i + 1}/${entries.length})`);
       }
@@ -99,6 +119,7 @@ async function main() {
     }
   }
 
+  context?.close();
   const secs = ((Date.now() - started) / 1000).toFixed(1);
   console.log(`[resolve-content] Done in ${secs}s: ${written} written, ${skipped} skipped, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);

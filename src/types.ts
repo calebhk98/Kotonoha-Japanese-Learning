@@ -25,6 +25,10 @@ export interface WordInfo {
   frequencyInContent?: number;   // how many times this word's base form appears in the source text
   breakdown?: ScoreBreakdown;
   isMorpheme?: boolean;          // true if this is a grammatical morpheme (conjugation, verb ending, etc.)
+  /** What this token's endings add to the meaning ("not · polite", "past"). */
+  form?: string;
+  /** Vocab list rows for a verb/adjective: every form the text uses (食べた ×3 "past"). */
+  forms?: { word: string; reading: string; form?: string; count: number }[];
 }
 
 export type LessonType = 'mcq' | 'flashcard'; // multiple choice or flashcards

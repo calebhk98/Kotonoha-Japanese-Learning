@@ -1,4 +1,5 @@
 import { WordInfo } from "../types";
+import type { Content } from "../data/content";
 
 export async function getAllContentWords(): Promise<Record<string, WordInfo[]>> {
   const res = await fetch("/api/content/words");
@@ -58,4 +59,32 @@ export async function extractVocabulary(
 
   onProgress?.(`Found ${list.length} unique words`);
   return list;
+}
+
+// ---- user imports: processed once on the server and saved there, so a
+// long text isn't re-resolved on every visit (and the reader, vocab list and
+// inspect-text all read the same saved document).
+
+async function importRequest<T>(method: string, url: string, payload?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: payload === undefined ? undefined : JSON.stringify(payload),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+  return body as T;
+}
+
+export function listImports(): Promise<Content[]> {
+  return importRequest<Content[]>("GET", "/api/imports");
+}
+
+/** Creates or replaces an import (also used to save edits of disk content under its id). */
+export function saveImport(content: Content): Promise<Content> {
+  return importRequest<Content>("POST", "/api/imports", content);
+}
+
+export function updateImport(content: Content): Promise<Content> {
+  return importRequest<Content>("PUT", `/api/imports/${encodeURIComponent(content.id)}`, content);
 }

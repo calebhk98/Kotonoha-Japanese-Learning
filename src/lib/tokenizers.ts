@@ -2,6 +2,14 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const TinySegmenter = require('tiny-segmenter');
 
+export interface RawMorpheme {
+  surface: string;
+  pos: string[];
+  normalizedForm: string;
+  dictionaryForm?: string;
+  reading?: string;
+}
+
 export interface TokenInfo {
   surface: string;      // The actual word as it appears (with conjugations)
   baseForm: string;     // Dictionary form for lookup (base form)
@@ -21,6 +29,27 @@ export interface TokenInfo {
    * 家の前 reads まえ, 六人 reads にん.
    */
   reading?: string;
+  /** Full UniDic POS of the token's first morpheme (Sudachi only). */
+  posDetail?: string[];
+  /** Sudachi dictionary_form of the first morpheme (keeps the text's spelling). */
+  dictionaryForm?: string;
+  /**
+   * The token's LAST morpheme (a grouped verb ends in て/ます/た…): surface,
+   * POS and conjugation form. Lets the NEXT token see its grammatical context
+   * ("after the -te form", "after the -masu stem").
+   */
+  tail?: { surface: string; pos: string; conj: string };
+  /**
+   * The morphemes grouped after the first (ます, ず, た, て, いる, しまう…),
+   * in order. Turned into a hover note (conjugation.ts) so 分かりません
+   * shows "not · polite", not just "to understand".
+   */
+  parts?: { surface: string; norm: string; pos: string; conj: string }[];
+  /**
+   * The token with its LAST morpheme in dictionary form (付いて来た →
+   * 付いて来る): the headword a conjugated multi-morpheme token would have.
+   */
+  lemmaSurface?: string;
 }
 
 /**
@@ -168,6 +197,22 @@ export class SudachiWasmImpl implements Tokenizer {
     }
   }
 
+  /**
+   * Raw, ungrouped Sudachi morphemes for inspection tooling
+   * (scripts/inspect-text.ts). Not used by the resolution pipeline.
+   * reading_form / dictionary_form are only present on patched builds.
+   */
+  rawMorphemes(text: string, mode: 'A' | 'B' | 'C' = 'C'): RawMorpheme[] {
+    if (!this.tokenizer) throw new Error('Sudachi WASM not initialized');
+    return this.tokenizer.run(text, mode).map((m: any) => ({
+      surface: m.surface,
+      pos: m.part_of_speech,
+      normalizedForm: m.normalized_form,
+      dictionaryForm: m.dictionary_form,
+      reading: m.reading_form,
+    }));
+  }
+
   async segment(text: string): Promise<TokenInfo[]> {
     if (!this.tokenizer) throw new Error('Sudachi WASM not initialized');
     const morphemes = this.tokenizer.run(text, 'C');
@@ -187,7 +232,9 @@ export class SudachiWasmImpl implements Tokenizer {
     //   - て or で (助詞) after verb               → append surface, set tePending
     //   - 動詞 when tePending                      → append surface, clear tePending
     //   - anything else                            → flush current group, start new group
-    const GROUPABLE_AUX = new Set(['ます', 'た', 'ず']);
+    // てる is the contracted progressive (遊んでる = 遊んでいる); Sudachi
+    // normalizes でる to てる.
+    const GROUPABLE_AUX = new Set(['ます', 'た', 'ず', 'てる']);
 
     // Grammaticalized verbs that function as aspectual/benefactive auxiliaries
     // after the te-form (て/で). Content verbs like 食べる or 転ぶ must NOT be
@@ -212,6 +259,12 @@ export class SudachiWasmImpl implements Tokenizer {
     let groupReadingValid = true;
     let groupIsVerb = false;
     let tePending = false;
+    let groupPosDetail: string[] | undefined;
+    let groupDictForm: string | undefined;
+    let groupTail: TokenInfo['tail'];
+    let groupParts: NonNullable<TokenInfo['parts']> = [];
+    let groupHead = ''; // surface before the group's last morpheme
+    let groupLastDict = '';
 
     // reading_form exists only on WASM builds patched via
     // scripts/sudachi-wasm-reading.patch; older builds yield undefined and
@@ -229,6 +282,11 @@ export class SudachiWasmImpl implements Tokenizer {
           baseForm: groupBaseForm,
           pos: groupPos || undefined,
           reading: groupReadingValid && groupReading ? groupReading : undefined,
+          posDetail: groupPosDetail,
+          dictionaryForm: groupDictForm,
+          tail: groupTail,
+          ...(groupParts.length ? { parts: groupParts } : {}),
+          lemmaSurface: groupHead + (groupLastDict || groupTail?.surface || ''),
         });
         groupSurface = '';
         groupBaseForm = '';
@@ -253,9 +311,20 @@ export class SudachiWasmImpl implements Tokenizer {
       const baseForm = m.normalized_form || surface;
       const reading = readingOf(m);
 
+      const tail = { surface, pos, conj: m.part_of_speech[5] ?? '*' };
       const appendReading = () => {
         if (reading === null) groupReadingValid = false;
         else groupReading += reading;
+        groupTail = tail;
+        groupParts.push({ surface, norm: m.normalized_form || surface, pos, conj: m.part_of_speech[5] ?? '*' });
+        // The lemma replaces the group's LAST VERB with its dictionary form
+        // (付いて+来た → 付いて来る; し+た → する); trailing auxiliaries
+        // (ます, た) are conjugation, not part of the headword.
+        // groupSurface already includes this morpheme when this runs.
+        if (pos === '動詞') {
+          groupHead = groupSurface.slice(0, groupSurface.length - surface.length);
+          groupLastDict = m.dictionary_form || surface;
+        }
       };
       const startGroup = () => {
         groupSurface = surface;
@@ -265,6 +334,12 @@ export class SudachiWasmImpl implements Tokenizer {
         groupReadingValid = reading !== null;
         groupIsVerb = pos === '動詞';
         tePending = false;
+        groupPosDetail = [...m.part_of_speech];
+        groupDictForm = m.dictionary_form || undefined;
+        groupTail = tail;
+        groupParts = [];
+        groupHead = '';
+        groupLastDict = m.dictionary_form || surface;
       };
 
       if (!groupSurface) {

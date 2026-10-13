@@ -140,16 +140,17 @@ export function useContentData() {
     console.log(`[Vocab] Loading vocabulary for "${content.id}"`);
     try {
       // Try server-side store first — avoids re-extraction if already processed
+      // The server's saved resolution (resolved.json, or a saved import) is
+      // what the reader shows, so read it even on a forced reload; live
+      // extraction is only the fallback for text the server has nothing for.
       let words: WordInfo[] = [];
-      if (!forceReload) {
-        try {
-          words = await getContentWords(content.id);
-          if (words.length > 0) {
-            console.log(`[Vocab] Loaded ${words.length} words for "${content.id}" from server`);
-          }
-        } catch (e) {
-          console.warn(`[Vocab] Server fetch failed for "${content.id}", falling back to extraction`);
+      try {
+        words = await getContentWords(content.id);
+        if (words.length > 0) {
+          console.log(`[Vocab] Loaded ${words.length} words for "${content.id}" from server`);
         }
+      } catch (e) {
+        console.warn(`[Vocab] Server fetch failed for "${content.id}", falling back to extraction`);
       }
 
       if (words.length === 0) {
@@ -165,7 +166,13 @@ export function useContentData() {
 
       setContentVocab(prev => {
         const next = { ...prev, [content.id]: words };
-        localStorage.setItem('contentVocab', JSON.stringify(next));
+        // Only a cache (the server holds the real data); vocab for 600+
+        // items can exceed the ~5 MB quota, which must not crash the app.
+        try {
+          localStorage.setItem('contentVocab', JSON.stringify(next));
+        } catch (e) {
+          console.warn('[Vocab] Could not cache vocab in localStorage:', e);
+        }
         return next;
       });
     } catch (err) {

@@ -84,6 +84,121 @@ export function getGrammarDefinition(surface: string, baseForm: string): string 
 }
 
 /**
+ * Grammar label for a kana token using its full UniDic POS, so one surface
+ * gets the label for the job it does HERE (な after 好き is the copula, not
+ * the sentence-final particle; と after a verb is "when/if", not "with").
+ *
+ * Returns:
+ *   - a string: the grammar label to show
+ *   - null: this surface is a CONTENT word here (もの "thing", ある日's ある
+ *     handled as a label, こと "matter") and must be resolved as vocabulary
+ *   - undefined: no POS-specific rule; caller falls back to getGrammarDefinition
+ */
+export function getContextualGrammarLabel(
+  surface: string,
+  posDetail: string[] | undefined,
+  baseForm?: string
+): string | null | undefined {
+  if (!posDetail) return undefined;
+  const [p0, p1] = posDetail;
+
+  // Interjections (あ, ええ, はい) are words with dictionary entries
+  // ("ah!", "yes"); the kana table only has verb-fragment labels for them.
+  if (p0 === '感動詞') return null;
+  // A conjugated する written in kana (さ in された, し in しない, す in
+  // classical すべく): the bare-kana table only has stem placeholders.
+  if (p0 === '動詞' && baseForm === '為る') return 'form of する "to do" (された "was done", しない "doesn\'t")';
+  // い of ていない, あっ of あった: the verb いる/ある, not the kana-table
+  // fragment labels ("Adjective ending").
+  if (p0 === '動詞' && baseForm === '有る' && posDetail.some((p) => p.startsWith('仮定形'))) {
+    return 'conditional of ある: "if there is" (あれば)';
+  }
+  if (p0 === '動詞' && (baseForm === '居る' || baseForm === '有る')) {
+    return getMorphemeDefinition(baseForm === '居る' ? 'いる' : 'ある');
+  }
+  switch (surface) {
+    case 'な':
+      if (p0 === '助動詞') return 'copula (attributive): links a na-adjective or noun to the noun after it (好きな人)';
+      break;
+    case 'に':
+      if (p0 === '助動詞') return 'adverbial ending: "-ly" / "so that, like" (きれいに, ように)';
+      break;
+    case 'で':
+      if (p0 === '接続詞') return 'and so; then (で at the start of a sentence)';
+      // Sudachi also tags plain locative で (家で) as the copula, so the
+      // label has to cover both readings.
+      if (p0 === '助動詞') return 'at / in / by means of; or copula te-form "is ... and" (〜で)';
+      if (p1 === '接続助詞') return 'te-form connector: "and" / "-ing" (遊んで)';
+      if (p1 === '格助詞') return 'at / in / by means of; also "is ... and" (te-form of だ)';
+      break;
+    case 'と':
+      if (p1 === '接続助詞') return 'conditional: "when / whenever / if" (〜と)';
+      if (p1 === '並立助詞') return 'and (complete list: AとB)';
+      if (p1 === '格助詞') return 'quotation marker ("..." と言う) / with / and; as, into (〜とする "treat as", 〜となる "become")';
+      break;
+    case 'が':
+      if (p1 === '接続助詞') return 'but / and (joins two clauses)';
+      if (p0 === '接続詞') return 'but, however (が at the start of a sentence)';
+      break;
+    case 'の':
+      // Sudachi also tags some possessive の (衣の色) as 準体助詞.
+      if (p1 === '準体助詞') return 'nominalizer: "the one / the fact that"; explanatory (〜のです); also possessive "\'s"';
+      if (p1 === '終助詞') return 'sentence-final の: soft question or explanation (来たの? "did you come?"); after an adjective also "the ... one" (大きいの)';
+      break;
+    case 'か':
+      if (p1 === '副助詞') return 'question marker; "or"; some- (何か "something", いつか "someday")';
+      break;
+    case 'ある':
+      if (p0 === '連体詞') return 'a certain / one (ある日 "one day")';
+      break;
+    case 'もの':
+    case 'こと':
+      if (p0 === '名詞') return null;
+      break;
+    case 'げ':
+      if (p0 === '接尾辞') return '-looking, seeming (ありげ "seemingly there", 楽しげ "cheerful-looking")';
+      break;
+    case 'ん':
+      if (p1 === '準体助詞') return 'explanatory の (んです "it is that ...")';
+      break;
+    case 'って':
+      if (p1 === '接続助詞') return 'and / -ing (colloquial て: 寒くって "it\'s cold and")';
+      // Sudachi tags quoting って (…って言った) 副助詞 as well as the topic って.
+      if (p1 === '副助詞') return 'quoting: "..." って (…って言った "said ..."); also casual topic "as for" (東京って "Tokyo is ...")';
+      if (p1 === '格助詞') return 'quotation marker, casual と ("..." って言った "said ...")';
+      break;
+    case 'じゃ':
+      if (p0 === '接続詞') return 'well then; so (じゃ at the start of a sentence)';
+      if (p0 === '助動詞') return 'is (casual/dialect copula, = だ); じゃない "is not"';
+      if (p0 === '助詞') return 'contraction of では (じゃない "is not")';
+      break;
+    case 'し':
+      if (p1 === '接続助詞') return 'and (what\'s more), listing reasons (雨だし "it\'s raining, and ...")';
+      break;
+    case 'なら':
+    case 'より':
+      // Verb なる (どうにもならない) and adverb より "more" are words.
+      if (p0 === '動詞' || p0 === '副詞') return null;
+      break;
+    case 'てる':
+    case 'でる':
+      if (p0 === '助動詞') return 'progressive: "is doing" (contraction of 〜ている)';
+      break;
+  }
+  // Any other conjugated auxiliary stem (れ in 言われます) is labelled by
+  // its lemma (れる "passive"), not by the bare-kana stem table.
+  // Only replaces the placeholder stem labels; まし keeps its own
+  // "polite verb stem" (ます's label says non-past, wrong for ました).
+  const own = getMorphemeDefinition(surface);
+  if (own && !/^Verb stem/.test(own)) return undefined;
+  if (p0 === '助動詞' && baseForm && baseForm !== surface && /^[ぁ-ん]+$/.test(baseForm)) {
+    const lemmaLabel = getMorphemeDefinition(baseForm);
+    if (lemmaLabel) return lemmaLabel;
+  }
+  return undefined;
+}
+
+/**
  * Returns true when a kana word ends in small-tsu (っ), indicating it is a
  * cut-off verb-stem conjugation artifact (e.g. もらっ, 走っ) rather than a
  * complete dictionary entry.  No valid Japanese dictionary form ends in っ, so

@@ -180,7 +180,7 @@ export function ContentReader({
             activateWord();
           }
         };
-        const wordAriaLabel = info.meaning ? `${info.word}, ${info.reading}, ${info.meaning}` : `${info.word}, ${info.reading}`;
+        const wordAriaLabel = info.meaning ? `${info.word}, ${info.reading}, ${info.meaning}${info.form ? `, ${info.form}` : ''}` : `${info.word}, ${info.reading}`;
 
         if (showHoverDefs) {
           elements.push(
@@ -204,6 +204,7 @@ export function ContentReader({
                   <span lang="ja" className="text-xs text-gray-400 font-medium">{info.reading}</span>
                   <span lang="ja" className="font-bold text-base">{info.word}</span>
                   <span className="text-sm border-t border-gray-700 pt-1 mt-1 text-gray-200">{info.meaning}</span>
+                  {info.form && <span className="text-xs text-amber-300">{info.form}</span>}
                   <div className="flex gap-2 mt-1 text-xs text-gray-400 font-medium">
                     {info.jlpt > 0 && <span>N{info.jlpt}</span>}
                     {!info.isMorpheme && <span>Score: {info.score}</span>}

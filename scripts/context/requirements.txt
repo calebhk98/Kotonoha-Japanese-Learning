@@ -1,0 +1,6 @@
+# CPU-only; installed by scripts/setup-context.sh into .venv-context
+torch
+transformers
+sentence-transformers
+sentencepiece
+sacremoses

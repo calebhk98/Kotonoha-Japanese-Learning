@@ -6,7 +6,9 @@ import type { WordInfo } from '../types';
 
 vi.mock('../lib/api', () => ({
   extractVocabulary: vi.fn().mockResolvedValue([]),
+  getContentWords: vi.fn().mockResolvedValue([]),
 }));
+import { extractVocabulary, getContentWords } from '../lib/api';
 
 const makeWord = (word: string, score: number): WordInfo => ({
   word,
@@ -200,5 +202,33 @@ describe('clearContentVocab', () => {
     const { result } = renderHook(() => useContentData());
     act(() => result.current.clearContentVocab());
     expect(result.current.knownWords.has('水')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// loadVocabForContent: the server's saved resolution is the source of truth
+// ---------------------------------------------------------------------------
+
+describe('loadVocabForContent', () => {
+  const content = { id: 'custom-1', title: 't', type: 'story' as const, description: '', text: '水を食べる。' };
+
+  it('reads the saved vocab from the server even on a forced reload (no re-extraction)', async () => {
+    vi.mocked(getContentWords).mockResolvedValue([WORD_A]);
+    const { result } = renderHook(() => useContentData());
+    await act(async () => { await result.current.loadVocabForContent(content, true); });
+    expect(getContentWords).toHaveBeenCalledWith('custom-1');
+    expect(extractVocabulary).not.toHaveBeenCalled();
+    expect(result.current.contentVocab['custom-1']).toEqual([WORD_A]);
+  });
+
+  it('keeps working when localStorage is full (quota exceeded)', async () => {
+    vi.mocked(getContentWords).mockResolvedValue([WORD_A]);
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota', 'QuotaExceededError');
+    });
+    const { result } = renderHook(() => useContentData());
+    await act(async () => { await result.current.loadVocabForContent(content); });
+    expect(result.current.contentVocab['custom-1']).toEqual([WORD_A]);
+    setItem.mockRestore();
   });
 });
