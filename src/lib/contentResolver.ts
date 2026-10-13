@@ -144,7 +144,7 @@ export async function resolveContent(
   // mapped back onto the kana (kanaConversion.ts); needs the context helper.
   const kanaToKanji = context?.kanaToKanji?.bind(context);
   const segmented = kanaToKanji
-    ? await applyKanaConversion(positioned, text, tokenizer, (s) => kanaToKanji(s).catch(() => s.map(() => null)), (w) => wordResolver.headwordReadings(w), async (w) => (await wordResolver.commonKanaWord(w)).size > 0)
+    ? await applyKanaConversion(positioned, text, tokenizer, (s) => kanaToKanji(s).catch(() => s.map(() => null)), (w) => wordResolver.headwordReadings(w))
     : positioned;
 
   // ---- sentence context: re-join split expressions, then classify each
@@ -248,9 +248,7 @@ export async function resolveContent(
         translationAt && t.posDetail?.[1] === '固有名詞' && /^[ぁ-ゖー]+$/.test(t.surface) && translationAt(t) &&
         !HONORIFIC.test(merged[k + 1]?.surface ?? '') && (await wordResolver.commonKanaWord(t.surface)).size > 0
       ) {
-        // …looked up by its kana: Sudachi's name spelling (かみ → 嘉美) has
-        // no common-word entry.
-        renamed.push({ ...t, posDetail: ['名詞', '普通名詞', '一般'], baseForm: t.surface, dictionaryForm: t.surface });
+        renamed.push({ ...t, posDetail: ['名詞', '普通名詞', '一般'] });
       } else {
         renamed.push(t);
       }

@@ -235,15 +235,19 @@ const MERGE_RULES: MergeRule[] = [
   },
   // のに "although" after a verb / adjective / copula: UniDic splits it into
   // nominalizer の + に, glossed "the one" + "to / at" (random-story
-  // grading: 送ったのに, 3 of 41 wrong tokens). Not before は/も/とって/つい
-  // (行くのには "for going", のにとって).
+  // grading: 送ったのに). Only in a concessive context: after a past or
+  // negative form, after な (なのに), or before a comma / sentence end. After
+  // a plain verb it is usually a purpose (表すのに使います "used to show",
+  // 読むのに "for reading"), or の + に従って / 大きいの + に (all-items
+  // diff review: 8 of 43 WORSE).
   {
     length: 2,
     match: ([a, b], text, prev) =>
       a.surface === 'の' && pos1(a) === '準体助詞' && b.surface === 'に' && pos1(b) === '格助詞' &&
-      !!prev && ['動詞', '形容詞', '助動詞'].includes(pos0(prev) ?? '') && !/^\s*[はもとつ]/.test(text.slice(b.endIndex)),
+      !!prev && ['動詞', '形容詞', '助動詞'].includes(pos0(prev) ?? '') &&
+      (/(た|だ|ない|な)$/.test(prev.surface) || /^\s*([、。，．！？!?」』]|$)/.test(text.slice(b.endIndex))),
     pos: '助詞',
-    fixed: 'although, even though (also: in order to)',
+    fixed: 'although, even though',
   },
   // Kana 足りない after a noun or particle: UniDic reads たり as the listing
   // particle and ない as "not" (かみが たりない "not enough paper"). After a
