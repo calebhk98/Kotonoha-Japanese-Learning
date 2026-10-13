@@ -908,3 +908,24 @@ describe('WordResolver – one-token set phrases only for whole utterances when 
     expect(r.meaning).toMatch(/Here I am/);
   });
 });
+
+// 土に帰ってしまう ("will crumble back into the earth") showed only
+// "to die (土に帰る)". A noun + に/へ/で + verb phrase can be the literal
+// place/direction reading, so the verb's own meaning must stay visible next
+// to the idiom; を/が idioms (実を結ぶ) keep the idiom alone.
+describe('WordResolver – idiom with a place particle keeps the verb own meaning', () => {
+  const dict = { lookup: async (w: string) => (w === '帰る' ? { meaning: 'to return, to come home', reading: 'かえる' } : null) };
+  const run = (expression: string, gloss: string, literal: boolean) =>
+    new WordResolver(dict).resolve('帰って', '帰る', undefined, '動詞', 'かえって', undefined, {
+      notGrammar: true,
+      idiom: { expression, gloss, literal },
+    } as any);
+  it('に idiom: own meaning first, idiom as a note', async () => {
+    const r = await run('土に帰る', 'to die', true);
+    expect(r.meaning).toBe('to return, to come home (idiom 土に帰る: to die)');
+  });
+  it('を idiom: idiom meaning alone, as before', async () => {
+    const r = await run('実を結ぶ', 'to bear fruit', false);
+    expect(r.meaning).toBe('to bear fruit (実を結ぶ)');
+  });
+});

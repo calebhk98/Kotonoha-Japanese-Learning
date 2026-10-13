@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { conjugationNote } from './conjugation.js';
-import { mergeFixedExpressions, mergeDictionaryWords, interjectionPos, type PositionedToken } from './tokenContext.js';
+import { mergeFixedExpressions, mergeDictionaryWords, interjectionPos, isSaidAlone, type PositionedToken } from './tokenContext.js';
 
 // Positioned tokens from (surface, posDetail) pairs laid out over `text`.
 function lay(text: string, parts: [string, string[]][]): PositionedToken[] {
@@ -331,5 +331,26 @@ describe('interjectionPos', () => {
   it('still turns a sentence-opening pronoun into an interjection (あれ～？)', () => {
     const text = 'あれ～？';
     expect(interjectionPos(text, lay(text, [['あれ', ['代名詞']]])[0])).toBe('感動詞');
+  });
+});
+
+describe('isSaidAlone: a word at a clause start that is the whole utterance', () => {
+  const say = (text: string, word: string, particles = 0) => {
+    const start = text.indexOf(word);
+    return isSaidAlone(text, start, start + word.length + particles, particles > 0);
+  };
+  it('ごめんね、 inside a quote, after an address, is an apology', () => {
+    expect(say('「ゆうた！ ごめんね、電車が止まっていて」', 'ごめん', 1)).toBe(true);
+  });
+  it('a bare 「ただいま」 and ごめん！ still count', () => {
+    expect(say('「ただいま」', 'ただいま')).toBe(true);
+    expect(say('ごめん！遅れた', 'ごめん')).toBe(true);
+  });
+  it('a comma alone (no sentence-final particle) does not make an utterance', () => {
+    expect(say('ごめん、それは無理だ。', 'ごめん')).toBe(false);
+  });
+  it('narration is not an utterance', () => {
+    expect(say('先生はごめんと言った。', 'ごめん')).toBe(false);
+    expect(say('おしまい。', 'おしまい')).toBe(false);
   });
 });
