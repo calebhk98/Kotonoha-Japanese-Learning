@@ -231,7 +231,7 @@ describe('vocab list: one word, one row', () => {
     ));
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ word: 'する', frequencyInContent: 5 });
-    expect(rows[0].forms.map((f: any) => f.word).sort()).toEqual(['した', 'して', 'し'].sort());
+    expect(rows[0].forms.map((f: any) => f.word).sort()).toEqual(['した', 'して', 'し', 'する'].sort());
   });
 
   it('a sense switched by the translation is the same row as the entry it came from', () => {

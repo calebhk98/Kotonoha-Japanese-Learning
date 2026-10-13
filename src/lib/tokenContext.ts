@@ -804,6 +804,7 @@ export async function mergeDictionaryWords(
         dictionaryForm: key,
         tail: last.tail,
         lemmaSurface: key,
+        ...(key !== surface ? { inflected: true } : {}),
         startIndex: span[0].startIndex,
         endIndex: last.endIndex,
       };
@@ -820,7 +821,7 @@ export async function mergeDictionaryWords(
     // (Not the word's own kana lemma: いいました → いう would drop Sudachi's
     // 言う and pick the kana homograph 結う "to do up hair".)
     if (t.lemmaSurface && t.lemmaSurface !== t.baseForm && t.lemmaSurface !== t.surface && !(t.lemmaSurface === t.dictionaryForm && !KANJI.test(t.lemmaSurface)) && t.surface.length > 2 && (await hasForm(t.lemmaSurface))) {
-      out.push({ ...t, baseForm: t.lemmaSurface, pos: undefined, posDetail: undefined });
+      out.push({ ...t, baseForm: t.lemmaSurface, pos: undefined, posDetail: undefined, inflected: true });
     } else {
       out.push(t);
     }

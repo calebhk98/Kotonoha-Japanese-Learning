@@ -53,6 +53,23 @@ export function kanaLemma(convSurface: string, kanaSurface: string, lemma: strin
   return kanaSurface.slice(0, kanaSurface.length - tail.length) + lemma.slice(head.length);
 }
 
+/**
+ * The converter writes kanji for kana; kanji the text already has are not
+ * its to change. True when the original's kanji appear, in order, among the
+ * conversion's (extra converted kanji are fine).
+ */
+export function keepsKanji(original: string, converted: string): boolean {
+  const kanji = (str: string) => [...str].filter((c) => KANJI.test(c));
+  const have = kanji(converted);
+  let i = 0;
+  for (const c of kanji(original)) {
+    while (i < have.length && have[i] !== c) i++;
+    if (i === have.length) return false;
+    i++;
+  }
+  return true;
+}
+
 /** A placed token; `mismatch` when its kana disagreed with the conversion. */
 export interface ConvertedToken extends PositionedToken {
   mismatch?: boolean;
@@ -207,6 +224,10 @@ export async function applyKanaConversion(
     const outside = (t: PositionedToken) => t.endIndex <= s.start || t.startIndex >= s.end;
     // A token straddling the sentence edge: leave the sentence as it is.
     if (out.some((t) => !inside(t) && !outside(t))) continue;
+    if (!keepsKanji(s.text, c)) {
+      kanaConversionStats.rejected++;
+      continue;
+    }
     const aligned = alignConverted(s.text, s.start, await tokenizer.segment(c));
     if (!aligned) {
       kanaConversionStats.rejected++;

@@ -22,6 +22,12 @@ export interface WordResolution {
   dictReading?: string;
   variant: DictionaryVariant | null;
   entry: DictionaryEntry | null;
+  /**
+   * The meaning is JMDict's set phrase for the INFLECTED surface itself
+   * (かかわらず "in spite of"), so it does not describe the dictionary form
+   * (かかわる) the token is lemmatised to.
+   */
+  viaPhrase?: boolean;
   jlpt: number;
   joyo: boolean;
   score: number;
@@ -398,7 +404,7 @@ export class WordResolver {
       const phrase = await this.expression(wordStr, ctx?.after, ctx?.utterance);
       if (phrase) {
         const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, null);
-        return { reading: tokenReading ?? phrase.reading, meaning: phrase.gloss, meanings: undefined, variant: null, entry: null, jlpt, joyo, score, breakdown };
+        return { reading: tokenReading ?? phrase.reading, meaning: phrase.gloss, meanings: undefined, variant: null, entry: null, viaPhrase: true, jlpt, joyo, score, breakdown };
       }
     }
 
