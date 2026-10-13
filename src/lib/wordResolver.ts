@@ -297,7 +297,7 @@ export class WordResolver {
       dictionaryForm?: string;
       notGrammar?: boolean;
       /** JMDict expression this verb completes (実を結ぶ) and its gloss. */
-      idiom?: { expression: string; gloss: string };
+      idiom?: { expression: string; gloss: string; /** noun + に/へ/で: the literal reading is plausible too */ literal?: boolean };
       /** English head words of the verb's subject/object (see LookupHint). */
       argumentWords?: string[];
       /** Sudachi says 普通名詞 (common noun), not a proper noun. */
@@ -606,7 +606,14 @@ export class WordResolver {
     // The verb completes a JMDict expression with the noun before it
     // (実を結ぶ "to bear fruit", 時間をかける "to spend time"): that
     // expression's meaning is what the reader needs.
-    if (ctx?.idiom) meaning = `${ctx.idiom.gloss} (${ctx.idiom.expression})`;
+    // With a place/direction particle (土に帰る "to die") the literal reading
+    // can be the one in use, so the verb's own meaning stays visible after
+    // the idiom's (気に入る keeps "to like" first).
+    if (ctx?.idiom) {
+      const own = String(meaning ?? '').split(/ — or: /)[0];
+      meaning = `${ctx.idiom.gloss} (${ctx.idiom.expression})`;
+      if (ctx.idiom.literal && own && !/^Unknown/.test(own)) meaning += ` — literally: ${own}`;
+    }
 
     // (5) Score calculation — always uses the same variant selected above.
     const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);

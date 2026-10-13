@@ -23,7 +23,7 @@ import type { WordResolver } from './wordResolver.js';
 import { getGrammarDefinition, getContextualGrammarLabel } from './extraction-helpers.js';
 import { getMorphemeDefinition } from './morphemeDefinitions.js';
 import { getWordScoreBreakdown } from './scoring.js';
-import { atClauseStart, counterReading, numberValue, mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, markGlossaryTerms, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
+import { atClauseStart, isSaidAlone, counterReading, numberValue, mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, markGlossaryTerms, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
 import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 import { chooseSense, chooseSenseByModel, type ContextModel, type ContextSentenceIn } from './contextModel.js';
@@ -263,7 +263,7 @@ export async function resolveContent(
     fixed?: { meaning: string; reading?: string };
     context?: GrammaticalContext;
     dictionaryForm?: string;
-    idiom?: { expression: string; gloss: string };
+    idiom?: { expression: string; gloss: string; literal?: boolean };
     posDetail?: string[];
     /** Sound-changed counter reading (20分 → ぷん), kept over the resolver's. */
     counterReading?: string;
@@ -431,15 +431,12 @@ export async function resolveContent(
         // (…and a verb said on its own: 行ってきます "I'm off".)
         const kanaNoun = t.posDetail?.[0] === '名詞' && /^[ぁ-んー]+$/.test(surface);
         if ((!kanaNoun && t.posDetail?.[0] !== '動詞') || !atClauseStart(text, t.startIndex)) return false;
-        // Said, not narrated: in quotes or exclaimed (「ただいま」, ごめん！).
-        // A story's closing おしまい。 is "the end", not "that's enough".
-        const quoted = /[「『]\s*$/.test(text.slice(0, t.startIndex));
-        // Sentence-final particles may follow (ごめんね。).
+        // Said, not narrated (see isSaidAlone). Sentence-final particles may
+        // follow (ごめんね。).
         let j = i + 1;
         let end = t.endIndex;
         while (merged[j] && merged[j].startIndex === end && merged[j].posDetail?.[1] === '終助詞') end = merged[j++].endIndex;
-        return quoted ? /^[ 　]*([。！？!?」』\n～〜ー…]|$)/.test(text.slice(end)) : /^[ 　]*[！!]/.test(text.slice(end));
-
+        return isSaidAlone(text, t.startIndex, end, end > t.endIndex);
       })(),
     });
   });
@@ -466,7 +463,7 @@ export async function resolveContent(
       const exprText = n.surface + particle + lemma;
       const hit = await expression(exprText);
       if (!hit) continue;
-      v.idiom = { expression: exprText, gloss: hit.gloss };
+      v.idiom = { expression: exprText, gloss: hit.gloss, literal: /^[にへで]$/.test(particle) };
       // Split the expression reading at the particle where the verb part
       // starts like the verb token's own reading.
       const vFirst = v.reading?.[0];
@@ -626,6 +623,16 @@ export async function resolveContent(
     if (!vWord?.meaning) continue;
     const head = String(words[ni]?.meaning ?? '').split(/[;,(—]/)[0];
     const argumentWords = (head.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter((w) => !STOP.has(w));
+    // A time expression in the clause (三十分以上がたっていた, 三か月がたった)
+    // makes "(of time)" the typical subject, whatever noun stands next to が.
+    const TIME_HEAD = /\b(minutes?|hours?|days?|weeks?|months?|years?|seconds?|time)\b/i;
+    let clauseStart = i - 2;
+    while (clauseStart > 0 && clauseStart > i - 5 && tokens[clauseStart - 1].isJapanese && !/^[、。,，！？!?]/.test(tokens[clauseStart - 1].surface)) clauseStart--;
+    const temporal = tokens.slice(clauseStart, i - 1).some((tk) => {
+      const wi = wordIndexByKey.get(keyOf(tk));
+      return wi !== undefined && TIME_HEAD.test(String(words[wi]?.meaning ?? '').split(/[;(—]/)[0]);
+    });
+    if (temporal && !argumentWords.includes('time')) argumentWords.push('time');
     if (argumentWords.length === 0) continue;
     const r = await wordResolver.resolve(v.surface, v.baseForm, lookupCache, v.pos, v.reading, undefined, {
       after: v.context,

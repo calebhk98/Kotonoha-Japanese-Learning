@@ -108,13 +108,28 @@ export function dayReading(n: number): string | undefined {
 
 const MONTH_READING = ['', 'いち', 'に', 'さん', 'し', 'ご', 'ろく', 'しち', 'はち', 'く', 'じゅう', 'じゅういち', 'じゅうに'];
 
-export type GrammaticalContext = 'te' | 'masu' | 'adj-stem' | 'verb-plain' | 'verb-past' | 'noun';
+export type GrammaticalContext = 'te' | 'masu' | 'adj-stem' | 'verb-plain' | 'verb-past' | 'noun' | 'number';
 
 const QUESTION_WORDS = new Set(['いつ', 'どう', '何', 'なに', 'なん', '誰', 'だれ', 'どこ', 'どれ', 'どちら']);
 
 /** Sentence start, or right after a comma / opening bracket. */
 export function atClauseStart(text: string, index: number): boolean {
   return atSentenceStart(text, index) || /[、，,]\s*$/.test(text.slice(0, index));
+}
+
+/**
+ * True when the word at [start, end) is said, not narrated, and is the whole
+ * utterance: in quotes or exclaimed (「ただいま」, ごめん！), with sentence-final
+ * particles allowed to follow (ごめんね。) and, after such a particle, a comma
+ * (「ゆうた！ ごめんね、電車が…」: an apology, then the reason). A story's
+ * closing おしまい。 is "the end", not "that's enough". The caller has
+ * already checked the clause start.
+ */
+export function isSaidAlone(text: string, start: number, end: number, hadFinalParticle: boolean): boolean {
+  // Inside a quotation (an open 「 / 『 not yet closed), not only right after it.
+  const quoted = /[「『][^」』]*$/.test(text.slice(0, start));
+  const closing = hadFinalParticle ? /^[ 　]*([。！？!?」』\n～〜ー…、，]|$)/ : /^[ 　]*([。！？!?」』\n～〜ー…]|$)/;
+  return quoted ? closing.test(text.slice(end)) : /^[ 　]*[！!]/.test(text.slice(end));
 }
 
 /** True when `text` before `index` is a sentence/line start. */
@@ -519,6 +534,10 @@ export function grammaticalContext(
   cur: PositionedToken,
   text: string
 ): GrammaticalContext | undefined {
+  // A plain noun right after a numeral (一顆, 三粒) is being used as a counter.
+  // (Nouns Sudachi already knows as counters take the date/minute logic.)
+  if (prev && prev.endIndex === cur.startIndex && pos1(prev) === '数詞' && pos0(cur) === '名詞' && pos1(cur) !== '数詞' &&
+    !cur.posDetail?.some((p) => p.startsWith('助数詞'))) return 'number';
   if (!prev || !nextTo(text, prev, cur) || !prev.tail) return undefined;
   const { surface, pos, conj } = prev.tail;
   if ((surface === 'て' || surface === 'で') && (pos === '助詞' || prev.pos === '動詞')) return 'te';
@@ -727,6 +746,11 @@ export async function mergeDictionaryWords(
       // Sentence-final にしろ / にせよ is "make it ..." (好い加減にしろ), not
       // "even if".
       if (/^に(しろ|せよ)$/.test(joined) && /^[。！!」』）)\n]/.test(text.slice(span[span.length - 1].endIndex, span[span.length - 1].endIndex + 1))) continue;
+      // Demonstrative + formal noun (そんな|もの, こんな|こと) before a case
+      // particle is a plain noun phrase "such a thing"; the JMDict set phrase
+      // (そんなもの "that's the way it is") ends its clause (…そんなものだ).
+      if (n === 2 && /^(そんな|こんな|あんな|どんな)$/.test(span[0].surface) && /^(もの|物|こと|事|ところ|わけ)$/.test(span[1].surface) &&
+        touchesAfter && /^[がをにはもでとへの]$/.test(after.surface)) continue;
       if (isGrammar(surface)) continue;
       const last = span[n - 1];
       if (n === 2 && last.surface === 'に' && pos0(span[0]) === '名詞') {
