@@ -632,7 +632,7 @@ export function findCloseAlternatives(
  * the head gloss of the next sense when it is ordinary (not slang/archaic/
  * specialist, not bound to a grammatical context) and the line stays short.
  */
-function buildHeadline(sorted: { sense: any; commonness: number }[], langs: string[]): string | undefined {
+export function buildHeadline(sorted: { sense: any; commonness: number }[], langs: string[]): string | undefined {
   const usable = sorted.filter(({ sense }) => getGlosses(sense, langs).length > 0);
   if (usable.length === 0) return undefined;
   const first = getGlosses(usable[0].sense, langs).slice(0, 2).join(', ');
