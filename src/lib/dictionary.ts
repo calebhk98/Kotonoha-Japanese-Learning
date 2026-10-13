@@ -25,6 +25,20 @@ export interface WordLookupResult {
   // tag, e.g. 'spa' | 'eng'), for the requested-vs-served comparison that lets
   // the UI flag English fallback (#260). Only set by JMDict lookups.
   glossLang?: string;
+  /** JMDict `common` flag of the matched entry (JMDict lookups only); feeds the frequency penalty. */
+  common?: boolean;
+}
+
+/**
+ * Is the JMDict entry common in the form in use? True when the looked-up
+ * spelling or the reading shown is flagged `common` (これ's kanji 此れ is not,
+ * but the kana これ is). JMDict-simplified keeps only this boolean, not the
+ * ichi1/news1/nfNN tags.
+ */
+export function isEntryCommonFor(entry: any, key: string, reading: string): boolean {
+  const k = entry?.kanji?.find((x: any) => x.text === key);
+  const r = entry?.kana?.find((x: any) => x.text === key) ?? entry?.kana?.find((x: any) => x.text === reading);
+  return !!(k?.common || r?.common);
 }
 
 /**
@@ -874,6 +888,7 @@ export class JmdictDictionary implements Dictionary {
         meanings: meanings.length > 1 ? meanings : undefined,
         ...(senseSizes.length > 1 ? { senseSizes, senseInfo } : {}),
         reading: matchedKana || word,
+        common: isEntryCommonFor(bestMatch, word, matchedKana || word),
         ...(primaryGlossLang ? { glossLang: primaryGlossLang } : {}),
       };
     } catch (e) {

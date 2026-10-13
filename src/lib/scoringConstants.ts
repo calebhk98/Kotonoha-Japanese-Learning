@@ -79,8 +79,11 @@ export const FREQUENCY_PENALTY_RULES: FrequencyPenaltyRule[] = [
   {
     id: 'very-common',
     label: 'Very Common',
-    detail: 'ichi1, news1, common kana',
-    tags: ['ichi1', 'news1'],
+    detail: 'ichi1, news1, or flagged common in JMDict',
+    // 'common' is the synthetic tag getWordScoreBreakdown adds when JMDict
+    // flags the resolved entry common but kanji-data's variant has no tags
+    // (kana-only words such as これ / とても).
+    tags: ['ichi1', 'news1', 'common'],
     penalty: -20,
   },
   {
@@ -148,8 +151,13 @@ export const FREQUENCY_PENALTY_RULES: FrequencyPenaltyRule[] = [
   },
 ];
 
-export function getFrequencyPenalty(variant: DictionaryVariant | null, wordStr: string): number {
-  const priorities = variant?.priorities || [];
+export function getFrequencyPenalty(
+  variant: DictionaryVariant | null,
+  wordStr: string,
+  jmdictCommon: boolean = false
+): number {
+  let priorities = variant?.priorities || [];
+  if (jmdictCommon && priorities.length === 0) priorities = ['common'];
 
   if (variant === null && /^[ぁ-ん]{1,3}$/.test(wordStr)) {
     return FREQUENCY_PENALTY_RULES.find((r) => r.kanaFallback)!.penalty;

@@ -96,13 +96,13 @@ describe('getFrequencyPenalty', () => {
 
 describe('getWordScoreBreakdown – JMDict common flag', () => {
   it('これ (kana, common, no kanji-data tags) is not scored as very rare', () => {
-    const r = getWordScoreBreakdown('これ', v([]), true);
+    const r = getWordScoreBreakdown('これ', { written: 'これ', pronounced: 'これ', priorities: [] }, true);
     expect(r.breakdown.freqPenalty).toBe(-20);
     expect(r.breakdown.priorities).toEqual(['common']);
     expect(r.score).toBeLessThan(30);
   });
   it('without the flag the old behaviour is unchanged', () => {
-    expect(getWordScoreBreakdown('これ', v([])).breakdown.freqPenalty).toBe(50);
+    expect(getWordScoreBreakdown('これ', { written: 'これ', pronounced: 'これ', priorities: [] }).breakdown.freqPenalty).toBe(50);
   });
 });
 
