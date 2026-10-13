@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEnglishGlosses, getSenseCommonness, pickBestEntry, findCloseAlternatives, DictionaryManager } from './dictionary';
+import { getEnglishGlosses, getSenseCommonness, pickBestEntry, findCloseAlternatives, DictionaryManager, JmdictDictionary } from './dictionary';
 import { getMorphemeDefinition } from './morphemeDefinitions';
 
 // ---------------------------------------------------------------------------
@@ -384,6 +384,54 @@ describe('DictionaryManager – JMnedict fallback', () => {
 
     const result = await manager.lookup('和彦');
     expect(result).toBeNull();
+  });
+});
+
+describe('DictionaryManager – names are nouns', () => {
+  const waai = { meaning: 'Waai', reading: 'わーい', meanings: ['Waai'] };
+  const make = () => {
+    const manager = new DictionaryManager();
+    (manager as any).primary = { lookup: async () => null };
+    (manager as any).fallback1 = { lookup: async () => waai };
+    return manager;
+  };
+
+  it('does not turn an interjection into a JMnedict name (わーい "Waai")', async () => {
+    expect(await make().lookup('わーい', { pos: '感動詞' })).toBeNull();
+  });
+
+  it('does not turn a verb, adjective or particle into a name either', async () => {
+    for (const pos of ['動詞', '形容詞', '助詞', '助動詞', '接続詞', '連体詞']) {
+      expect(await make().lookup('わーい', { pos }), pos).toBeNull();
+    }
+  });
+
+  it('still falls back to JMnedict for nouns and for lookups with no POS', async () => {
+    expect((await make().lookup('わーい', { pos: '名詞' }))?.meaning).toBe('Waai');
+    expect((await make().lookup('わーい'))?.meaning).toBe('Waai');
+  });
+});
+
+describe('JmdictDictionary – requirePos', () => {
+  // 少なし (classical adj-ku) is only a written form of a proverb entry: a
+  // 形容詞 token must not take that entry's gloss as its own.
+  const proverb = {
+    id: 'p', kanji: [{ text: '少なし', common: false }], kana: [{ text: 'すくなし', common: false }],
+    sense: [{ partOfSpeech: ['exp'], misc: [], gloss: [{ lang: 'eng', text: 'those who resort to blandishments are apt to lack compassion' }] }],
+  };
+  const make = () => {
+    const d = new JmdictDictionary();
+    (d as any).db = { values: () => {} };
+    (d as any).searchExact = async (_w: string, kind: string) => (kind === 'kanji' ? [proverb] : []);
+    return d;
+  };
+
+  it('returns null when no sense of the picked entry fits the POS and requirePos is set', async () => {
+    expect(await make().lookup('少なし', true, { pos: '形容詞', requirePos: true })).toBeNull();
+  });
+
+  it('keeps today\'s behaviour without requirePos', async () => {
+    expect(await make().lookup('少なし', true, { pos: '形容詞' })).not.toBeNull();
   });
 });
 
