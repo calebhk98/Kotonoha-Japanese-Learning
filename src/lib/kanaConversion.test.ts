@@ -255,29 +255,17 @@ describe('applyKanaConversion', () => {
     const out = await applyKanaConversion(original, text, tk, async () => [conv], readingsOf);
     expect(out.find((x) => x.surface === '見た')?.baseForm).toBe('見る');
   });
-  // Random-story grading: いちまい めの かみに → 嘉美 "Kami (name)" for 紙.
-  it('does not take a converter name for a common kana word', async () => {
-    const text = 'いちまいめのかみにかきました。';
-    const conv = '一枚目の嘉美に書きました。';
+  // All-items diff review: demoting converter names that are also common
+  // kana words fixed one かみ "paper" and broke seven given names (なな
+  // "seven", けんじ "public prosecutor", みき "tree trunk").
+  it('keeps a converter name for a kana given name that is also a common word', async () => {
+    const text = 'ななちゃんが わらいました。';
+    const conv = '奈々ちゃんが笑いました。';
     const tk = tokenizerFor({
-      [conv]: [
-        t('一枚', '一枚', 'いちまい'),
-        t('目', '目', 'め'),
-        t('の', 'の', 'の'),
-        t('嘉美', '嘉美', 'かみ', { posDetail: ['名詞', '固有名詞', '人名', '名'] }),
-        t('に', 'に', 'に'),
-        t('書きました', '書く', 'かきました', { posDetail: ['動詞', '一般'] }),
-      ],
+      [conv]: [t('奈々', '奈々', 'なな', { posDetail: ['名詞', '固有名詞', '人名', '名'] }), t('ちゃん', 'ちゃん', 'ちゃん'), t('が', 'が', 'が'), t('笑いました', '笑う', 'わらいました', { posDetail: ['動詞', '一般'] })],
     });
-    const common = async (w: string) => w === 'かみ';
-    // Also when the kana tokenization tagged it a name too.
-    const original = [pos('かみ', 6, 'かみ', ['名詞', '固有名詞', '一般'])];
-    for (const orig of [[], original]) {
-      const out = await applyKanaConversion(orig, text, tk, async () => [conv], readingsOf, common);
-      const kami = out.find((x) => x.surface === 'かみ');
-      expect(kami?.baseForm).toBe('かみ');
-      expect(kami?.posDetail?.[1]).toBe('普通名詞');
-    }
+    const out = await applyKanaConversion([], text, tk, async () => [conv], readingsOf);
+    expect(out.find((x) => x.surface === 'なな')?.posDetail?.[1]).toBe('固有名詞');
   });
   // The converter turned a full-width space into U+FFFD and garbage.
   it('sends sentences to the converter without spaces', async () => {

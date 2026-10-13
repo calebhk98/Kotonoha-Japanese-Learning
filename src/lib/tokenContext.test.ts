@@ -267,6 +267,21 @@ describe('random-story grading fixes', () => {
     expect(out.map((t) => t.surface)).toContain('のに');
     expect(out.find((t) => t.surface === 'のに')?.fixed?.meaning).toMatch(/although/);
   });
+  // All-items diff review: のに after a dictionary-form verb is usually a
+  // purpose (表すのに使います "used to show"), and の|に can be pronoun + に
+  // (大きいのにしよう "let's take the big one") or の + に従って.
+  it('のに merges only in a concessive context (past, なのに, or before a comma)', () => {
+    const V2 = ['動詞', '一般'];
+    const merged = (text: string, parts: [string, string[]][]) => mergeFixedExpressions(lay(text, parts), text).some((t) => t.surface === 'のに');
+    const NO = ['助詞', '準体助詞'];
+    const NI = ['助詞', '格助詞'];
+    expect(merged('まけたのに、わらった。', [['まけた', V2], ['の', NO], ['に', NI]])).toBe(true);
+    expect(merged('はずなのに来ない', [['はず', N], ['な', ['助動詞']], ['の', NO], ['に', NI]])).toBe(true);
+    expect(merged('いるのに、だまっていた', [['いる', V2], ['の', NO], ['に', NI]])).toBe(true);
+    expect(merged('表すのに使います', [['表す', V2], ['の', NO], ['に', NI], ['使います', V2]])).toBe(false);
+    expect(merged('抜けるのに従って', [['抜ける', V2], ['の', NO], ['に', NI]])).toBe(false);
+    expect(merged('大きいのにしよう', [['大きい', ['形容詞']], ['の', NO], ['に', NI], ['しよう', V2]])).toBe(false);
+  });
   it('…のには (purpose, topic) stays split', () => {
     const text = '行くのには時間がかかる。';
     const out = mergeFixedExpressions(lay(text, [['行く', V], ['の', ['助詞', '準体助詞']], ['に', ['助詞', '格助詞']], ['は', ['助詞', '係助詞']]]), text);
