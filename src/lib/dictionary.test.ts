@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEnglishGlosses, getSenseCommonness, pickBestEntry, findCloseAlternatives, DictionaryManager } from './dictionary';
+import { getEnglishGlosses, getSenseCommonness, pickBestEntry, findCloseAlternatives, DictionaryManager, isEntryCommonFor } from './dictionary';
 import { getMorphemeDefinition } from './morphemeDefinitions';
 
 // ---------------------------------------------------------------------------
@@ -782,5 +782,24 @@ describe('kana tie-break by word frequency (full re-resolve review)', () => {
   it('うみ: 海 "sea" (nf02) beats 生み "birth" (nf11) although 生 is the easier kanji', () => {
     const e = (id: string, kanji: string) => ({ id, kanji: [{ text: kanji, common: true }], kana: [{ text: 'うみ', common: true }], sense: [{ partOfSpeech: ['n'], gloss: [{ lang: 'eng', text: kanji }] }] });
     expect(pickBestEntry([e('1', '生み'), e('2', '海')], 'うみ', { pos: '名詞' }).id).toBe('2');
+  });
+});
+
+
+describe('isEntryCommonFor – JMDict common flag for the form in use', () => {
+  const entry = {
+    kanji: [{ text: '此れ', common: false }],
+    kana: [{ text: 'これ', common: true }, { text: 'こりゃ', common: false }],
+  };
+  it('kana lookup key uses the kana element', () => {
+    expect(isEntryCommonFor(entry, 'これ', 'これ')).toBe(true);
+    expect(isEntryCommonFor(entry, 'こりゃ', 'こりゃ')).toBe(false);
+  });
+  it('kanji key falls back to the reading shown (rare kanji spelling of a common word)', () => {
+    expect(isEntryCommonFor(entry, '此れ', 'これ')).toBe(true);
+  });
+  it('a common kanji form is common even if the reading is not', () => {
+    const e = { kanji: [{ text: '猫', common: true }], kana: [{ text: 'ねこ', common: false }] };
+    expect(isEntryCommonFor(e, '猫', 'ねこ')).toBe(true);
   });
 });

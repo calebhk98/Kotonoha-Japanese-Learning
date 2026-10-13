@@ -80,6 +80,30 @@ describe('getFrequencyPenalty', () => {
     expect(getFrequencyPenalty(v([]), 'x')).toBe(50);
     expect(getFrequencyPenalty({ written: 'x', pronounced: 'x' }, 'x')).toBe(50);
   });
+
+  // kanji-data carries ichi1/news1 tags only on some variants (none for kana-only
+  // words such as これ / とても); JMDict's own `common` flag stands in for them.
+  it('treats a JMDict-common entry with no tags as Very Common (-20), not the +50 fallback', () => {
+    expect(getFrequencyPenalty(null, 'ドア', true)).toBe(-20);
+    expect(getFrequencyPenalty(v([]), 'x', true)).toBe(-20);
+    expect(getFrequencyPenalty(null, 'ドア', false)).toBe(50);
+  });
+
+  it('prefers real priority tags over the common flag', () => {
+    expect(getFrequencyPenalty(v(['nf30']), 'x', true)).toBe(30);
+  });
+});
+
+describe('getWordScoreBreakdown – JMDict common flag', () => {
+  it('これ (kana, common, no kanji-data tags) is not scored as very rare', () => {
+    const r = getWordScoreBreakdown('これ', v([]), true);
+    expect(r.breakdown.freqPenalty).toBe(-20);
+    expect(r.breakdown.priorities).toEqual(['common']);
+    expect(r.score).toBeLessThan(30);
+  });
+  it('without the flag the old behaviour is unchanged', () => {
+    expect(getWordScoreBreakdown('これ', v([])).breakdown.freqPenalty).toBe(50);
+  });
 });
 
 // ---------------------------------------------------------------------------
