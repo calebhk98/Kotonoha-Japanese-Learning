@@ -196,6 +196,9 @@ const CONTEXT_INFO: Record<string, RegExp> = {
 };
 
 const senseInfo = (s: any): string[] => (Array.isArray(s.info) ? s.info : []);
+/** A JMDict note about spelling only ("esp. 聴く", "occ. written as 晩い"), not about use. */
+const isSpellingNote = (note: string): boolean =>
+  /\b(written|pronounced|read|spelled|spelt)\b/i.test(note) || /^(esp\.|usu\.|oft\.|occ\.)?\s*[^\sA-Za-z0-9.,;]+$/.test(note);
 const senseInfoText = (s: any): string => (s && Array.isArray(s.info) ? s.info.join(' ') : '');
 
 /**
@@ -673,7 +676,7 @@ export function buildHeadline(sorted: { sense: any; commonness: number }[], lang
   // in ordinary text, so it must not stand next to the everyday meaning. A
   // writing-style tag (uk) says nothing about use and stays allowed.
   const plain = (sn: any) =>
-    (sn.misc ?? []).every((m: string) => m === 'uk') && senseInfo(sn).length === 0 && !getGlosses(sn, langs).some(isAdultGloss);
+    (sn.misc ?? []).every((m: string) => m === 'uk') && senseInfo(sn).every(isSpellingNote) && !getGlosses(sn, langs).some(isAdultGloss);
   if (!second || second.commonness < 0 || niche(second.sense) || !plain(second.sense) || isContextBoundSense(second.sense) || first.length >= 40) return first;
   const extra = getGlosses(second.sense, langs)[0];
   if (!extra || first.includes(extra)) return first;

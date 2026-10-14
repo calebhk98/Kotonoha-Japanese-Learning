@@ -11,6 +11,11 @@ const sense = (gloss: string, extra: Record<string, any> = {}) => ({
 const sorted = (...senses: any[]) => senses.map((s, i) => ({ sense: s, commonness: 0 - i * 0 }));
 
 describe('buildHeadline "(also: …)" only shows a plain second sense', () => {
+  it('a spelling-only note is not a usage note (聞く hear / listen: "esp. 聴く")', () => {
+    expect(buildHeadline(sorted(sense('to hear'), sense('to listen', { info: ['esp. 聴く'] })), ['eng'])).toBe('to hear (also: to listen)');
+    expect(buildHeadline(sorted(sense('slow'), sense('late', { info: ['occ. written as 晩い'] })), ['eng'])).toBe('slow (also: late)');
+  });
+
   it('shows an unmarked second sense', () => {
     expect(buildHeadline(sorted(sense('mother'), sense('parent')), ['eng'])).toBe('mother (also: parent)');
   });

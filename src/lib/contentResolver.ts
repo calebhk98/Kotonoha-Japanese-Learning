@@ -627,12 +627,13 @@ export async function resolveContent(
     // makes "(of time)" the typical subject, whatever noun stands next to が.
     const TIME_HEAD = /\b(minutes?|hours?|days?|weeks?|months?|years?|seconds?|time)\b/i;
     let clauseStart = i - 2;
-    while (clauseStart > 0 && clauseStart > i - 5 && tokens[clauseStart - 1].isJapanese && !/^[、。,，！？!?]/.test(tokens[clauseStart - 1].surface)) clauseStart--;
+    while (clauseStart > 0 && clauseStart > i - 5 && tokens[clauseStart - 1].isJapanese && !/[、。,，！？!?「」]/.test(text.slice(tokens[clauseStart - 1].endIndex, tokens[clauseStart].startIndex))) clauseStart--;
     const temporal = tokens.slice(clauseStart, i - 1).some((tk) => {
       const wi = wordIndexByKey.get(keyOf(tk));
       return wi !== undefined && TIME_HEAD.test(String(words[wi]?.meaning ?? '').split(/[;(—]/)[0]);
     });
-    if (temporal && !argumentWords.includes('time')) argumentWords.push('time');
+    // (Not for helper verbs: する/いる/ある are 非自立可能 and "to pass (of time)" is not theirs.)
+    if (temporal && v.posDetail?.[1] !== '非自立可能' && !argumentWords.includes('time')) argumentWords.push('time');
     if (argumentWords.length === 0) continue;
     const r = await wordResolver.resolve(v.surface, v.baseForm, lookupCache, v.pos, v.reading, undefined, {
       after: v.context,

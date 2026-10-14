@@ -610,7 +610,7 @@ export class WordResolver {
     // can be the one in use, so the verb's own meaning stays visible after
     // the idiom's (気に入る keeps "to like" first).
     if (ctx?.idiom) {
-      const own = String(meaning ?? '').split(/ — or: /)[0];
+      const own = String(meaning ?? '').split(/ — or: /)[0].replace(/ \(also: .*$/, '');
       meaning = `${ctx.idiom.gloss} (${ctx.idiom.expression})`;
       if (ctx.idiom.literal && own && !/^Unknown/.test(own)) meaning += ` — literally: ${own}`;
     }
