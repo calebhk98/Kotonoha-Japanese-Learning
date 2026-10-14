@@ -23,7 +23,7 @@ import type { WordResolver } from './wordResolver.js';
 import { getGrammarDefinition, getContextualGrammarLabel } from './extraction-helpers.js';
 import { getMorphemeDefinition } from './morphemeDefinitions.js';
 import { getWordScoreBreakdown } from './scoring.js';
-import { atClauseStart, counterReading, numberValue, mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, markGlossaryTerms, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
+import { atClauseStart, isSaidAlone, counterReading, numberValue, mergeFixedExpressions, mergeDictionaryWords, markParenthesizedReadings, markGlossaryTerms, formalNounMeaning, grammaticalContext, interjectionPos, nextTo, type PositionedToken, type GrammaticalContext } from './tokenContext.js';
 import { getDisplayProfile } from './language/registry.js';
 import type { LanguageDisplayProfile } from './language/types.js';
 import { chooseSense, chooseSenseByModel, type ContextModel, type ContextSentenceIn } from './contextModel.js';
@@ -170,6 +170,17 @@ export async function resolveContent(
     if (t.surface === 'そら' && t.baseForm === '其れ' && !(atClauseStart(text, t.startIndex) && /^[、，！!]/.test(text.slice(t.endIndex)))) {
       return { ...t, baseForm: '空', dictionaryForm: '空', lemmaSurface: '空', pos: '名詞', posDetail: ['名詞', '普通名詞', '一般'] };
     }
+    // 寺町通 / 二条通: after a place or surname the 通 is the street suffix
+    // (どおり). Sudachi tags it as a given name (つう "Tsuu"), but a name
+    // token glued to another name token is not a person: one name does not
+    // follow another without a space.
+    const prev = merged[k - 1];
+    if (
+      t.surface === '通' && t.posDetail?.[1] === '固有名詞' && prev && prev.endIndex === t.startIndex &&
+      (prev.posDetail?.[1] === '固有名詞' || /^[一-鿿々]{2,}$/.test(prev.surface))
+    ) {
+      return { ...t, reading: 'どおり', posDetail: ['名詞', '普通名詞', '一般'], fixed: { meaning: 'street (suffix of street names: -dori)', reading: 'どおり' } };
+    }
     const n = merged[k + 1];
     if (t.surface === 'あおい' && t.posDetail?.[0] === '名詞') {
       if (n && n.posDetail?.[0] === '名詞' && /^[ 　]*$/.test(text.slice(t.endIndex, n.startIndex))) {
@@ -226,6 +237,14 @@ export async function resolveContent(
       const tagged = t.posDetail?.[1] === '固有名詞' || HONORIFIC.test(merged[k + 1]?.surface ?? '');
       const common = (await wordResolver.commonKanaWord(t.surface)).size > 0;
       if (common && !tagged) continue;
+      // A word the dictionary writes in kana (おでん) or in the katakana
+      // spelling Sudachi normalizes to (びいどろ → ビードロ) is that word:
+      // the translator romanizes words it has no English for (Oden,
+      // Biidoro) exactly like names. Only Sudachi's own name tag overrules.
+      if (!tagged) {
+        const kata = /^[ァ-ヴー]+$/.test(t.baseForm);
+        if (kata ? await wordResolver.hasForm(t.baseForm) : (await wordResolver.isKanaHeadword(t.surface)) || (await wordResolver.isKanaHeadword(t.baseForm))) continue;
+      }
       const name = kanaNameIn(t.surface, translationAt!(t), tagged);
       if (name) {
         confirmed.set(t.surface, name);
@@ -263,7 +282,7 @@ export async function resolveContent(
     fixed?: { meaning: string; reading?: string };
     context?: GrammaticalContext;
     dictionaryForm?: string;
-    idiom?: { expression: string; gloss: string };
+    idiom?: { expression: string; gloss: string; literal?: boolean };
     posDetail?: string[];
     /** Sound-changed counter reading (20分 → ぷん), kept over the resolver's. */
     counterReading?: string;
@@ -271,6 +290,7 @@ export async function resolveContent(
     utterance?: boolean;
     /** Dictionary form in the text's spelling (食べました → 食べる). */
     lemmaSurface?: string;
+    inflected?: boolean;
     /** Endings grouped into the token (tokenizers.ts), for the form note. */
     parts?: { surface: string; norm: string; pos: string; conj: string }[];
     /** The kana tokenization's reading of this word (kanaConversion.ts). */
@@ -424,6 +444,7 @@ export async function resolveContent(
       counterReading: t.counterReading,
       parts: t.parts,
       lemmaSurface: t.lemmaSurface,
+      inflected: t.inflected,
       kanaAlt: t.kanaAlt,
       utterance: (() => {
         // Only a kana noun reads differently on its own (ただいま, ごめん);
@@ -431,15 +452,12 @@ export async function resolveContent(
         // (…and a verb said on its own: 行ってきます "I'm off".)
         const kanaNoun = t.posDetail?.[0] === '名詞' && /^[ぁ-んー]+$/.test(surface);
         if ((!kanaNoun && t.posDetail?.[0] !== '動詞') || !atClauseStart(text, t.startIndex)) return false;
-        // Said, not narrated: in quotes or exclaimed (「ただいま」, ごめん！).
-        // A story's closing おしまい。 is "the end", not "that's enough".
-        const quoted = /[「『]\s*$/.test(text.slice(0, t.startIndex));
-        // Sentence-final particles may follow (ごめんね。).
+        // Said, not narrated (see isSaidAlone). Sentence-final particles may
+        // follow (ごめんね。).
         let j = i + 1;
         let end = t.endIndex;
         while (merged[j] && merged[j].startIndex === end && merged[j].posDetail?.[1] === '終助詞') end = merged[j++].endIndex;
-        return quoted ? /^[ 　]*([。！？!?」』\n～〜ー…]|$)/.test(text.slice(end)) : /^[ 　]*[！!]/.test(text.slice(end));
-
+        return isSaidAlone(text, t.startIndex, end, end > t.endIndex);
       })(),
     });
   });
@@ -466,7 +484,7 @@ export async function resolveContent(
       const exprText = n.surface + particle + lemma;
       const hit = await expression(exprText);
       if (!hit) continue;
-      v.idiom = { expression: exprText, gloss: hit.gloss };
+      v.idiom = { expression: exprText, gloss: hit.gloss, literal: /^[にへで]$/.test(particle) };
       // Split the expression reading at the particle where the verb part
       // starts like the verb token's own reading.
       const vFirst = v.reading?.[0];
@@ -536,13 +554,20 @@ export async function resolveContent(
             breakdown: EMPTY_BREAKDOWN,
             isMorpheme: true,
           };
+          // A grammar-table verb (し, した, して, させ, あった, いて) is one
+          // vocab row under its dictionary form, like any other verb.
+          const morphemeLemma = token.parts?.length ? token.dictionaryForm ?? token.lemmaSurface : token.lemmaSurface ?? token.dictionaryForm;
+          if (token.posDetail?.[0] === '動詞' && morphemeLemma && /^[ぁ-んー]+$/.test(morphemeLemma)) {
+            words[i].lemma = morphemeLemma;
+            words[i].lemmaReading = morphemeLemma;
+          }
           // Grouped する / いる forms carry endings too (してしまった).
           if (token.parts?.length) {
             const form = conjugationNote(token.posDetail?.[5] ?? '*', token.parts);
             if (form) words[i].form = form;
           }
         } else if (token.isVocabWord) {
-          const { reading, meaning, meanings, senseSizes, senseInfo, dictReading, jlpt, joyo, score, breakdown } =
+          const { reading, meaning, meanings, senseSizes, senseInfo, dictReading, viaPhrase, jlpt, joyo, score, breakdown } =
             await wordResolver.resolve(token.surface, token.baseForm, lookupCache, token.pos, token.reading, undefined, {
               after: token.context,
               dictionaryForm: token.dictionaryForm,
@@ -564,8 +589,10 @@ export async function resolveContent(
           // in the vocab list (食べた, 食べます → 食べる).
           // (The first verb's dictionary form: すわっていました groups under
           // すわる, not すわっている.)
-          const lemma = token.parts?.length ? token.dictionaryForm ?? token.lemmaSurface : token.lemmaSurface;
-          if (lemma && lemma !== token.surface && ['動詞', '形容詞'].includes(token.posDetail?.[0] ?? '')) {
+          const lemma = token.parts?.length && !token.inflected ? token.dictionaryForm ?? token.lemmaSurface : token.lemmaSurface;
+          // (Not when the meaning is the set phrase of the inflected surface:
+          // かかわらず "in spite of" would become the row かかわる.)
+          if (lemma && lemma !== token.surface && !viaPhrase && (token.inflected || ['動詞', '形容詞'].includes(token.posDetail?.[0] ?? ''))) {
             info.lemma = lemma;
             info.lemmaReading = /[一-鿿々]/.test(lemma) ? dictReading : lemma;
           }
@@ -626,6 +653,17 @@ export async function resolveContent(
     if (!vWord?.meaning) continue;
     const head = String(words[ni]?.meaning ?? '').split(/[;,(—]/)[0];
     const argumentWords = (head.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter((w) => !STOP.has(w));
+    // A time expression in the clause (三十分以上がたっていた, 三か月がたった)
+    // makes "(of time)" the typical subject, whatever noun stands next to が.
+    const TIME_HEAD = /\b(minutes?|hours?|days?|weeks?|months?|years?|seconds?|time)\b/i;
+    let clauseStart = i - 2;
+    while (clauseStart > 0 && clauseStart > i - 5 && tokens[clauseStart - 1].isJapanese && !/[、。,，！？!?「」]/.test(text.slice(tokens[clauseStart - 1].endIndex, tokens[clauseStart].startIndex))) clauseStart--;
+    const temporal = tokens.slice(clauseStart, i - 1).some((tk) => {
+      const wi = wordIndexByKey.get(keyOf(tk));
+      return wi !== undefined && TIME_HEAD.test(String(words[wi]?.meaning ?? '').split(/[;(—]/)[0]);
+    });
+    // (Not for helper verbs: する/いる/ある are 非自立可能 and "to pass (of time)" is not theirs.)
+    if (temporal && v.posDetail?.[1] !== '非自立可能' && !argumentWords.includes('time')) argumentWords.push('time');
     if (argumentWords.length === 0) continue;
     const r = await wordResolver.resolve(v.surface, v.baseForm, lookupCache, v.pos, v.reading, undefined, {
       after: v.context,
@@ -750,7 +788,7 @@ export async function resolveContent(
     ...(sentences ? { sentences } : {}),
     words,
     tokens: tokens.map((t, idx) => {
-      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, fixed, utterance, parts, lemmaSurface, ...rest } = t;
+      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, fixed, utterance, parts, lemmaSurface, inflected, ...rest } = t;
       return {
         ...rest,
         // For the client, isVocabWord doubles as "hoverable": every Japanese
@@ -789,15 +827,30 @@ export function buildWordsResponse(resolved: ResolvedContent): any[] {
   for (const t of resolved.tokens) {
     if (t.wordIndex !== undefined) tokensPerWord.set(t.wordIndex, (tokensPerWord.get(t.wordIndex) ?? 0) + 1);
   }
+  // A sense the translation switched to (すごい "amazing" → "terrible") is
+  // the same dictionary word as the entry it came from, not another row:
+  // such a word takes the headline of its unswitched twin (same word,
+  // reading and set of meanings).
+  const entryId = (w: any) => `${w.word}\u0000${w.reading}\u0000${Array.isArray(w.meanings) ? [...w.meanings].sort().join('|') : ''}`;
+  const headlineOf = (w: any) => String(w.meaning ?? '').split(/ \(also: | — or: /)[0];
+  const unswitched = new Map<string, string>();
+  for (const w of resolved.words) {
+    if (w && w.contextSense === undefined && Array.isArray(w.meanings) && !unswitched.has(entryId(w))) unswitched.set(entryId(w), headlineOf(w));
+  }
   const rows = new Map<string, any>();
   resolved.words.forEach((w, i) => {
     if (w.isMorpheme && w.meaning === 'Kana particle / expression') return;
     // Grammar morphemes are one row (their label variants describe one
     // particle, not separate words to study); content words compare on the
     // headline gloss, ignoring the "(also: …)" / "— or: …" tails.
-    const headline = String(w.meaning ?? '').split(/ \(also: | — or: /)[0];
+    const headline = (w.contextSense !== undefined && unswitched.get(entryId(w))) || headlineOf(w);
     const lemma: string = w.lemma ?? w.word;
-    const key = w.isMorpheme ? w.word : `${lemma}\u0000${headline}`;
+    // Rows are one dictionary word: the reading of the headword stands in for
+    // its spelling, so 言う and いう (same reading, same meaning) are one row
+    // while かた "person" and ほう "person" stay apart. Verbs whose reading we
+    // don't know keep their lemma.
+    const reading = w.lemma ? w.lemmaReading ?? w.lemma : w.reading ?? w.word;
+    const key = w.isMorpheme ? lemma : `${reading}\u0000${headline}`;
     const n = tokensPerWord.get(i) ?? 0;
     // An entry no token shows (its token was re-resolved by the argument
     // pass) is not a meaning the text uses.
@@ -815,6 +868,7 @@ export function buildWordsResponse(resolved: ResolvedContent): any[] {
       rows.set(key, row);
     }
     row.frequencyInContent += count;
+    if (w.lemma && !row.forms) row.forms = [];
     if (row.forms) {
       const f = row.forms.find((x: any) => x.word === w.word && x.form === w.form);
       if (f) f.count += count;

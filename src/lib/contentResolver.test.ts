@@ -207,3 +207,144 @@ describe('vocab list grouped by dictionary form', () => {
     expect(rows.find((r: any) => r.word === '猫').forms).toBeUndefined();
   });
 });
+
+// Vocab-list review of four imported texts: one word showed up as several
+// rows (し / した / して / したら / する, ある / あった / あり, みどり ×3,
+// いう / 言う, すごい ×2).
+describe('vocab list: one word, one row', () => {
+  const doc = (words: any[], tokenWords: number[]): any => ({
+    formatVersion: RESOLVED_FORMAT_VERSION,
+    words,
+    tokens: tokenWords.map((wordIndex, i) => ({ surface: words[wordIndex].word, startIndex: i, endIndex: i + 1, isVocabWord: true, isMorpheme: false, wordIndex })),
+  });
+
+  it('conjugated forms of a verb the grammar table labels share one row under the dictionary form', () => {
+    const label = 'form of する "to do"';
+    const rows = buildWordsResponse(doc(
+      [
+        { word: 'し', reading: 'し', meaning: label, isMorpheme: true, lemma: 'する', lemmaReading: 'する' },
+        { word: 'した', reading: 'した', meaning: label, isMorpheme: true, lemma: 'する', lemmaReading: 'する' },
+        { word: 'して', reading: 'して', meaning: label, isMorpheme: true, lemma: 'する', lemmaReading: 'する' },
+        { word: 'する', reading: 'する', meaning: label, isMorpheme: true },
+      ],
+      [0, 0, 1, 2, 3]
+    ));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ word: 'する', frequencyInContent: 5 });
+    expect(rows[0].forms.map((f: any) => f.word).sort()).toEqual(['した', 'して', 'し', 'する'].sort());
+  });
+
+  it('a sense switched by the translation is the same row as the entry it came from', () => {
+    const entry = ['amazing', 'terrible'];
+    const rows = buildWordsResponse(doc(
+      [
+        { word: 'すごい', reading: 'すごい', meaning: 'amazing (also: terrible)', meanings: entry, senseSizes: [1, 1] },
+        { word: 'すごい', reading: 'すごい', meaning: 'terrible (also: amazing)', meanings: [...entry].reverse(), senseSizes: [1, 1], contextSense: 1 },
+      ],
+      [0, 1, 1]
+    ));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].frequencyInContent).toBe(3);
+  });
+
+  it('a verb written in kana and in kanji with the same reading and meaning is one row', () => {
+    const rows = buildWordsResponse(doc(
+      [
+        { word: '言った', reading: 'いった', meaning: 'to say', lemma: '言う', lemmaReading: 'いう', form: 'past' },
+        { word: 'いう', reading: 'いう', meaning: 'to say' },
+      ],
+      [0, 1, 1]
+    ));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].frequencyInContent).toBe(3);
+  });
+
+  it('keeps homographs with different readings apart', () => {
+    const rows = buildWordsResponse(doc(
+      [
+        { word: '方', reading: 'かた', meaning: 'person' },
+        { word: '方', reading: 'ほう', meaning: 'person' },
+      ],
+      [0, 1]
+    ));
+    expect(rows).toHaveLength(2);
+  });
+
+  it('resolveContent: する forms (grammar-table verbs) are filed under the dictionary form', async () => {
+    const text = 'したしました';
+    const verb = (surface: string, reading: string) => ({
+      surface, baseForm: '為る', pos: '動詞', reading, dictionaryForm: 'する', lemmaSurface: 'する',
+      posDetail: ['動詞', '非自立可能', '*', '*', 'サ行変格', '連用形-一般'],
+    });
+    const resolved = await resolveContent(text, makeTokenizer([verb('した', 'した'), verb('しました', 'しました')]), new WordResolver(dict));
+    const rows = buildWordsResponse(resolved);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ word: 'する', frequencyInContent: 2 });
+  });
+
+  it('resolveContent: a set phrase resolved from the inflected surface keeps its own row (かかわらず is not かかわる)', async () => {
+    const phraseDict = {
+      lookup: async (w: string) => ({ かかわる: { meaning: 'to be concerned with', reading: 'かかわる' } } as any)[w] ?? null,
+      hasForm: async () => false,
+      expression: async (w: string) => (w === 'かかわらず' ? { reading: 'かかわらず', gloss: 'in spite of, despite' } : null),
+    };
+    const resolver = new WordResolver(phraseDict as any);
+    // WordResolver.expression is the lookup the early set-phrase return uses
+    (resolver as any).expression = async (w: string) => (w === 'かかわらず' ? { reading: 'かかわらず', gloss: 'in spite of, despite' } : null);
+    const tok = {
+      surface: 'かかわらず', baseForm: '関わる', pos: '動詞', reading: 'かかわらず', dictionaryForm: 'かかわる', lemmaSurface: 'かかわる',
+      posDetail: ['動詞', '一般', '*', '*', '五段-ラ行', '未然形-一般'],
+      parts: [{ surface: 'かかわら', norm: '関わる', pos: '動詞', conj: '未然形-一般' }, { surface: 'ず', norm: 'ず', pos: '助動詞', conj: '終止形-一般' }],
+    };
+    const resolved = await resolveContent('かかわらず', makeTokenizer([tok]), resolver);
+    const rows = buildWordsResponse(resolved);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].word).toBe('かかわらず');
+    expect(rows[0].meaning).toMatch(/in spite of/);
+  });
+});
+
+describe('street-name 通', { timeout: 30000 }, () => {
+  // Sudachi tags the 通 of 寺町通 as a given name (つう "Tsuu"); after a place
+  // or surname token it is the street suffix, read どおり.
+  const text = '寺町通は賑やかだ。';
+  const tokens = (tsuuTag: string[]) => [
+    { surface: '寺町', baseForm: '寺町', pos: '名詞', reading: 'てらまち', posDetail: ['名詞', '固有名詞', '人名', '姓', '*', '*'] },
+    { surface: '通', baseForm: '通', pos: '名詞', reading: 'つう', posDetail: tsuuTag },
+    { surface: 'は', baseForm: 'は', pos: '助詞', reading: 'は' },
+  ];
+
+  it('reads どおり and says "street" instead of the name Tsuu', async () => {
+    const resolved = await resolveContent('寺町通は', makeTokenizer(tokens(['名詞', '固有名詞', '人名', '名', '*', '*'])), new WordResolver(dict));
+    const w = resolved.words[resolved.tokens[1].wordIndex!];
+    expect(w.reading).toBe('どおり');
+    expect(w.meaning).toMatch(/street/i);
+    expect(w.meaning).not.toMatch(/\(name\)/);
+  });
+
+  it('leaves a plain common-noun 通 (usage 通) alone', async () => {
+    const resolved = await resolveContent('寺町通は', makeTokenizer(tokens(['名詞', '普通名詞', '一般', '*', '*', '*'])), new WordResolver(dict));
+    const w = resolved.words[resolved.tokens[1].wordIndex!];
+    expect(w.reading).toBe('つう');
+  });
+});
+
+describe('words the translator leaves romanized are not names', { timeout: 30000 }, () => {
+  const text = 'おでんが好きだ';
+  const tokens = [
+    { surface: 'おでん', baseForm: 'おでん', pos: '名詞', reading: 'おでん', posDetail: ['名詞', '普通名詞', '一般', '*', '*', '*'] },
+    { surface: 'が', baseForm: 'が', pos: '助詞', reading: 'が' },
+  ];
+  const context = { enrich: async () => [], translate: async () => ['I like Oden.'] } as any;
+  const odenDict = { lookup: async (w: string) => (w === 'おでん' ? { meaning: 'oden (dish)', reading: 'おでん' } : null), isKanaHeadword: async (w: string) => w === 'おでん' };
+
+  it('おでん, a kana headword of the dictionary, keeps its dictionary meaning', async () => {
+    const r = await resolveContent(text, makeTokenizer(tokens), new WordResolver(odenDict as any), undefined, undefined, context);
+    expect(r.words[r.tokens[0].wordIndex!].meaning).toBe('oden (dish)');
+  });
+
+  it('an unknown kana word the translation spells as a name is still that name', async () => {
+    const r = await resolveContent(text, makeTokenizer(tokens), new WordResolver({ lookup: async () => null, isKanaHeadword: async () => false } as any), undefined, undefined, context);
+    expect(r.words[r.tokens[0].wordIndex!].meaning).toBe('Oden (name)');
+  });
+});

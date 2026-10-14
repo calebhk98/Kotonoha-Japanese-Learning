@@ -33,3 +33,7 @@ data/imports/
 # Translation context step (npm run setup-context): venv + downloaded models
 .venv-context/
 .models/
+
+# Python bytecode (regenerated whenever enrich.py / sense_scorer.py run)
+__pycache__/
+*.pyc

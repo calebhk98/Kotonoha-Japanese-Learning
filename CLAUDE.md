@@ -942,6 +942,12 @@ Process to apply:
 
 ## Issues worth filing / known open threads
 
+**Start with `docs/notes/2026-10-vocab-eval/HANDOFF.md`** (Oct 2026 vocab-list
+evaluation round): what was measured and merged, the state you inherit
+(committed resolved.json artifacts are stale until re-resolved) and the
+ordered next steps (re-resolve, grammar scoring, master vocabulary table
+phase 2, names).
+
 The original orientation-pass list (npm start, WordResolver refactor,
 SIGTERM, startup extraction, App.tsx split, dependency pruning) has been
 fully addressed — see issues #250–#256 and their merged implementations.
@@ -1032,6 +1038,12 @@ Most of these will bite silently if you don't know them:
   Use a self-excluding bracket pattern (`pkill -f "resolve[-]content"`) or
   kill by collected PIDs. Also scope patterns tightly: a broad
   `pkill -f "server.ts"` killed sibling worktree agents' dev servers.
+- **One context pipeline per machine.** `enrich.py` fixes torch at 4
+  threads; 3-4 helpers at once on 4 cores spin-wait 20-60x slower and look
+  hung (100% CPU, no progress). Sibling worktrees each have their own
+  jmdict-db lock, so nothing stops them: serialize context-enabled runs
+  with `flock <lockfile> <cmd>`. Don't "fix" it with timeouts or
+  load-dependent thread counts; output must not depend on machine load.
 - **One `jmdict-db` lock, one port.** See Common pitfalls — server XOR
   scripts. Sibling agent worktrees have their OWN clone/lock/node_modules,
   but they share port 3000 unless they use `PORT`.

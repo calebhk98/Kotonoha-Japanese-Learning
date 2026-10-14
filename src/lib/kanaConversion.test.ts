@@ -273,4 +273,19 @@ describe('applyKanaConversion', () => {
     await applyKanaConversion([], 'おばあちゃんは\u3000うなずきました。', tokenizerFor({}), async (s) => ((sent = s), s.map(() => null)), readingsOf);
     expect(sent).toEqual(['おばあちゃんはうなずきました。']);
   });
+
+  // Vocab review: その檸檬の冷たさはたとえようもなくよかった was converted with
+  // the lemon rewritten, and the alignment then invented 檸 + 檬の "Unknown".
+  // The converter only writes kanji for kana; kanji already in the text are
+  // never its to change.
+  it('rejects a conversion that rewrites kanji the text already has', async () => {
+    const text = 'その檸檬の冷たさはたとえようもなくよかった。';
+    const conv = 'その檸蒙の冷たさはたとえようもなくよかった。';
+    const tk = tokenizerFor({
+      [conv]: [t('その', 'その', 'その'), t('檸', '檸', 'ねい'), t('蒙', '蒙', 'もう'), t('の', 'の', 'の'), t('冷たさ', '冷たさ', 'つめたさ'), t('は', 'は', 'は'), t('たとえよう', '例える', 'たとえよう'), t('も', 'も', 'も'), t('なく', '無い', 'なく'), t('よかっ', '良い', 'よかっ'), t('た', 'た', 'た')],
+    });
+    const original = [{ ...t('檸檬', '檸檬', 'れもん'), startIndex: 2, endIndex: 4 }];
+    const out = await applyKanaConversion(original as any, text, tk, async () => [conv], async () => new Set());
+    expect(out).toBe(original);
+  });
 });

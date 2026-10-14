@@ -126,7 +126,14 @@ export interface FindBestVariantResult {
   score: number;
 }
 
-export function getWordScoreBreakdown(wordStr: string, variant: DictionaryVariant | null) {
+/**
+ * `jmdictCommon`: JMDict's `common` flag for the entry the resolver actually
+ * picked. kanji-data's variants carry ichi1/news1/nfNN tags only for some
+ * words (none for most kana-only ones: これ, とても, ドア), so without this
+ * they fell through to the +50 "no frequency tags" fallback. Only consulted
+ * when the variant has no tags of its own.
+ */
+export function getWordScoreBreakdown(wordStr: string, variant: DictionaryVariant | null, jmdictCommon: boolean = false) {
   let hardestJlpt = 6;
   let hasKanji = false;
   let allJoyo = true;
@@ -157,7 +164,7 @@ export function getWordScoreBreakdown(wordStr: string, variant: DictionaryVarian
   const finalJlpt = hasKanji && hardestJlpt !== 6 ? hardestJlpt : (hasKanji ? 0 : 5);
   const jlptScore = JLPT_SCORES[finalJlpt] || 100;
   const joyoPenalty = (hasKanji && highestGrade !== null) ? (JOYO_PENALTIES[highestGrade] || 0) : 0;
-  const freqPenalty = getFrequencyPenalty(variant, wordStr);
+  const freqPenalty = getFrequencyPenalty(variant, wordStr, jmdictCommon);
   const score = Math.min(100, Math.max(1, jlptScore + joyoPenalty + freqPenalty));
 
   return {
@@ -171,7 +178,7 @@ export function getWordScoreBreakdown(wordStr: string, variant: DictionaryVarian
       freqPenalty,
       jlptValues,
       gradeValues,
-      priorities: variant?.priorities || []
+      priorities: variant?.priorities?.length ? variant.priorities : (jmdictCommon ? ['common'] : [])
     }
   };
 }
