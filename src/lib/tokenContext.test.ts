@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { conjugationNote } from './conjugation.js';
-import { mergeFixedExpressions, mergeDictionaryWords, interjectionPos, type PositionedToken } from './tokenContext.js';
+import { mergeFixedExpressions, mergeDictionaryWords, interjectionPos, isSaidAlone, grammaticalContext, type PositionedToken } from './tokenContext.js';
 
 // Positioned tokens from (surface, posDetail) pairs laid out over `text`.
 function lay(text: string, parts: [string, string[]][]): PositionedToken[] {
@@ -341,5 +341,61 @@ describe('mixed-script kana spans are never one headword', () => {
     const out = await mergeDictionaryWords(toks, text, async (s) => s === 'ピッと', async () => true, () => false, none, async () => new Set(['adv']));
     expect(out.map((t) => t.surface)).toContain('ピッ');
     expect(out.map((t) => t.surface)).not.toContain('ピッと');
+  });
+});
+
+describe('isSaidAlone: a word at a clause start that is the whole utterance', () => {
+  const say = (text: string, word: string, particles = 0) => {
+    const start = text.indexOf(word);
+    return isSaidAlone(text, start, start + word.length + particles, particles > 0);
+  };
+  it('ごめんね、 inside a quote, after an address, is an apology', () => {
+    expect(say('「ゆうた！ ごめんね、電車が止まっていて」', 'ごめん', 1)).toBe(true);
+  });
+  it('a bare 「ただいま」 and ごめん！ still count', () => {
+    expect(say('「ただいま」', 'ただいま')).toBe(true);
+    expect(say('ごめん！遅れた', 'ごめん')).toBe(true);
+  });
+  it('a comma alone (no sentence-final particle) does not make an utterance', () => {
+    expect(say('ごめん、それは無理だ。', 'ごめん')).toBe(false);
+  });
+  it('narration is not an utterance', () => {
+    expect(say('先生はごめんと言った。', 'ごめん')).toBe(false);
+    expect(say('おしまい。', 'おしまい')).toBe(false);
+  });
+});
+
+describe('demonstrative + formal noun is a noun phrase before a case particle', () => {
+  const RENTAI = ['連体詞'];
+  const hasForm = async (s: string) => s === 'そんなもの' || s === 'こんなこと';
+  const mergeKana = (toks: PositionedToken[], text: string, has: (s: string) => Promise<boolean>) =>
+    mergeDictionaryWords(toks, text, has, async () => true, () => false, none, async () => new Set(['exp', 'n']));
+  it('そんなものが is "such a thing" + が, not the set phrase "such is life"', async () => {
+    const text = 'そんなものが私を唆った';
+    const out = await mergeKana(lay(text, [['そんな', RENTAI], ['もの', ['名詞', '普通名詞', '一般']], ['が', ['助詞', '格助詞']], ['私', ['代名詞']]]), text, hasForm);
+    expect(out.map((t) => t.surface)).toEqual(['そんな', 'もの', 'が', '私']);
+  });
+  it('こんなことを too', async () => {
+    const text = 'こんなことを言う';
+    const out = await mergeKana(lay(text, [['こんな', RENTAI], ['こと', ['名詞', '普通名詞', '一般']], ['を', ['助詞', '格助詞']], ['言う', ['動詞']]]), text, hasForm);
+    expect(out.map((t) => t.surface)).toEqual(['こんな', 'こと', 'を', '言う']);
+  });
+  it('clause-final そんなもの(だ) still merges', async () => {
+    const text = '世の中はそんなものだ';
+    const out = await mergeKana(lay(text, [['世の中', ['名詞']], ['は', ['助詞', '係助詞']], ['そんな', RENTAI], ['もの', ['名詞', '普通名詞', '一般']], ['だ', ['助動詞']]]), text, hasForm);
+    expect(out.map((t) => t.surface)).toContain('そんなもの');
+  });
+});
+
+describe('grammaticalContext: number', () => {
+  it('a plain noun glued to a numeral is in the "number" context', () => {
+    const toks = lay('一顆の', [['一', ['名詞', '数詞']], ['顆', N]]);
+    expect(grammaticalContext(toks[0], toks[1], '一顆の')).toBe('number');
+  });
+  it('not for a counter-capable noun (handled by the counter logic) or after a space', () => {
+    const toks = lay('三か月', [['三', ['名詞', '数詞']], ['か月', ['名詞', '普通名詞', '助数詞可能']]]);
+    expect(grammaticalContext(toks[0], toks[1], '三か月')).toBeUndefined();
+    const sp = lay('一 顆', [['一', ['名詞', '数詞']], ['顆', N]]);
+    expect(grammaticalContext(sp[0], sp[1], '一 顆')).toBeUndefined();
   });
 });

@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 import kanjiData from 'kanji-data';
 import { getCachedDictionaryEntries, findBestVariant } from './scoring.js';
+import { isAdultGloss } from './senseDisplay.js';
 
 export interface SenseInfo {
   index: number;
@@ -137,6 +138,12 @@ function restrictionAllows(list: string[] | undefined, form: string): boolean {
  *   3. POS: the sense's partOfSpeech must fit the token's Sudachi POS, so a
  *      verb token doesn't lead with a noun sense of the same entry
  */
+/** Historical/rare/slang/abbreviation or specialist-field sense. */
+function isNicheSense(sn: any): boolean {
+  return (sn.field ?? []).length > 0 ||
+    (sn.misc ?? []).some((m: string) => ['hist', 'arch', 'obs', 'rare', 'sl', 'vulg', 'derog', 'abbr', 'dated', 'poet', 'X'].includes(m));
+}
+
 export function selectSenses(entry: any, word: string, hint?: LookupHint): any[] {
   let senses: any[] = entry.sense || [];
   const narrow = (keep: (s: any) => boolean) => {
@@ -150,7 +157,15 @@ export function selectSenses(entry: any, word: string, hint?: LookupHint): any[]
   if (isKanjiForm && hint?.reading && (entry.kana || []).some((k: any) => k.text === hint.reading)) {
     narrow((s) => restrictionAllows(s.appliesToKana, hint.reading!));
   }
-  const matches = hint?.pos ? jmdictPosMatcher(hint.pos) : null;
+  let matches = hint?.pos ? jmdictPosMatcher(hint.pos) : null;
+  // After a numeral a noun may be a counter (一顆). Counter senses lead only
+  // when the entry's first sense is a specialist one (顆 "condyle"): an
+  // everyday noun keeps its own meaning (三種類 is still 種類 "kind").
+  const asCounter = hint?.after === 'number' && senses.length > 0 && isNicheSense(senses[0]) && senses.some((s) => (s.partOfSpeech ?? []).includes('ctr'));
+  if (matches && asCounter) {
+    const nounLike = matches;
+    matches = (t) => nounLike(t) || t === 'ctr';
+  }
   if (matches) narrow((s) => Array.isArray(s.partOfSpeech) && s.partOfSpeech.some(matches));
   // A proper noun's capitalised sense (日産: "daily output" → "Nissan").
   if (hint?.properNoun) {
@@ -174,7 +189,7 @@ export function selectSenses(entry: any, word: string, hint?: LookupHint): any[]
     if (hit.length > 0) senses = [...hit, ...senses.filter((s) => !hit.includes(s))];
   }
 
-  const fits = (s: any) => senseFitsHint(s, hint);
+  const fits = (s: any) => (asCounter ? (s.partOfSpeech ?? []).includes('ctr') : senseFitsHint(s, hint));
   const bound = (s: any) => senseInfo(s).some((i) => /\bafter\b/i.test(i));
   return [
     ...senses.filter((s) => fits(s)),
@@ -197,6 +212,10 @@ const CONTEXT_INFO: Record<string, RegExp> = {
 };
 
 const senseInfo = (s: any): string[] => (Array.isArray(s.info) ? s.info : []);
+/** A JMDict note about spelling only ("esp. 聴く", "occ. written as 晩い"), not about use. */
+const isSpellingNote = (note: string): boolean =>
+  /\b(written|pronounced|read|spelled|spelt)\b/i.test(note) || /^(esp\.|usu\.|oft\.|occ\.)?\s*[^\sA-Za-z0-9.,;]+$/.test(note);
+const senseInfoText = (s: any): string => (s && Array.isArray(s.info) ? s.info.join(' ') : '');
 
 /**
  * True when the sense is the one this occurrence's grammatical context
@@ -501,6 +520,12 @@ export function getEntryCommonness(entry: any, word?: string, hint?: LookupHint)
 
   if (entry.sense && entry.sense.length > 1) score += 2;
 
+  // An entry whose first sense is bound to one collocation (空かす: "usu.
+  // 腹を...", "to feel hungry") must not win a kana homophone tie for a bare
+  // verb: すかして眺めた is 透かす "to look through". Small, so a real
+  // difference in commonness or POS still decides.
+  if (wordIsKana && /\busu\.\s*\S*[をがにでの]\s*(\.{2,3}|…)/.test(senseInfoText(entry.sense?.[0]))) score -= 4;
+
   // Sudachi says proper noun: an entry whose first English gloss is a name
   // (ふじ → 富士 "Mount Fuji", not 藤 "wisteria") is the one meant.
   if (hint?.properNoun && /^[A-Z]/.test(firstEnglishGloss(entry))) score += 15;
@@ -648,7 +673,7 @@ export function findCloseAlternatives(
  * the head gloss of the next sense when it is ordinary (not slang/archaic/
  * specialist, not bound to a grammatical context) and the line stays short.
  */
-function buildHeadline(sorted: { sense: any; commonness: number }[], langs: string[]): string | undefined {
+export function buildHeadline(sorted: { sense: any; commonness: number }[], langs: string[]): string | undefined {
   const usable = sorted.filter(({ sense }) => getGlosses(sense, langs).length > 0);
   if (usable.length === 0) return undefined;
   const first = getGlosses(usable[0].sense, langs).slice(0, 2).join(', ');
@@ -656,10 +681,15 @@ function buildHeadline(sorted: { sense: any; commonness: number }[], langs: stri
   // A second sense is only worth showing when it is everyday Japanese: not
   // historical/rare/slang/abbreviation and not a specialist field (大学's
   // "former imperial university (ritsuryō system)" is noise).
-  const niche = (sn: any) =>
-    (sn.field ?? []).length > 0 ||
-    (sn.misc ?? []).some((m: string) => ['hist', 'arch', 'obs', 'rare', 'sl', 'vulg', 'derog', 'abbr', 'dated', 'poet', 'X'].includes(m));
-  if (!second || second.commonness < 0 || niche(second.sense) || isContextBoundSense(second.sense) || first.length >= 40) return first;
+  const niche = isNicheSense;
+  // ...and only a PLAIN one: a sense tagged for register or speaker (col
+  // 息子 "penis", male/col 僕 "you", hon お母さん "wife") or carrying a usage
+  // note (両手 "ten": "used as secret jargon") is not what the learner meets
+  // in ordinary text, so it must not stand next to the everyday meaning. A
+  // writing-style tag (uk) says nothing about use and stays allowed.
+  const plain = (sn: any) =>
+    (sn.misc ?? []).every((m: string) => m === 'uk') && senseInfo(sn).every(isSpellingNote) && !getGlosses(sn, langs).some(isAdultGloss);
+  if (!second || second.commonness < 0 || niche(second.sense) || !plain(second.sense) || isContextBoundSense(second.sense) || first.length >= 40) return first;
   const extra = getGlosses(second.sense, langs)[0];
   if (!extra || first.includes(extra)) return first;
   // Marked as secondary: graded on 120 corpus tokens, the extra sense was
@@ -802,16 +832,24 @@ export class JmdictDictionary implements Dictionary {
       if (hint?.requirePos && hint.pos && jmdictPosMatcher(hint.pos) && !entryMatchesPos(bestMatch, hint.pos)) return null;
       if (hint?.argumentWords?.length) {
         const bestScore = getEntryCommonness(bestMatch, word, hint);
-        const mentions = (e: any) =>
+        const mentions = (e: any, inParens = false) =>
           (e.sense ?? []).some((sn: any) =>
             getGlosses(sn, ['eng']).some((g: string) =>
-              hint.argumentWords!.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(g))
+              hint.argumentWords!.some((w) =>
+                new RegExp(inParens ? `\\([^)]*\\b${w}s?\\b[^)]*\\)` : `\\b${w}\\b`, 'i').test(g)
+              )
             )
           );
         if (!mentions(bestMatch)) {
-          const alt = exactMatches.find(
-            (e) => e !== bestMatch && getEntryCommonness(e, word, hint) >= bestScore - 3 && mentions(e)
-          );
+          // JMDict puts a verb's typical object / subject in parentheses
+          // ("to hold up (an umbrella, etc.)", "to pass (of time)"): that is
+          // stronger evidence than a bare gloss word, so it may outweigh a
+          // wider commonness gap (uk bonus of a pour/add homophone).
+          const strongest = (floor: number, inParens: boolean) =>
+            exactMatches
+              .filter((e) => e !== bestMatch && getEntryCommonness(e, word, hint) >= bestScore - floor && mentions(e, inParens))
+              .sort((a, b) => getEntryCommonness(b, word, hint) - getEntryCommonness(a, word, hint))[0];
+          const alt = strongest(15, true) ?? strongest(3, false);
           if (alt) bestMatch = alt;
         }
       }
