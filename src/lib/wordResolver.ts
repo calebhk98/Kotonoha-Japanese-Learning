@@ -443,6 +443,7 @@ export class WordResolver {
     // JMDict hit set it. Lets callers flag English fallback when the learner
     // asked for another language.
     let servedGlossLang: string | undefined;
+    let jmdictCommon = false;
 
     if (this.dictionary) {
       // The POS/reading hints change homograph selection (おく as a noun vs
@@ -522,6 +523,7 @@ export class WordResolver {
           senseInfo = dictResult.senseInfo;
           dictReading = dictResult.reading;
           if (dictResult.glossLang) servedGlossLang = dictResult.glossLang;
+          jmdictCommon = !!dictResult.common;
         }
       }
     }
@@ -609,7 +611,7 @@ export class WordResolver {
     if (ctx?.idiom) meaning = `${ctx.idiom.gloss} (${ctx.idiom.expression})`;
 
     // (5) Score calculation — always uses the same variant selected above.
-    const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant);
+    const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, variant, jmdictCommon);
 
     return { reading, meaning, meanings, senseSizes, senseInfo, dictReading, variant, entry, jlpt, joyo, score, breakdown, glossLang: servedGlossLang };
   }

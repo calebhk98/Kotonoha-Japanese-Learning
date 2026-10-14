@@ -908,3 +908,17 @@ describe('WordResolver – one-token set phrases only for whole utterances when 
     expect(r.meaning).toMatch(/Here I am/);
   });
 });
+
+
+describe('WordResolver – frequency penalty uses the JMDict entry it resolved', () => {
+  it('これ (base 此れ; kanji-data has no tags) gets the common-word penalty, not +50', async () => {
+    const dict = makeMockDictionary({ 此れ: { meaning: 'this', reading: 'これ', common: true } as any });
+    const r = await new WordResolver(dict).resolve('これ', '此れ');
+    expect(r.breakdown.freqPenalty).toBe(-20);
+  });
+  it('a kana word whose JMDict entry is not common keeps the +50 fallback', async () => {
+    const dict = makeMockDictionary({ ぐしょぐしょ: { meaning: 'sopping', reading: 'ぐしょぐしょ', common: false } as any });
+    const r = await new WordResolver(dict).resolve('ぐしょぐしょ', 'ぐしょぐしょ');
+    expect(r.breakdown.freqPenalty).toBe(50);
+  });
+});
