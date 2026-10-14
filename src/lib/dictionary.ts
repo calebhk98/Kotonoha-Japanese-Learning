@@ -63,6 +63,8 @@ export interface LookupHint {
   kanaForm?: string;
   /** The text writes this word in kana (lookup key may be a kanji spelling). */
   kanaSurface?: boolean;
+  /** Return null when the picked entry has no sense that fits `pos` (instead of using it anyway). */
+  requirePos?: boolean;
   /** Sudachi tags the token as a proper noun (固有名詞). */
   properNoun?: boolean;
   /** ...specifically a person/place/organization name (人名/地名/組織). */
@@ -797,6 +799,7 @@ export class JmdictDictionary implements Dictionary {
       // For words like 行く that have multiple variants (行く, 往く), all exact matches
       // refer to the same underlying word — pick the most common entry.
       let bestMatch = pickBestEntry(exactMatches, word, hint);
+      if (hint?.requirePos && hint.pos && jmdictPosMatcher(hint.pos) && !entryMatchesPos(bestMatch, hint.pos)) return null;
       if (hint?.argumentWords?.length) {
         const bestScore = getEntryCommonness(bestMatch, word, hint);
         const mentions = (e: any) =>
@@ -1009,6 +1012,9 @@ export class JmnedictDictionary implements Dictionary {
 }
 
 // ==================== Dictionary Factory ====================
+/** Sudachi POS classes that never name a person, place or organization. */
+const NON_NAME_POS = new Set(['感動詞', '動詞', '形容詞', '助詞', '助動詞', '接続詞', '連体詞']);
+
 export class DictionaryManager {
   private primary: Dictionary | null = null;
   private fallback1: Dictionary | null = null;
@@ -1117,17 +1123,25 @@ export class DictionaryManager {
       if (name) return name;
     }
     if (result) return result;
+    // A lookup that insists on a POS-fitting JMDict entry is for an
+    // alternative SPELLING of the word; the name and kanji dictionaries
+    // would answer for any string (少なし → a proverb quoted in kanji-data).
+    if (hint?.requirePos) return null;
 
     // Try JMnedict for names and proper nouns — these can be hiragana, katakana,
     // or kanji-written (e.g. 和彦, 山城屋). The previous guard limited this to
     // pure-hiragana only, causing kanji-written names to always return null here.
-    if (this.fallback1) {
+    // Names are nouns: an interjection (わーい "Waai"), verb or particle
+    // that JMDict lacks is not a name just because JMnedict spells it.
+    if (this.fallback1 && !(hint?.pos && NON_NAME_POS.has(hint.pos))) {
       const jmnedictResult = await this.fallback1.lookup(word, false, hint);
       if (jmnedictResult) return jmnedictResult;
     }
 
     // Try remaining fallback: KanjiData
-    if (this.fallback2) {
+    // (kanji-data is a kanji dictionary: a kana word "matches" it only through
+    // a reading, which gives nonsense — わあい "common merganser".)
+    if (this.fallback2 && /[一-鿿々]/.test(word)) {
       const result2 = await this.fallback2.lookup(word);
       if (result2) return result2;
     }

@@ -727,6 +727,10 @@ export async function mergeDictionaryWords(
       // Sentence-final にしろ / にせよ is "make it ..." (好い加減にしろ), not
       // "even if".
       if (/^に(しろ|せよ)$/.test(joined) && /^[。！!」』）)\n]/.test(text.slice(span[span.length - 1].endIndex, span[span.length - 1].endIndex + 1))) continue;
+      // Headwords are written in one kana script. A katakana stem + hiragana
+      // tail (ピッ|と) can only match a loanword through kana normalization
+      // (ピット "pit"), never as written.
+      if (/[ァ-ヴ]/.test(joined) && /[ぁ-ゖ]/.test(joined) && !KANJI.test(joined)) continue;
       if (isGrammar(surface)) continue;
       const last = span[n - 1];
       if (n === 2 && last.surface === 'に' && pos0(span[0]) === '名詞') {

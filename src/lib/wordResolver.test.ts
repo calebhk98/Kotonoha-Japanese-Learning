@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { WordResolver } from './wordResolver.js';
+import { WordResolver, lemmaReadingFor } from './wordResolver.js';
 
 // ---------------------------------------------------------------------------
 // #197 – WordResolver class
@@ -470,7 +470,45 @@ describe('WordResolver – tokenizer reading is used for display and lookup', ()
     };
     const resolver = new WordResolver(dict as any);
     await resolver.resolve('読みました', '読む', undefined, '動詞', 'よみました');
-    expect(calls[0]).toEqual({ pos: '動詞' });
+    expect(calls[0]).not.toHaveProperty('reading', 'よみました');
+  });
+
+  it('passes the LEMMA reading derived from the surface reading for conjugated tokens', async () => {
+    // 入って is read はいって: 入る "enter" (はいる), not 入る "set" (いる).
+    const calls: any[] = [];
+    const dict = {
+      lookup: async (word: string, hint?: any) => { calls.push(hint); return { meaning: 'to enter', reading: 'はいる' }; },
+    };
+    const resolver = new WordResolver(dict as any);
+    await resolver.resolve('入っ', '入る', undefined, '動詞', 'はいっ');
+    expect(calls[0]).toMatchObject({ pos: '動詞', reading: 'はいる' });
+  });
+
+  it('a kanji dictionary_form lookup must fit the POS (少なから is not the proverb 少なし)', async () => {
+    const calls: { word: string; hint?: any }[] = [];
+    const dict = {
+      lookup: async (word: string, hint?: any) => { calls.push({ word, hint }); return { meaning: 'few', reading: 'すくない' }; },
+    };
+    const resolver = new WordResolver(dict as any);
+    await resolver.resolve('少なから', '少ない', undefined, '形容詞', 'すくなから', undefined, { dictionaryForm: '少なし' });
+    const lemmaCall = calls.find((c) => c.word === '少なし');
+    expect(lemmaCall?.hint).toMatchObject({ requirePos: true });
+  });
+});
+
+describe('lemmaReadingFor – dictionary-form reading from a conjugated surface', () => {
+  it('replaces the inflected tail with the lemma ending', () => {
+    expect(lemmaReadingFor('入っ', 'はいっ', '入る')).toBe('はいる');
+    expect(lemmaReadingFor('食べた', 'たべた', '食べる')).toBe('たべる');
+    expect(lemmaReadingFor('読みました', 'よみました', '読む')).toBe('よむ');
+    expect(lemmaReadingFor('高かっ', 'たかかっ', '高い')).toBe('たかい');
+    expect(lemmaReadingFor('行っ', 'いっ', '行く')).toBe('いく');
+  });
+  it('gives up when the pieces do not line up', () => {
+    expect(lemmaReadingFor('入っ', undefined, '入る')).toBeUndefined();
+    expect(lemmaReadingFor('たべた', 'たべた', 'たべる')).toBeUndefined(); // all-kana lemma: nothing to disambiguate
+    expect(lemmaReadingFor('来た', 'きた', '来る')).toBe('きる'); // irregular: harmless, matches no entry
+    expect(lemmaReadingFor('食べ', 'べ', '食べる')).toBeUndefined(); // reading shorter than the kanji prefix needs
   });
 });
 
@@ -929,5 +967,39 @@ describe('WordResolver – frequency penalty uses the JMDict entry it resolved',
     const dict = makeMockDictionary({ ぐしょぐしょ: { meaning: 'sopping', reading: 'ぐしょぐしょ', common: false } as any });
     const r = await new WordResolver(dict).resolve('ぐしょぐしょ', 'ぐしょぐしょ');
     expect(r.breakdown.freqPenalty).toBe(50);
+  });
+});
+
+describe('WordResolver – a name-tagged token keeps the reading of the entry it shows', () => {
+  it('清 tagged as a name (きよし) but defined by the JMDict word 清 (しん) is read しん', async () => {
+    // Sudachi guesses a given-name reading for 清 in 清湯 / 清淡; the gloss
+    // is the Qing dynasty, so the reading must be the dynasty's.
+    const dict = makeMockDictionary({ 清: { meaning: 'Qing dynasty', reading: 'しん' } });
+    const resolver = new WordResolver(dict);
+    const r = await resolver.resolve('清', '清', undefined, '名詞', 'きよし', undefined, { properNoun: true, nameType: true });
+    expect(r.meaning).toBe('Qing dynasty');
+    expect(r.reading).toBe('しん');
+  });
+
+  it('a JMnedict name keeps the contextual reading', async () => {
+    const dict = makeMockDictionary({ 清: { meaning: 'Kiyoshi (name)', reading: 'きよし' } });
+    const resolver = new WordResolver(dict);
+    const r = await resolver.resolve('清', '清', undefined, '名詞', 'きよし', undefined, { properNoun: true, nameType: true });
+    expect(r.reading).toBe('きよし');
+  });
+
+  it('an ordinary (not name-tagged) token still takes the tokenizer reading', async () => {
+    const dict = makeMockDictionary({ 家: { meaning: 'house', reading: 'いえ' } });
+    const resolver = new WordResolver(dict);
+    const r = await resolver.resolve('家', '家', undefined, '名詞', 'うち');
+    expect(r.reading).toBe('うち');
+  });
+});
+
+describe('WordResolver – katakana name readings are not rewritten', () => {
+  it('a katakana name keeps the tokenizer reading when the entry reading is the same kana in hiragana', async () => {
+    const dict = makeMockDictionary({ ローソン: { meaning: 'Lawson', reading: 'ろーそん' } });
+    const r = await new WordResolver(dict).resolve('ローソン', 'ローソン', undefined, '名詞', 'ローソン', undefined, { properNoun: true, nameType: true });
+    expect(r.reading).toBe('ローソン');
   });
 });

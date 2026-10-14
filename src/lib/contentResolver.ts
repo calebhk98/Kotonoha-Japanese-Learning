@@ -170,6 +170,17 @@ export async function resolveContent(
     if (t.surface === 'そら' && t.baseForm === '其れ' && !(atClauseStart(text, t.startIndex) && /^[、，！!]/.test(text.slice(t.endIndex)))) {
       return { ...t, baseForm: '空', dictionaryForm: '空', lemmaSurface: '空', pos: '名詞', posDetail: ['名詞', '普通名詞', '一般'] };
     }
+    // 寺町通 / 二条通: after a place or surname the 通 is the street suffix
+    // (どおり). Sudachi tags it as a given name (つう "Tsuu"), but a name
+    // token glued to another name token is not a person: one name does not
+    // follow another without a space.
+    const prev = merged[k - 1];
+    if (
+      t.surface === '通' && t.posDetail?.[1] === '固有名詞' && prev && prev.endIndex === t.startIndex &&
+      (prev.posDetail?.[1] === '固有名詞' || /^[一-鿿々]{2,}$/.test(prev.surface))
+    ) {
+      return { ...t, reading: 'どおり', posDetail: ['名詞', '普通名詞', '一般'], fixed: { meaning: 'street (suffix of street names: -dori)', reading: 'どおり' } };
+    }
     const n = merged[k + 1];
     if (t.surface === 'あおい' && t.posDetail?.[0] === '名詞') {
       if (n && n.posDetail?.[0] === '名詞' && /^[ 　]*$/.test(text.slice(t.endIndex, n.startIndex))) {
@@ -226,6 +237,14 @@ export async function resolveContent(
       const tagged = t.posDetail?.[1] === '固有名詞' || HONORIFIC.test(merged[k + 1]?.surface ?? '');
       const common = (await wordResolver.commonKanaWord(t.surface)).size > 0;
       if (common && !tagged) continue;
+      // A word the dictionary writes in kana (おでん) or in the katakana
+      // spelling Sudachi normalizes to (びいどろ → ビードロ) is that word:
+      // the translator romanizes words it has no English for (Oden,
+      // Biidoro) exactly like names. Only Sudachi's own name tag overrules.
+      if (!tagged) {
+        const kata = /^[ァ-ヴー]+$/.test(t.baseForm);
+        if (kata ? await wordResolver.hasForm(t.baseForm) : (await wordResolver.isKanaHeadword(t.surface)) || (await wordResolver.isKanaHeadword(t.baseForm))) continue;
+      }
       const name = kanaNameIn(t.surface, translationAt!(t), tagged);
       if (name) {
         confirmed.set(t.surface, name);
