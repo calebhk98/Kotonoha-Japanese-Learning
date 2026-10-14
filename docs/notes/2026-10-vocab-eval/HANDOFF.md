@@ -85,6 +85,17 @@ Start here if you are picking up this work. CLAUDE.md links to this file.
 5. **Remaining blind-list rows not fixed:** see the "not fixed" sections of the agent
    reports (archaic okurigana splits 蘇える / 落ち魄れる, 動きかける's JMDict gloss, カンナ
    "plane" for the canna flower; JMDict has no flower entry).
+   From `fix/vocab-senses`, still open: 時どき "seasonal"; つける "to do intensely" (Sudachi
+   splits 圧え|つけ, needs a merge); なる "bear fruit" (a sense-count tie-break was tried and
+   reverted: it flipped はいた to "vomit" and かみ to "god"); 渡す / 人参 / からだ, whose
+   headline comes from the sense scorer / embedding switch. Review items from that branch:
+   `buildHeadline` now shows an "(also: …)" second sense only when it is plain (no misc tag
+   except uk, no usage note); ~800 tokens in the 30-item sample changed, mostly better
+   (この "last couple of years", 先生 "sensei" gone) but ~8 lost a useful second sense
+   (泣く "suffer", 青い "green", いただく "to eat"). Idiom headlines with に/へ/で now get a
+   "— literally: …" note, which is redundant on true idioms (気に入る). The branch's final
+   code (after reverting the tie-break) was not re-run end to end; the corpus re-resolve
+   in step 1 covers it.
    Known issue the entries agent mis-graded as better: 辛い/辛く in a food context shows
    "painful" because UniDic reads it つらい and the new dictionary-form reading hint
    (`lemmaReadingFor`) now carries that reading faithfully. With context ON it was already
