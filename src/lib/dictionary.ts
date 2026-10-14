@@ -583,10 +583,6 @@ export function pickBestEntry(exactMatches: any[], word: string, hint?: LookupHi
     if (kana && currentScore === bestScore) {
       const [fc, fb] = [freqRank(current), freqRank(best)];
       if (fc !== fb) return fc < fb ? current : best;
-      // A core verb with many senses (なる 成る: 11) against a one-sense rarity
-      // (生る "to bear fruit"): the broad entry is what kana text means.
-      const [sc, sb] = [current.sense?.length ?? 0, best.sense?.length ?? 0];
-      if (Math.abs(sc - sb) >= 4) return sc > sb ? current : best;
       return kanjiEase(current) > kanjiEase(best) ? current : best;
     }
     return currentScore > bestScore ? current : best;
