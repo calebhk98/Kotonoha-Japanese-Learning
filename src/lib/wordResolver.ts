@@ -22,6 +22,12 @@ export interface WordResolution {
   dictReading?: string;
   variant: DictionaryVariant | null;
   entry: DictionaryEntry | null;
+  /**
+   * The meaning is JMDict's set phrase for the INFLECTED surface itself
+   * (かかわらず "in spite of"), so it does not describe the dictionary form
+   * (かかわる) the token is lemmatised to.
+   */
+  viaPhrase?: boolean;
   jlpt: number;
   joyo: boolean;
   score: number;
@@ -398,7 +404,7 @@ export class WordResolver {
       const phrase = await this.expression(wordStr, ctx?.after, ctx?.utterance);
       if (phrase) {
         const { jlpt, joyo, score, breakdown } = getWordScoreBreakdown(wordStr, null);
-        return { reading: tokenReading ?? phrase.reading, meaning: phrase.gloss, meanings: undefined, variant: null, entry: null, jlpt, joyo, score, breakdown };
+        return { reading: tokenReading ?? phrase.reading, meaning: phrase.gloss, meanings: undefined, variant: null, entry: null, viaPhrase: true, jlpt, joyo, score, breakdown };
       }
     }
 
@@ -846,7 +852,12 @@ export class WordResolver {
         }
       }
       const parts = await this.bestNounParts(baseForm, 3, new Map());
-      if (parts && parts.length >= 2) {
+      // A two-kanji word is a jukugo, not the sum of its characters: when
+      // JMDict lacks it (Chinese 中专 written 中専, a coined abbreviation) the
+      // two single-character glosses ("inside" + "exclusively doing …")
+      // describe nothing, so it stays unknown rather than wrong.
+      const bareJukugo = /^[一-鿿々]{2}$/.test(baseForm);
+      if (parts && parts.length >= 2 && !bareJukugo) {
         return { meaning: parts.map((p) => `${p.surface} (${shortGloss(p.meaning)})`).join(' + ') };
       }
     }

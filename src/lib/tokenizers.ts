@@ -31,6 +31,12 @@ export interface TokenInfo {
   reading?: string;
   /** Full UniDic POS of the token's first morpheme (Sudachi only). */
   posDetail?: string[];
+  /**
+   * A merged span (立ち|留まっ) whose headword was found through its lemma:
+   * the surface is an inflected form of lemmaSurface, so it belongs to that
+   * dictionary word's vocab row.
+   */
+  inflected?: boolean;
   /** Sudachi dictionary_form of the first morpheme (keeps the text's spelling). */
   dictionaryForm?: string;
   /**

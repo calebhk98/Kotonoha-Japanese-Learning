@@ -271,6 +271,7 @@ export async function resolveContent(
     utterance?: boolean;
     /** Dictionary form in the text's spelling (食べました → 食べる). */
     lemmaSurface?: string;
+    inflected?: boolean;
     /** Endings grouped into the token (tokenizers.ts), for the form note. */
     parts?: { surface: string; norm: string; pos: string; conj: string }[];
     /** The kana tokenization's reading of this word (kanaConversion.ts). */
@@ -424,6 +425,7 @@ export async function resolveContent(
       counterReading: t.counterReading,
       parts: t.parts,
       lemmaSurface: t.lemmaSurface,
+      inflected: t.inflected,
       kanaAlt: t.kanaAlt,
       utterance: (() => {
         // Only a kana noun reads differently on its own (ただいま, ごめん);
@@ -536,13 +538,20 @@ export async function resolveContent(
             breakdown: EMPTY_BREAKDOWN,
             isMorpheme: true,
           };
+          // A grammar-table verb (し, した, して, させ, あった, いて) is one
+          // vocab row under its dictionary form, like any other verb.
+          const morphemeLemma = token.parts?.length ? token.dictionaryForm ?? token.lemmaSurface : token.lemmaSurface ?? token.dictionaryForm;
+          if (token.posDetail?.[0] === '動詞' && morphemeLemma && /^[ぁ-んー]+$/.test(morphemeLemma)) {
+            words[i].lemma = morphemeLemma;
+            words[i].lemmaReading = morphemeLemma;
+          }
           // Grouped する / いる forms carry endings too (してしまった).
           if (token.parts?.length) {
             const form = conjugationNote(token.posDetail?.[5] ?? '*', token.parts);
             if (form) words[i].form = form;
           }
         } else if (token.isVocabWord) {
-          const { reading, meaning, meanings, senseSizes, senseInfo, dictReading, jlpt, joyo, score, breakdown } =
+          const { reading, meaning, meanings, senseSizes, senseInfo, dictReading, viaPhrase, jlpt, joyo, score, breakdown } =
             await wordResolver.resolve(token.surface, token.baseForm, lookupCache, token.pos, token.reading, undefined, {
               after: token.context,
               dictionaryForm: token.dictionaryForm,
@@ -564,8 +573,10 @@ export async function resolveContent(
           // in the vocab list (食べた, 食べます → 食べる).
           // (The first verb's dictionary form: すわっていました groups under
           // すわる, not すわっている.)
-          const lemma = token.parts?.length ? token.dictionaryForm ?? token.lemmaSurface : token.lemmaSurface;
-          if (lemma && lemma !== token.surface && ['動詞', '形容詞'].includes(token.posDetail?.[0] ?? '')) {
+          const lemma = token.parts?.length && !token.inflected ? token.dictionaryForm ?? token.lemmaSurface : token.lemmaSurface;
+          // (Not when the meaning is the set phrase of the inflected surface:
+          // かかわらず "in spite of" would become the row かかわる.)
+          if (lemma && lemma !== token.surface && !viaPhrase && (token.inflected || ['動詞', '形容詞'].includes(token.posDetail?.[0] ?? ''))) {
             info.lemma = lemma;
             info.lemmaReading = /[一-鿿々]/.test(lemma) ? dictReading : lemma;
           }
@@ -750,7 +761,7 @@ export async function resolveContent(
     ...(sentences ? { sentences } : {}),
     words,
     tokens: tokens.map((t, idx) => {
-      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, fixed, utterance, parts, lemmaSurface, ...rest } = t;
+      const { baseForm, isJapanese, isVocabWord, isMorpheme, grammarLabel, context, dictionaryForm, idiom, posDetail, fixed, utterance, parts, lemmaSurface, inflected, ...rest } = t;
       return {
         ...rest,
         // For the client, isVocabWord doubles as "hoverable": every Japanese
@@ -789,15 +800,30 @@ export function buildWordsResponse(resolved: ResolvedContent): any[] {
   for (const t of resolved.tokens) {
     if (t.wordIndex !== undefined) tokensPerWord.set(t.wordIndex, (tokensPerWord.get(t.wordIndex) ?? 0) + 1);
   }
+  // A sense the translation switched to (すごい "amazing" → "terrible") is
+  // the same dictionary word as the entry it came from, not another row:
+  // such a word takes the headline of its unswitched twin (same word,
+  // reading and set of meanings).
+  const entryId = (w: any) => `${w.word}\u0000${w.reading}\u0000${Array.isArray(w.meanings) ? [...w.meanings].sort().join('|') : ''}`;
+  const headlineOf = (w: any) => String(w.meaning ?? '').split(/ \(also: | — or: /)[0];
+  const unswitched = new Map<string, string>();
+  for (const w of resolved.words) {
+    if (w && w.contextSense === undefined && Array.isArray(w.meanings) && !unswitched.has(entryId(w))) unswitched.set(entryId(w), headlineOf(w));
+  }
   const rows = new Map<string, any>();
   resolved.words.forEach((w, i) => {
     if (w.isMorpheme && w.meaning === 'Kana particle / expression') return;
     // Grammar morphemes are one row (their label variants describe one
     // particle, not separate words to study); content words compare on the
     // headline gloss, ignoring the "(also: …)" / "— or: …" tails.
-    const headline = String(w.meaning ?? '').split(/ \(also: | — or: /)[0];
+    const headline = (w.contextSense !== undefined && unswitched.get(entryId(w))) || headlineOf(w);
     const lemma: string = w.lemma ?? w.word;
-    const key = w.isMorpheme ? w.word : `${lemma}\u0000${headline}`;
+    // Rows are one dictionary word: the reading of the headword stands in for
+    // its spelling, so 言う and いう (same reading, same meaning) are one row
+    // while かた "person" and ほう "person" stay apart. Verbs whose reading we
+    // don't know keep their lemma.
+    const reading = w.lemma ? w.lemmaReading ?? w.lemma : w.reading ?? w.word;
+    const key = w.isMorpheme ? lemma : `${reading}\u0000${headline}`;
     const n = tokensPerWord.get(i) ?? 0;
     // An entry no token shows (its token was re-resolved by the argument
     // pass) is not a meaning the text uses.
@@ -815,6 +841,7 @@ export function buildWordsResponse(resolved: ResolvedContent): any[] {
       rows.set(key, row);
     }
     row.frequencyInContent += count;
+    if (w.lemma && !row.forms) row.forms = [];
     if (row.forms) {
       const f = row.forms.find((x: any) => x.word === w.word && x.form === w.form);
       if (f) f.count += count;
